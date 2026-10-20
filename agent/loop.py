@@ -26,6 +26,11 @@ from .prompts import AGENT_SYSTEM, CHECK_SYSTEM, DRAFT_SYSTEM, ROLES_RU, tools_b
 from .tools import ToolSession
 
 MAX_TOOL_STEPS = 5
+# Что показать пользователю, пока модель отвечает на шаг с этим названием
+PENDING = {"План": "Модель составляет план и выбирает инструменты…", "Черновик карточки": "Модель пишет черновик карточки…",
+           "Правка черновика": "Модель исправляет черновик по замечаниям проверки…",
+           "Самопроверка (модель)": "Проверяющая модель (другая) читает черновик и источники…",
+           "Шаг": "Модель выбирает следующий шаг…"}
 
 
 def _count(result) -> int:
@@ -51,10 +56,18 @@ class Agent:
         self.llm, self.bank, self.news = llm, bank, news
         self.bank_meta = bank_meta or []
         self.today = today or date.today()
+        self.on_step = None  # обратный вызов для показа шагов в интерфейсе в реальном времени
+
+    def _emit(self, trace: list, pending: str = "") -> None:
+        """Отдаёт текущее состояние трассы наружу (поток SSE). pending — что агент делает прямо сейчас."""
+        if self.on_step:
+            self.on_step({"trace": [{k: v for k, v in t.items() if not k.startswith("_")} for t in trace],
+                          "pending": pending})
 
     # ---------- вспомогательное ----------
     def _ask(self, role: str, messages: list[dict], trace: list, kind: str, title: str, max_tokens=6000):
         """Вызов модели с одной повторной попыткой, если ответ не JSON."""
+        self._emit(trace, PENDING.get(title, "Модель работает…"))
         c = self.llm.complete(ROUTING[role], messages, max_tokens=max_tokens, json_mode=True)
         cost, ms = c.cost_rub, c.ms
         try:
@@ -104,6 +117,7 @@ class Agent:
 
         trace.append({"kind": "done", "title": "Карточка готова" if rep.ok else "Карточка не прошла проверку",
                       "detail": rep.summary(), "ms": 0, "cost": 0})
+        self._emit(trace)
         card["trace"] = [{k: v for k, v in t.items() if not k.startswith("_")} for t in trace]
         return Result(card if rep.ok else None, rep, trace, ses.log)
 
@@ -117,10 +131,11 @@ class Agent:
                      "В первом ответе добавь поле \"plan\" — список шагов анализа."}]
         observations = []
         for step in range(MAX_TOOL_STEPS + 1):
-            act = self._ask("draft", messages, trace, "plan", "План")
+            act = self._ask("draft", messages, trace, "plan", "План" if step == 0 else "Шаг")
             if step == 0:
                 trace[-1]["detail"] = "; ".join(map(str, act.get("plan") or [])) or str(act.get("thought", ""))
                 think = {"ms": 0, "cost": 0}
+                self._emit(trace)
             else:
                 # выбор следующего действия — не отдельный шаг трассы: его время и цена идут в шаг инструмента
                 think = trace.pop()
@@ -136,6 +151,7 @@ class Agent:
                           "detail": (act.get("thought") or "")[:200] + (" · ошибка: " + result["error"] if not entry["ok"] else
                                      f" · результат: {_count(result)} объект(ов)")})
             observations.append({"tool": name, "args": act.get("args"), "result": result})
+            self._emit(trace, "Модель выбирает следующий шаг…")
             messages += [{"role": "assistant", "content": json.dumps(act, ensure_ascii=False)},
                          {"role": "user", "content": f"Результат {name}: " + json.dumps(result, ensure_ascii=False)[:6000]}]
         return observations
@@ -152,6 +168,7 @@ class Agent:
                           trace, "draft", "Черновик карточки" if not issues else "Правка черновика", max_tokens=10000)
         n = sum(len(draft.get("blocks", {}).get(b, [])) for b in ("what", "why", "risks", "opportunities", "actions"))
         trace[-1]["detail"] = f"{n} утверждений, источников в работе: {len(ses.sources)}"
+        self._emit(trace, "Код проверяет происхождение, ссылки и цифры…")
         return draft
 
     def _check(self, card: dict, ses: ToolSession, trace: list) -> dict:
@@ -159,6 +176,7 @@ class Agent:
         verdict = self._ask("check", [{"role": "system", "content": CHECK_SYSTEM}, {"role": "user", "content": user}],
                             trace, "check", "Самопроверка (модель)", max_tokens=6000)
         trace[-1]["detail"] = "замечаний нет" if verdict.get("ok") else "; ".join(verdict.get("issues", [])[:3])
+        self._emit(trace)
         return verdict
 
     def _assemble(self, draft: dict, ses: ToolSession, event: dict, company_id: str, match: Match, trace):
@@ -220,4 +238,5 @@ class Agent:
         texts = {i: by_label[lbl].text for i, lbl in enumerate(cited)}
         rep = validate_card(card, today=self.today, source_texts=texts)
         trace.append({"kind": "check", "title": "Самопроверка (код)", "detail": rep.summary(), "ms": 0, "cost": 0})
+        self._emit(trace)
         return card, rep
