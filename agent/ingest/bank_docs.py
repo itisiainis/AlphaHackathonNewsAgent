@@ -1,0 +1,183 @@
+"""Парсер аналитических материалов Альфа-Банка: PDF → текст → фрагменты для поиска.
+
+Что делает: превращает папку с PDF (data/raw/bank/) в data/bank/docs.json — список документов
+с названием, датой, постраничным текстом и фрагментами (chunks), по которым работает поиск агента.
+
+Как устроено:
+1. Текст страницы берётся из текстового слоя PDF (pypdf). Материалы кейса — сканы без текстового
+   слоя, поэтому для пустых страниц включается OCR: pdftoppm рендерит страницу в PNG (200 dpi),
+   Tesseract распознаёт её (rus+eng). OCR — локальный, без LLM и без расхода бюджета.
+2. Дата документа ищется в начале первой страницы по шаблону «11 сентября 2026 г.»;
+   если не нашлась — берётся из имени файла (…_14092026.pdf, …15Apr2021…).
+3. Название — первая содержательная строка после шапки «Центр макроэкономического анализа».
+4. Текст режется на фрагменты по абзацам, ~900 символов, с номером страницы — чтобы вывод агента
+   можно было связать с конкретной страницей первоисточника.
+Результат кешируется: повторный запуск пересчитывает только новые или изменённые файлы (по хешу).
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+import subprocess
+import tempfile
+from datetime import date
+from pathlib import Path
+
+MONTHS = {
+    "январ": 1, "феврал": 2, "март": 3, "апрел": 4, "ма": 5, "июн": 6,
+    "июл": 7, "август": 8, "сентябр": 9, "октябр": 10, "ноябр": 11, "декабр": 12,
+}
+EN_MONTHS = {m: i + 1 for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"])}
+RU_DATE_RE = re.compile(r"(\d{1,2})\s+([а-яё]+)\s+(20\d\d)(?:\s*г)?", re.I)
+HEADER_LINES = ("центр макроэкономического анализа", "альфа-банк", "alfa-bank", "alfa bank")
+CHUNK_CHARS = 900
+
+
+def file_hash(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()[:16]
+
+
+def _month(word: str) -> int | None:
+    word = word.lower()
+    # «мая» и «марта» оба начинаются на «ма»: проверяем длинные основы первыми
+    for stem in sorted(MONTHS, key=len, reverse=True):
+        if word.startswith(stem):
+            return MONTHS[stem]
+    return None
+
+
+def detect_date(first_page: str, filename: str) -> str | None:
+    """Дата выпуска документа в ISO-формате или None."""
+    for m in RU_DATE_RE.finditer(first_page[:1500]):
+        month = _month(m.group(2))
+        if month:
+            try:
+                return date(int(m.group(3)), month, int(m.group(1))).isoformat()
+            except ValueError:
+                continue
+    m = re.search(r"(\d{2})(\d{2})(20\d\d)", filename)            # 14092026
+    if m:
+        try:
+            return date(int(m.group(3)), int(m.group(2)), int(m.group(1))).isoformat()
+        except ValueError:
+            pass
+    m = re.search(r"(\d{1,2})([A-Za-z]{3})(20\d\d)", filename)     # 15Apr2021
+    if m and m.group(2).lower() in EN_MONTHS:
+        return date(int(m.group(3)), EN_MONTHS[m.group(2).lower()], int(m.group(1))).isoformat()
+    return None
+
+
+def detect_title(first_page: str) -> str:
+    lines = [ln.strip() for ln in first_page.splitlines() if ln.strip()]
+    picked = []
+    for ln in lines[:12]:
+        low = ln.lower()
+        if any(low.startswith(h) for h in HEADER_LINES) or RU_DATE_RE.search(ln) or len(ln) < 4:
+            continue
+        picked.append(ln)
+        if len(picked) == 2:  # заголовок + подзаголовок
+            break
+    return ": ".join(picked)[:200] or "Без названия"
+
+
+def _text_layer(path: Path) -> list[str]:
+    from pypdf import PdfReader
+
+    try:
+        return [(p.extract_text() or "").strip() for p in PdfReader(path).pages]
+    except Exception:
+        return []
+
+
+def _ocr_page(path: Path, page_no: int) -> str:
+    """Распознаёт одну страницу (нумерация с 1). Пустая строка, если OCR недоступен."""
+    with tempfile.TemporaryDirectory() as td:
+        prefix = Path(td) / "p"
+        try:
+            subprocess.run(["pdftoppm", "-r", "200", "-f", str(page_no), "-l", str(page_no), "-png",
+                            str(path), str(prefix)], check=True, capture_output=True, timeout=120)
+            png = next(Path(td).glob("p*.png"))
+            out = subprocess.run(["tesseract", str(png), "-", "-l", "rus+eng"],
+                                 check=True, capture_output=True, timeout=180)
+            return out.stdout.decode("utf-8", "replace").strip()
+        except (OSError, subprocess.SubprocessError, StopIteration):
+            return ""
+
+
+def clean_ocr(text: str) -> str:
+    text = text.replace("py6.", "руб.").replace("pyб.", "руб.")
+    text = re.sub(r"-\n(?=[а-яё])", "", text)            # перенос слова по слогам
+    text = re.sub(r"(?<![.:;!?\n])\n(?!\n)", " ", text)  # строка внутри абзаца
+    return re.sub(r"[ \t]+", " ", text).strip()
+
+
+def chunk_pages(pages: list[str], size: int = CHUNK_CHARS) -> list[dict]:
+    """Фрагменты по абзацам: [{page, text}], страницы нумеруются с 1."""
+    chunks = []
+    for no, page in enumerate(pages, start=1):
+        buf = ""
+        for para in re.split(r"\n\s*\n", page):
+            para = para.strip()
+            if not para:
+                continue
+            if buf and len(buf) + len(para) > size:
+                chunks.append({"page": no, "text": buf})
+                buf = ""
+            buf = f"{buf}\n{para}".strip()
+        if buf:
+            chunks.append({"page": no, "text": buf})
+    return chunks
+
+
+def parse_pdf(path: Path, ocr: bool = True) -> dict:
+    pages = _text_layer(path)
+    ocr_pages = 0
+    for i, txt in enumerate(pages):
+        if len(txt) < 50 and ocr:
+            txt = _ocr_page(path, i + 1)
+            ocr_pages += 1 if txt else 0
+        pages[i] = clean_ocr(txt) if txt else ""
+    first = pages[0] if pages else ""
+    return {
+        "file": path.name,
+        "hash": file_hash(path),
+        "title": detect_title(first),
+        "date": detect_date(first, path.name),
+        "pages": pages,
+        "ocr_pages": ocr_pages,
+        "chunks": chunk_pages(pages),
+    }
+
+
+def build_index(raw_dir: Path, out_path: Path, overrides: dict | None = None) -> list[dict]:
+    """Пересобирает data/bank/docs.json. overrides — {файл: {title, date, url}} для ручных поправок."""
+    old = {}
+    if out_path.exists():
+        old = {d["file"]: d for d in json.loads(out_path.read_text(encoding="utf-8"))}
+    docs = []
+    for pdf in sorted(raw_dir.glob("*.pdf")):
+        h = file_hash(pdf)
+        doc = old[pdf.name] if pdf.name in old and old[pdf.name]["hash"] == h else parse_pdf(pdf)
+        doc.update((overrides or {}).get(pdf.name, {}))
+        doc["id"] = "bank-" + h[:8]
+        docs.append(doc)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(docs, ensure_ascii=False, indent=1), encoding="utf-8")
+    return docs
+
+
+if __name__ == "__main__":
+    import sys
+
+    root = Path(__file__).resolve().parents[2]
+    raw = Path(sys.argv[1]) if len(sys.argv) > 1 else root / "data" / "raw" / "bank"
+    over_path = root / "data" / "bank" / "overrides.json"
+    over = json.loads(over_path.read_text(encoding="utf-8")) if over_path.exists() else {}
+    for d in build_index(raw, root / "data" / "bank" / "docs.json", over):
+        print(f"{d['date']}  {d['file']}  стр.{len(d['pages'])} OCR:{d['ocr_pages']}  фрагм.{len(d['chunks'])}  {d['title'][:70]}")

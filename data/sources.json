@@ -1,0 +1,16 @@
+{
+  "_comment": "Источники новостей. Добавить источник = добавить строку, код менять не нужно (критерий 07). Все адреса проверены 20.10.2026.",
+  "rss": [
+    {"name": "Банк России", "url": "https://www.cbr.ru/rss/eventrss", "kind": "news"},
+    {"name": "Интерфакс", "url": "https://www.interfax.ru/rss.asp", "kind": "news"},
+    {"name": "РБК", "url": "https://rssexport.rbc.ru/rbcnews/news/30/full.rss", "kind": "news"},
+    {"name": "Ведомости", "url": "https://www.vedomosti.ru/rss/news.xml", "kind": "news"},
+    {"name": "Коммерсантъ", "url": "https://www.kommersant.ru/RSS/news.xml", "kind": "news"},
+    {"name": "ТАСС", "url": "https://tass.ru/rss/v2.xml", "kind": "news"}
+  ],
+  "telegram": [
+    {"name": "MarketTwits", "channel": "markettwits", "kind": "news"},
+    {"name": "Банкста", "channel": "banksta", "kind": "news"},
+    {"name": "Альфа-Инвестиции", "channel": "alfa_investments", "kind": "news"}
+  ]
+}
