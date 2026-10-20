@@ -1,0 +1,8 @@
+.git
+.venv
+.env
+data/raw
+data/cache
+data/news/events.json
+**/__pycache__
+tests

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Зависимости
+        run: |
+          pip install -r requirements.lock
+          pip install pytest==9.1.1 ruff==0.17.1
+      - name: Линтер
+        run: ruff check .
+      - name: Тесты
+        run: pytest -q tests
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Сборка образа
+        run: docker build -t newsagent:ci .
+      - name: Сервис стартует и отвечает
+        run: |
+          docker run -d --name app -p 8000:8000 -e COLLECT_ON_START=0 newsagent:ci
+          for i in $(seq 1 30); do curl -sf localhost:8000/api/health && exit 0; sleep 1; done
+          docker logs app; exit 1

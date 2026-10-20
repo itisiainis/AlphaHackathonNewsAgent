@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Новости для бизнеса — прототип</title>
+<link rel="icon" href="data:,">
 <style>
 :root{
   --brand:#e3262f;
@@ -189,9 +190,19 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
 
 <script id="data" type="application/json">__DATA__</script>
 <script>
-const DATA = JSON.parse(document.getElementById('data').textContent);
-const state = {company: DATA.companies[0].id, role: DATA.roles[0].id, filter: 'all', open: null,
-  read: new Set(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true};
+/* Два режима: статический прототип (build.py вшивает mock_data.json) и рабочий — страницу отдаёт
+   бэкенд без данных (null), данные и действия идут через API. */
+let DATA = JSON.parse(document.getElementById('data').textContent);
+const API = DATA === null;
+const state = {company: null, role: null, filter: 'all', open: null,
+  read: new Set(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {}, busy: false};
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail ? (typeof data.detail === 'string' ? data.detail : 'неверный запрос') : 'сервис недоступен');
+  return data;
+}
+const origin = i => ((DATA.origins || {})[state.company] || {})[i.id];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const IMPACT = {high: 3, medium: 2, low: 1};
@@ -215,10 +226,25 @@ function ranked() {
 }
 const newCount = () => ranked().filter(isNew).length;
 
+function companyOptions() {
+  const demo = DATA.companies.map(c => `<option value="${c.id}">${esc(c.display)} · ${c.id}</option>`).join('');
+  const shown = new Set(DATA.companies.map(c => c.id));
+  const rest = (DATA.all_companies || []).filter(c => !shown.has(c.id))
+    .map(c => `<option value="${c.id}">${esc(c.display)} · ${c.revenue_bn.toLocaleString('ru-RU')} млрд ₽ · ${c.id}</option>`).join('');
+  return rest ? `<optgroup label="С карточками">${demo}</optgroup><optgroup label="Все компании выборки">${rest}</optgroup>` : demo;
+}
+async function loadCompany(id) {
+  if (!API || DATA.companies.some(c => c.id === id)) return;
+  const r = await api('/api/companies/' + id);
+  DATA.companies.push(r.company); DATA.insights[id] = r.insights; (DATA.origins = DATA.origins || {})[id] = r.origins;
+}
 function initSwitchers() {
-  $('#sel-company').innerHTML = DATA.companies.map(c => `<option value="${c.id}">${esc(c.display)} · ${c.id}</option>`).join('');
+  $('#sel-company').innerHTML = companyOptions();
   $('#sel-role').innerHTML = DATA.roles.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
-  $('#sel-company').onchange = e => { state.company = e.target.value; state.open = null; state.firstPaint = true;
+  $('#sel-company').value = state.company;
+  $('#sel-company').onchange = async e => { const id = e.target.value;
+    try { await loadCompany(id); } catch (err) { showModal('Не удалось загрузить компанию', err.message); return; }
+    state.company = id; state.open = null; state.firstPaint = true;
     if (location.hash.startsWith('#feed/')) location.hash = '#feed'; else render(); };
   $('#sel-role').onchange = e => { state.role = e.target.value; render(); };
 }
@@ -227,11 +253,23 @@ function renderNav(route) {
   $('#nav').innerHTML = `
     <a href="#home" class="${route === 'home' ? 'on' : ''}">Главная</a>
     <a class="dis">Счета</a><a class="dis">Платежи</a><a class="dis">Документы</a>
-    <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>`;
+    <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>
+    ${API ? `<a href="#analyze" class="${route === 'analyze' ? 'on' : ''}">Разобрать новость</a>
+    <a href="#quality" class="${route === 'quality' ? 'on' : ''}">Качество</a>` : ''}`;
 }
+function renderStatus() {
+  if (!API || !DATA.status) return;
+  const s = DATA.status;
+  $('.demo-tag').textContent = s.llm_online ? `модель подключена · расход сегодня ${s.spent_today_rub.toLocaleString('ru-RU')} из ${s.budget_rub} ₽`
+    : 'без ключа модели: доступны отбор и готовые карточки';
+}
+function showModal(title, text) { $('#modal-title').textContent = title; $('#modal-text').textContent = text;
+  $('#modal').classList.add('on'); $('#overlay').classList.add('on'); }
 
 /* ---------- фрагменты ---------- */
-const ref = (s, i) => (s.src !== undefined && i && i.sources[s.src]) ? ` <sup><a href="${esc(i.sources[s.src].url)}" target="_blank" rel="noopener" title="${esc(i.sources[s.src].name)}">[${s.src + 1}]</a></sup>` : '';
+// источник без адреса (например, новость, вставленная пользователем) — подпись без ссылки, а не мёртвый href
+const srcLink = (s, inner, title = '') => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener"${title ? ` title="${esc(title)}"` : ''}>${inner}</a>` : `<span title="${esc(title)}">${inner}</span>`;
+const ref = (s, i) => (s.src !== undefined && i && i.sources[s.src]) ? ` <sup>${srcLink(i.sources[s.src], `[${s.src + 1}]`, i.sources[s.src].name)}</sup>` : '';
 function stmtHtml(s, i) {
   const str = s.strength ? `<span class="str">${STR_RU[s.strength]}</span>` : '';
   return `<div class="stmt ${s.p}"><span class="p">${P_FULL[s.p]}</span>${esc(s.t)}${ref(s, i)}${str}</div>`;
@@ -250,7 +288,7 @@ function cardHtml(i) {
   const kp = (i.key_points || []).map(s => `<li><span class="pdot ${s.p}">${P_RU[s.p]}</span><span>${esc(s.t)}${ref(s, i)}</span></li>`).join('');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span><span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'seed' ? '<span class="chip" title="Карточка подготовлена командой по материалам кейса, не агентом">пример</span>' : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
       <div class="ic-event">${esc(i.title)}</div>
       <div class="ic-take">${esc(takeaway(i))}</div>
       <ul class="kp">${kp}</ul>
@@ -269,11 +307,11 @@ function bodyHtml(i) {
     <div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>
     <div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>
     <div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>
-    <div class="sec"><h3>Как оценивает банк</h3><div class="quote ${b.bank.stale ? 'stale' : ''}">«${esc(b.bank.quote)}»</div>
-      <div class="src-line">${esc(b.bank.doc)} · ${fmtDateY(b.bank.date)}</div>
+    <div class="sec"><h3>Как оценивает банк</h3>${b.bank.quote ? `<div class="quote ${b.bank.stale ? 'stale' : ''}">«${esc(b.bank.quote)}»</div>
+      <div class="src-line">${esc(b.bank.doc)} · ${fmtDateY(b.bank.date)}</div>` : `<div class="dq">${esc(b.bank.doc)}</div>`}
       ${b.bank.stale ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}</div>
     <div class="sec"><h3>На чём основан вывод</h3><div class="two">
-      <div><h4>Источники</h4><ol class="srcs">${i.sources.map(s => `<li><span class="kind ${s.kind}">${s.kind === 'bank' ? 'банк' : s.kind === 'stat' ? 'статистика' : 'новость'}</span><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a> <span class="muted">· ${fmtDateY(s.date)}</span></li>`).join('')}</ol></div>
+      <div><h4>Источники</h4><ol class="srcs">${i.sources.map(s => `<li><span class="kind ${s.kind}">${s.kind === 'bank' ? 'банк' : s.kind === 'stat' ? 'статистика' : 'новость'}</span>${srcLink(s, esc(s.name))} <span class="muted">· ${fmtDateY(s.date)}</span></li>`).join('')}</ol></div>
       <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(f)}</span>`).join('')}
         ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></div>
     <div class="tools">
@@ -300,7 +338,8 @@ function viewHome() {
     <div class="card widget">
       <div class="widget-head"><h2>Важное для вашего бизнеса ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
       ${top.length ? top.map(i => `<a class="w-item" href="#feed/${i.id}"><span class="${isNew(i) ? 'dot-new' : 'dot-read'}"></span>
-        <span><span class="tag ${i.type}">${TYPE_RU[i.type]}</span><div class="w-take" style="margin-top:4px">${esc(takeaway(i))}</div><div class="w-ev">${esc(i.title)}</div></span></a>`).join('') : '<div class="empty">Значимых событий за сутки нет</div>'}
+        <span><span class="tag ${i.type}">${TYPE_RU[i.type]}</span><div class="w-take" style="margin-top:4px">${esc(takeaway(i))}</div><div class="w-ev">${esc(i.title)}</div></span></a>`).join('')
+        : `<div class="empty">${API ? 'Разобранных событий пока нет. <a class="linkbtn" href="#feed">Посмотреть отобранные новости →</a>' : 'Значимых событий за сутки нет'}</div>`}
     </div>
     <div class="grid3" style="margin-top:16px">${['Последние платежи', 'Документы на подпись', 'Предложения'].map(t => `<div class="card"><div class="muted">${t}</div><div class="ph w80"></div><div class="ph w60"></div></div>`).join('')}</div>`;
 }
@@ -313,7 +352,68 @@ function viewFeed() {
     ${c.data_quality.length ? `<div class="dq"><b>Качество данных:</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
     <div class="filters">${f('all', 'Все')}${f('risk', 'Риски')}${f('opportunity', 'Возможности')}${f('info', 'К сведению')}</div>
     ${items.length ? items.map(cardHtml).join('') : '<div class="card empty">В этой категории событий нет</div>'}
+    ${API ? `<div class="sec"><h3>Отобрано для компании из свежих новостей</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}
     <footer class="note">Главный вывод сформулирован для роли «${esc(role().name)}». Порядок: сила влияния × важность тем для роли.</footer>`;
+}
+/* События, прошедшие отбор правилами (без LLM): видно, на какие признаки компании они сработали */
+function eventsHtml() {
+  const ev = state.events[state.company];
+  if (ev === undefined) return '<div class="muted">Подбираем события…</div>';
+  if (!ev.length) return '<div class="card empty">Среди собранных новостей нет событий, значимых для этой компании</div>';
+  return ev.map(e => `<div class="card" style="margin-bottom:8px">
+    <div class="ic-meta"><span class="imp">${esc(e.source)}${e.also ? ` +${e.also}` : ''}</span><span class="imp">релевантность ${String(e.score).replace('.', ',')}</span><span class="ic-date">${fmtDate(e.published)}</span></div>
+    <div class="ic-event">${srcLink(e, esc(e.title))}</div>
+    <div style="margin-top:6px">${e.matched.map(m => `<span class="chip f">${esc(m)}</span>`).join('')}</div>
+    <div class="actions-row">${e.analyzed ? '<span class="muted">Разобрано — карточка в ленте</span>' : `<button class="btn" data-ev="${e.id}" ${state.busy ? 'disabled' : ''}>Разобрать агентом</button>`}</div></div>`).join('');
+}
+async function loadEvents() {
+  if (!API || state.events[state.company] !== undefined) return;
+  const cid = state.company;
+  try { state.events[cid] = await api(`/api/companies/${cid}/events`); } catch (e) { state.events[cid] = []; }
+  const box = document.getElementById('events-box');
+  if (box && cid === state.company) { box.innerHTML = eventsHtml(); bindEvents(); }
+}
+/* Запуск агента: шаги показываются в панели «Как ИИ пришёл к выводу», карточка добавляется в ленту */
+async function runAgent(path, body) {
+  state.busy = true;
+  $('#drawer-body').innerHTML = '<div class="step shown k-plan"><span class="dot"></span><div class="st">Агент работает</div><div class="sd">План → инструменты → черновик → самопроверка. Обычно 20–60 секунд.</div></div>';
+  $('#drawer-totals').textContent = ''; $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
+  try {
+    const r = await api(path, body);
+    if (!r.ok) { openTrace({trace: r.trace}); $('#drawer-totals').textContent = 'Карточка не прошла проверку: ' + r.errors.slice(0, 2).join('; '); return null; }
+    const cid = state.company;
+    DATA.insights[cid] = [r.card, ...(DATA.insights[cid] || []).filter(c => c.id !== r.card.id)];
+    ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = 'agent';
+    delete state.events[cid];
+    closeOverlays(); location.hash = '#feed/' + r.card.id;
+    return r.card;
+  } catch (e) { closeOverlays(); showModal('Агент не запустился', e.message); return null; }
+  finally { state.busy = false; }
+}
+function bindEvents() {
+  document.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => runAgent(`/api/companies/${state.company}/events/${b.dataset.ev}/analyze`, {}));
+}
+function viewAnalyze() {
+  return `<h1>Разобрать новость</h1><div class="muted">Вставьте новость, которой нет в ленте, — агент разберёт её для компании «${esc(company().display)}» и роли «${esc(role().name)}».</div>
+    <form class="card" id="an-form" style="margin-top:16px;display:grid;gap:10px">
+      <input name="title" placeholder="Заголовок новости" required minlength="5" maxlength="300" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px">
+      <textarea name="text" placeholder="Текст новости" rows="8" maxlength="8000" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px"></textarea>
+      <input name="url" placeholder="Ссылка на первоисточник (необязательно)" maxlength="500" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px">
+      <div><button class="btn pri" ${state.busy ? 'disabled' : ''}>Разобрать</button></div>
+    </form>`;
+}
+function viewQuality() {
+  return `<h1>Качество сервиса</h1><div class="muted">Метрики для регулярного мониторинга: обратная связь, проверка карточек, расход модели.</div><div id="q-box" class="card" style="margin-top:16px">Загружаем…</div>`;
+}
+async function loadQuality() {
+  try {
+    const m = await api('/api/metrics'), f = m.feedback, r = m.agent_runs, pct = x => x === null ? '—' : Math.round(x * 100) + '%';
+    $('#q-box').innerHTML = `<div class="grid3">
+      <div><div class="muted">Полезно / не про нас</div><h2>${f.useful} / ${f.not_relevant}</h2><div class="muted">доля полезных ${pct(f.useful_share)}</div></div>
+      <div><div class="muted">Запусков агента</div><h2>${r.total}</h2><div class="muted">прошли проверку ${pct(r.pass_rate)}</div></div>
+      <div><div class="muted">Расход модели</div><h2>${r.cost_rub.toLocaleString('ru-RU')} ₽</h2><div class="muted">среднее время ${(r.avg_ms / 1000).toFixed(1).replace('.', ',')} с</div></div></div>
+      <div class="src-line">Карточек: ${Object.entries(m.cards).map(([k, v]) => `${k === 'seed' ? 'примеры' : 'агент'} — ${v}`).join(', ')}</div>`;
+  } catch (e) { $('#q-box').textContent = e.message; }
 }
 
 /* ---------- чат, график, трасса ---------- */
@@ -344,11 +444,16 @@ function render(scrollToOpen = false) {
   const [route, arg] = (location.hash || '#home').slice(1).split('/');
   const r = route === 'insight' ? 'feed' : route;   // старые ссылки #insight/id
   if (r === 'feed' && arg && state.open !== arg) { state.open = arg; markRead(arg); scrollToOpen = true; }
-  closeOverlays();
-  renderNav(r);
-  $('#app').innerHTML = r === 'feed' ? viewFeed() : viewHome();
+  if (!state.busy) closeOverlays();
+  renderNav(r); renderStatus();
+  const views = {feed: viewFeed, analyze: viewAnalyze, quality: viewQuality};
+  $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))();
   state.firstPaint = false;
   bind();
+  if (r === 'feed') { loadEvents(); bindEvents(); }
+  if (r === 'quality' && API) loadQuality();
+  if (r === 'analyze' && API) $('#an-form').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target);
+    runAgent('/api/analyze', {company_id: state.company, title: f.get('title'), text: f.get('text'), url: f.get('url')}); };
   if (scrollToOpen && state.open) { const el = document.getElementById('card-' + state.open); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
   else if (!arg) window.scrollTo(0, 0);
 }
@@ -367,7 +472,8 @@ function bind() {
   const card = document.getElementById('card-' + i.id); if (!card) return;
   card.querySelector('[data-trace]').onclick = () => openTrace(i);
   card.querySelector('[data-chat]').onclick = () => { state.chatOpen[i.id] = !state.chatOpen[i.id]; render(); };
-  card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render(); });
+  card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render();
+    if (API) api(`/api/cards/${i.id}/feedback`, {company_id: state.company, role: state.role, vote: b.dataset.fb}).catch(() => {}); });
   card.querySelectorAll('[data-cta]').forEach(b => b.onclick = () => {
     const mgr = b.dataset.cta === 'manager';
     $('#modal-title').textContent = mgr ? 'Заявка отправлена' : b.dataset.label;
@@ -378,13 +484,26 @@ function bind() {
   const log = card.querySelector('.chat-log');
   const push = (q, html) => { (state.chats[i.id] = state.chats[i.id] || []).push(`<div class="msg u">${esc(q)}</div>`, `<div class="msg a">${html}</div>`); log.innerHTML = state.chats[i.id].join(''); };
   card.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const c = i.chat[+b.dataset.q]; push(c.q, c.a.map(s => stmtHtml(s)).join('') + (c.chart ? chartSvg(c.chart) : '')); });
-  card.querySelector('.chat-in').onsubmit = e => { e.preventDefault(); const inp = e.target.querySelector('input'), q = inp.value.trim(); if (!q) return;
-    push(q, '<div class="muted">В прототипе работают подсказанные вопросы. В рабочей версии ответ соберёт агент — с той же разметкой «факт / банк / ИИ».</div>'); inp.value = ''; };
+  card.querySelector('.chat-in').onsubmit = async e => { e.preventDefault(); const inp = e.target.querySelector('input'), q = inp.value.trim(); if (!q) return;
+    inp.value = '';
+    if (!API) { push(q, '<div class="muted">В прототипе работают подсказанные вопросы. В рабочей версии ответ соберёт агент — с той же разметкой «факт / банк / ИИ».</div>'); return; }
+    log.insertAdjacentHTML('beforeend', `<div class="msg u">${esc(q)}</div><div class="msg a muted" id="chat-wait">Ищем ответ в аналитике банка…</div>`);
+    try { const r = await api(`/api/cards/${i.id}/chat`, {company_id: state.company, q});
+      (state.chats[i.id] = state.chats[i.id] || []).push(`<div class="msg u">${esc(q)}</div>`, `<div class="msg a">${r.a.map(s => stmtHtml(s, i)).join('')}${r.chart ? chartSvg(r.chart) : ''}</div>`);
+    } catch (err) { (state.chats[i.id] = state.chats[i.id] || []).push(`<div class="msg u">${esc(q)}</div>`, `<div class="msg a muted">${esc(err.message)}</div>`); }
+    log.innerHTML = state.chats[i.id].join(''); };
 }
 $('#overlay').onclick = closeOverlays; $('#drawer-close').onclick = closeOverlays; $('#modal-ok').onclick = closeOverlays;
 window.addEventListener('hashchange', () => render());
-initSwitchers();
-render();
+(async function boot() {
+  if (API) {
+    try { DATA = await api('/api/bootstrap'); }
+    catch (e) { $('#app').innerHTML = `<div class="card empty">Сервис недоступен: ${esc(e.message)}</div>`; return; }
+  }
+  state.company = DATA.companies[0].id; state.role = DATA.roles[0].id;
+  initSwitchers();
+  render();
+})();
 </script>
 </body>
 </html>
