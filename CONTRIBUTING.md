@@ -17,7 +17,7 @@
 - Сдача: GitHub-репо, Docker (запуск одной командой), README, lock-файлы, THIRD_PARTY_NOTICES.
 
 ## Формат данных = контракт
-`data/mock_data.json` — общий формат: агент выдаёт такой JSON, бэк отдаёт, фронт рисует.
+`frontend/mock_data.json` — общий формат: агент выдаёт такой JSON, бэк отдаёт, фронт рисует.
 Поля НЕ переименовывать и не удалять без договорённости команды. Ключевое:
 - карточка: `id, type (risk|opportunity|info), impact (high|medium|low), topics[], is_new, title (событие),
   takeaway{cfo, ceo, treasurer} (главный вывод под роль — короткий слой), key_points[] (2–3 обоснования),
