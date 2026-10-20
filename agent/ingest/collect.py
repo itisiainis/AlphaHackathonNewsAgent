@@ -45,7 +45,7 @@ TRIAGE_SYSTEM = """Ты — редактор деловых новостей д�
 importance: 0-2 — реклама, розыгрыши, мелочи; 3-5 — рутина; 6-8 — значимо для бизнеса; 9-10 — особо важно.
 topics — только из списка: ставка, долг, курс, ликвидность, отрасль, спрос, контрагенты.
 sectors — двузначные коды классов ОКВЭД2 затронутых отраслей (например "24" металлургия, "41" строительство).
-Ответ — строго JSON-массив."""
+Ответ — строго JSON-объект {"items": [объекты по каждой новости]}."""
 
 
 def _event_id(p: Post) -> str:
@@ -120,8 +120,9 @@ def triage(llm, events: list[dict]) -> int:
         user = "\n\n".join(f"[{j}] {e['source']}: {e['title']}\n{e['text'][:500]}" for j, e in enumerate(batch))
         try:
             c = llm.complete(ROUTING["triage"], [{"role": "system", "content": TRIAGE_SYSTEM},
-                                                 {"role": "user", "content": user}], max_tokens=3000)
-            items = extract_json(c.text)
+                                                 {"role": "user", "content": user}], max_tokens=6000, json_mode=True)
+            data = extract_json(c.text)
+            items = data.get("items", []) if isinstance(data, dict) else data
         except LLMUnavailable:
             return done
         except ValueError:

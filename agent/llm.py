@@ -10,8 +10,12 @@
   задаются переменными окружения (.env.example).
 - Кеш: ответ на одинаковый запрос (модель + сообщения + параметры) хранится на диске и повторно
   не оплачивается. Это главный способ уложиться в 500 ₽/день при повторных показах.
-- Стоимость: токены из ответа × тариф модели (₽ за 1 млн токенов, из окружения). Сумма за день
-  копится в файле; при превышении LLM_DAILY_BUDGET_RUB новые платные вызовы отклоняются.
+- Стоимость: прокси кейса возвращает в каждом ответе `usage.cost` — в тех же единицах, что и лимит
+  ключа (500 ₽ в день, сброс в 03:00 МСК). Берём его; если поля нет — считаем по тарифу из окружения
+  (₽ за 1 млн токенов). Сумма за день копится в файле; при превышении LLM_DAILY_BUDGET_RUB новые
+  платные вызовы отклоняются до того, как прокси вернёт «Budget has been exceeded».
+- Рассуждающие модели (GLM, DeepSeek, Qwen3.6, Kimi) тратят на «размышления» сотни токенов из
+  max_tokens, поэтому лимит ответа по умолчанию большой, а пустой ответ из-за обрезки — явная ошибка.
 - Без ключа клиент работает в режиме offline: кешированные ответы отдаются, новые — нет
   (LLMUnavailable). Остальная система — сбор, отбор, поиск, валидация — работает без модели.
 """
@@ -78,7 +82,7 @@ class LLM:
         self.budget = daily_budget_rub if daily_budget_rub is not None else _env_float("LLM_DAILY_BUDGET_RUB", 450)
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.http = http or httpx.Client(timeout=120)
+        self.http = http or httpx.Client(timeout=180)
 
     @property
     def online(self) -> bool:
@@ -107,7 +111,7 @@ class LLM:
             return 0.0, 0.0
 
     # ---------- вызов ----------
-    def complete(self, role: str, messages: list[dict], max_tokens: int = 2000,
+    def complete(self, role: str, messages: list[dict], max_tokens: int = 6000,
                  temperature: float = 0.2, json_mode: bool = False) -> Completion:
         if role not in ALLOWED:
             raise ValueError(f"модель «{role}» не входит в список разрешённых кейсом")
@@ -132,6 +136,8 @@ class LLM:
             try:
                 r = self.http.post(f"{self.base_url}/chat/completions", json=body,
                                    headers={"Authorization": f"Bearer {self.api_key}"})
+                if r.status_code >= 400 and "budget" in r.text.lower():  # «Budget has been exceeded» — не повторяем
+                    raise LLMUnavailable("бюджет ключа на сегодня исчерпан, сброс в 03:00 МСК")
                 if r.status_code in (429, 500, 502, 503, 504):
                     raise httpx.HTTPStatusError("повторяемая ошибка", request=r.request, response=r)
                 r.raise_for_status()
@@ -143,12 +149,21 @@ class LLM:
         else:
             raise LLMUnavailable(f"провайдер модели не ответил: {last}")
 
-        text = (data["choices"][0]["message"].get("content") or "").strip()
+        if data.get("error"):
+            raise LLMUnavailable(f"провайдер вернул ошибку: {str(data['error'])[:200]}")
+        choice = (data.get("choices") or [{}])[0]
+        text = ((choice.get("message") or {}).get("content") or "").strip()
         usage = data.get("usage") or {}
         tin, tout = int(usage.get("prompt_tokens", 0)), int(usage.get("completion_tokens", 0))
-        pin, pout = self.price(role)
-        cost = (tin * pin + tout * pout) / 1_000_000
+        if isinstance(usage.get("cost"), (int, float)):
+            cost = float(usage["cost"])  # стоимость, посчитанная прокси кейса
+        else:
+            pin, pout = self.price(role)
+            cost = (tin * pin + tout * pout) / 1_000_000
         self._add_spend(cost)
+        if not text:
+            why = "лимит токенов израсходован на рассуждения" if choice.get("finish_reason") == "length" else "пустой ответ"
+            raise LLMUnavailable(f"модель {model_id}: {why}")
         cache_file.write_text(json.dumps({"text": text, "model": model_id, "tokens_in": tin, "tokens_out": tout},
                                          ensure_ascii=False), encoding="utf-8")
         return Completion(text, model_id, tin, tout, cost, int((time.monotonic() - t0) * 1000), False)

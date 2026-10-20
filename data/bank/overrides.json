@@ -1,41 +1,71 @@
 {
- "_comment": "Названия — по списку материалов на слайде 17 презентации кейса (приоритетный источник). Даты, не найденные в тексте, указаны с пояснением.",
+ "_comment": "Названия — по списку материалов на слайде 17 презентации кейса (приоритетный источник). Даты, не найденные в тексте, указаны с пояснением. kind: macro — макроэкономика, rates — ключевая ставка, bonds — долговой рынок, commodity — сырьевой рынок, industry — отраслевой обзор. okved_prefixes — префиксы кодов ОКВЭД, для которых документ является отраслевой оценкой банка (только для commodity и industry); сравниваются с полным кодом компании, поэтому обзор золота не считается оценкой для опта металлами.",
  "ALFA-7M26.pdf": {
   "title": "Макростатистика 7М26: данные по рынку труда не подтверждают охлаждения экономики",
-  "url": "https://drive.google.com/file/d/1HZDq3WGRFdzgm1TZ5hWL23Q3I9c2Eq64/view"
+  "url": "https://drive.google.com/file/d/1HZDq3WGRFdzgm1TZ5hWL23Q3I9c2Eq64/view",
+  "kind": "macro",
+  "okved_prefixes": []
  },
  "ALFA-Macro_Insights-Policy_Rate_11Sep.pdf": {
   "title": "Ключевая ставка ЦБ РФ: ставка без изменения на 14,0%, риторика стала жестче",
-  "url": "https://drive.google.com/file/d/1shHG89LtMgHT1_uEebHmQSFZe_zbeq7-/view"
+  "url": "https://drive.google.com/file/d/1shHG89LtMgHT1_uEebHmQSFZe_zbeq7-/view",
+  "kind": "rates",
+  "okved_prefixes": []
  },
  "ALFA-consumption.pdf": {
   "title": "Потребление на пике",
-  "url": "https://drive.google.com/file/d/1riR1lhsb6EY1MwGMxdBlS_tI5ed9mIiz/view"
+  "url": "https://drive.google.com/file/d/1riR1lhsb6EY1MwGMxdBlS_tI5ed9mIiz/view",
+  "kind": "macro",
+  "okved_prefixes": []
  },
  "ALFA-macro_stat1H26.pdf": {
   "title": "Макростатистика 1П26: слабый рост 1П26 смещает прогноз роста ВВП на 0,1% за год",
-  "url": "https://drive.google.com/file/d/1khcHwoS0FkG9p_0J4XoHGaGq3B4V0ime/view"
+  "url": "https://drive.google.com/file/d/1khcHwoS0FkG9p_0J4XoHGaGq3B4V0ime/view",
+  "kind": "macro",
+  "okved_prefixes": []
  },
  "ALFA_Russian_Steels_1К21PreviewUpdate_15Apr2021.pdf": {
   "title": "Российская сталь: ралли цен продолжается; прогноз результатов за 1К21",
-  "url": "https://drive.google.com/file/d/1yLCBrIoyIsubLTEBvBHh6io48ysnW-wn/view"
+  "url": "https://drive.google.com/file/d/1yLCBrIoyIsubLTEBvBHh6io48ysnW-wn/view",
+  "kind": "industry",
+  "okved_prefixes": [
+   "24.1",
+   "24.2",
+   "24.3",
+   "46.72"
+  ]
  },
  "FI_Strategy_3Q26_22072026.pdf": {
   "title": "Тактический взгляд на 3-й квартал 2026 года: время собирать камни",
-  "url": "https://drive.google.com/file/d/1hq3Fhyz9ce_sRyGUQB1MdoHeQdfAJfhK/view"
+  "url": "https://drive.google.com/file/d/1hq3Fhyz9ce_sRyGUQB1MdoHeQdfAJfhK/view",
+  "kind": "bonds",
+  "okved_prefixes": []
  },
  "Gold_digest_August26.pdf": {
   "title": "Обзор рынка золота, август 2026",
   "date": "2026-08-31",
   "date_note": "в документе указан только месяц; взят конец периода обзора",
-  "url": "https://drive.google.com/file/d/1a7TXOCHARfKzUR0hn9Cm9gQSrIldxTDE/view"
+  "url": "https://drive.google.com/file/d/1a7TXOCHARfKzUR0hn9Cm9gQSrIldxTDE/view",
+  "kind": "commodity",
+  "okved_prefixes": [
+   "07.29.4",
+   "24.41",
+   "32.12",
+   "46.72.23",
+   "46.48",
+   "47.77"
+  ]
  },
  "Inflation_tracker_02.pdf": {
   "title": "Инфляция 25–31 августа: основные выводы",
-  "url": "https://drive.google.com/file/d/19iW3Ph8_wO0HHQY7Ik4lTfC3jRc9gjWV/view"
+  "url": "https://drive.google.com/file/d/19iW3Ph8_wO0HHQY7Ik4lTfC3jRc9gjWV/view",
+  "kind": "macro",
+  "okved_prefixes": []
  },
  "Бонд_Бриф_14092026.pdf": {
   "title": "Бонд Бриф: итоги недели",
-  "url": "https://drive.google.com/file/d/1bPzix_332N2CyMY0tqCHuYtGsfJWnFGv/view"
+  "url": "https://drive.google.com/file/d/1bPzix_332N2CyMY0tqCHuYtGsfJWnFGv/view",
+  "kind": "bonds",
+  "okved_prefixes": []
  }
 }

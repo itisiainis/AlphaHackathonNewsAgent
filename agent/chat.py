@@ -36,7 +36,7 @@ def answer(llm: LLM, bank: BM25Index, card: dict, company_id: str, question: str
     user = (f"Вопрос: {question}\n\nКарточка: {json.dumps({k: card[k] for k in ('title', 'takeaway', 'blocks')}, ensure_ascii=False)[:5000]}\n\n"
             f"Профиль: {json.dumps(profile, ensure_ascii=False)}\n\nИсточники:\n" + "\n".join(lines))
     c = llm.complete(ROUTING["chat"], [{"role": "system", "content": CHAT_SYSTEM}, {"role": "user", "content": user}],
-                     max_tokens=1200, json_mode=True)
+                     max_tokens=6000, json_mode=True)
     data = extract_json(c.text)
     out = []
     for s in data.get("a", []):
