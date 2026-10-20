@@ -61,8 +61,10 @@ class Pipeline:
         p = profiles.get(company_id)
         return rank(self.events, profiles.features(p), p["bank_products"])[:limit]
 
-    def analyze(self, event: dict, company_id: str) -> tuple[Result, Match]:
+    def analyze(self, event: dict, company_id: str, on_step=None) -> tuple[Result, Match]:
+        """on_step(state) вызывается на каждом шаге агента — для показа трассы в реальном времени."""
         p = profiles.get(company_id)
         m = match(event, profiles.features(p), p["bank_products"])
         agent = Agent(self.llm, self.bank, self.news, today=self.today, bank_meta=self.bank_meta)
+        agent.on_step = on_step
         return agent.run(event, company_id, m), m

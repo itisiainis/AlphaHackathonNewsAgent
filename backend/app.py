@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import queue
 import threading
 import time
 from collections import defaultdict, deque
@@ -16,7 +17,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agent import profiles
@@ -160,8 +161,8 @@ def metrics():
 
 
 # ---------- действия ----------
-def _run(event: dict, cid: str) -> dict:
-    res, m = pipe.analyze(event, cid)
+def _run(event: dict, cid: str, on_step=None) -> dict:
+    res, m = pipe.analyze(event, cid, on_step)
     if res.error and not res.trace:  # модель недоступна до первого шага — это не запуск агента
         raise HTTPException(503, res.error)
     cost = sum(t.get("cost", 0) for t in res.trace)
@@ -174,13 +175,61 @@ def _run(event: dict, cid: str) -> dict:
     return {"ok": True, "card": res.card, "warnings": res.report.warnings, "tool_log": res.tool_log}
 
 
-@app.post("/api/companies/{cid}/events/{eid}/analyze")
-def analyze_event(cid: str, eid: str):
+SSE_PING_SEC = 15
+
+
+def _stream(event: dict, cid: str) -> StreamingResponse:
+    """Запуск агента с потоком шагов (Server-Sent Events): step — текущая трасса, result — итог, error — отказ.
+
+    Агент работает в отдельном потоке и кладёт шаги в очередь; генератор отдаёт их клиенту по мере
+    появления. Пока модель думает дольше SSE_PING_SEC, уходит комментарий-пинг, чтобы прокси не
+    закрыли соединение."""
+    q: queue.Queue = queue.Queue()
+
+    def worker():
+        try:
+            q.put({"type": "result", **_run(event, cid, on_step=lambda st: q.put({"type": "step", **st}))})
+        except HTTPException as e:
+            q.put({"type": "error", "detail": e.detail})
+        except Exception:
+            log.exception("агент упал на событии %s", event.get("id"))
+            q.put({"type": "error", "detail": "внутренняя ошибка агента"})
+        finally:
+            q.put(None)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    def gen():
+        while True:
+            try:
+                item = q.get(timeout=SSE_PING_SEC)
+            except queue.Empty:
+                yield ": ping\n\n"
+                continue
+            if item is None:
+                return
+            yield "data: " + json.dumps(item, ensure_ascii=False) + "\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+def _event(cid: str, eid: str) -> dict:
     _company(cid)
     ev = next((e for e in pipe.events if e["id"] == eid), None)
     if not ev:
         raise HTTPException(404, "событие не найдено")
-    return _run(ev, cid)
+    return ev
+
+
+@app.post("/api/companies/{cid}/events/{eid}/analyze")
+def analyze_event(cid: str, eid: str):
+    return _run(_event(cid, eid), cid)
+
+
+@app.post("/api/companies/{cid}/events/{eid}/analyze/stream")
+def analyze_event_stream(cid: str, eid: str):
+    return _stream(_event(cid, eid), cid)
 
 
 class NewsIn(BaseModel):
@@ -195,6 +244,13 @@ def analyze_news(body: NewsIn):
     """Разбор новости, которой нет в базе (критерий 04: ранее не показанные новости)."""
     _company(body.company_id)
     return _run(event_from_text(body.title, body.text, body.url), body.company_id)
+
+
+@app.post("/api/analyze/stream")
+def analyze_news_stream(body: NewsIn):
+    """То же, что /api/analyze, но шаги агента приходят потоком SSE."""
+    _company(body.company_id)
+    return _stream(event_from_text(body.title, body.text, body.url), body.company_id)
 
 
 class ChatIn(BaseModel):

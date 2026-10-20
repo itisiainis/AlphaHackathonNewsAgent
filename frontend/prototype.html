@@ -143,6 +143,10 @@ h2{font-size:16px;margin:0}
 .step.shown .dot{border-color:var(--ai);background:var(--ai)}
 .step.k-check.shown .dot{border-color:#c79200;background:#c79200}
 .step.k-done.shown .dot{border-color:var(--opp);background:var(--opp)}
+.step.k-pending .dot{border-color:var(--ai);background:#fff;animation:pulse 1.2s ease-in-out infinite}
+.step.k-pending .st{color:var(--ink-2);font-family:inherit;font-weight:500}
+@keyframes pulse{50%{background:var(--ai)}}
+@media (prefers-reduced-motion:reduce){.step.k-pending .dot{animation:none;background:var(--ai)}}
 .step .st{font-weight:600;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-word}
 .step .sd{color:var(--ink-2);font-size:13px}
 .step .sm{font-size:11px;color:var(--ink-3)}
@@ -374,13 +378,36 @@ async function loadEvents() {
   if (box && cid === state.company) { box.innerHTML = eventsHtml(); bindEvents(); }
 }
 /* Запуск агента: шаги показываются в панели «Как ИИ пришёл к выводу», карточка добавляется в ленту */
+/* Поток шагов агента (SSE поверх POST): шаги рисуются по мере работы, итог — карточка в ленте */
+async function streamAgent(path, body) {
+  const resp = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  if (!resp.ok) { const d = await resp.json().catch(() => ({})); throw new Error(typeof d.detail === 'string' ? d.detail : 'сервис недоступен'); }
+  const reader = resp.body.getReader(), dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const {value, done} = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, {stream: true});
+    let k;
+    while ((k = buf.indexOf('\n\n')) >= 0) {
+      const line = buf.slice(0, k).split('\n').find(l => l.startsWith('data: '));
+      buf = buf.slice(k + 2);
+      if (!line) continue;  // пинг, чтобы соединение не закрылось, пока модель думает
+      const ev = JSON.parse(line.slice(6));
+      if (ev.type === 'step') liveTrace(ev.trace, ev.pending);
+      else if (ev.type === 'result') return ev;
+      else if (ev.type === 'error') throw new Error(ev.detail);
+    }
+  }
+  throw new Error('соединение с сервисом прервалось');
+}
 async function runAgent(path, body) {
   state.busy = true;
-  $('#drawer-body').innerHTML = '<div class="step shown k-plan"><span class="dot"></span><div class="st">Агент работает</div><div class="sd">План → инструменты → черновик → самопроверка. Обычно 20–60 секунд.</div></div>';
-  $('#drawer-totals').textContent = ''; $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
+  liveTrace([], 'Агент запускается…');
+  $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
   try {
-    const r = await api(path, body);
-    if (!r.ok) { openTrace({trace: r.trace}); $('#drawer-totals').textContent = 'Карточка не прошла проверку: ' + r.errors.slice(0, 2).join('; '); return null; }
+    const r = await streamAgent(path + '/stream', body);
+    if (!r.ok) { liveTrace(r.trace, ''); $('#drawer-totals').textContent = 'Карточка не прошла проверку: ' + r.errors.slice(0, 2).join('; '); return null; }
     const cid = state.company;
     DATA.insights[cid] = [r.card, ...(DATA.insights[cid] || []).filter(c => c.id !== r.card.id)];
     ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = 'agent';
@@ -426,13 +453,22 @@ function chartSvg(ch) {
   return `<div class="chart"><div class="cap">${esc(ch.title)}</div><svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">${bars}</svg>${ch.note ? `<div class="note">${esc(ch.note)}</div>` : ''}</div>`;
 }
 let traceTimers = [];
+const rub = x => x > 0 && x < 0.01 ? '<0,01' : x.toFixed(2).replace('.', ',');
+const stepHtml = (s, shown) => `<div class="step k-${s.kind}${shown ? ' shown' : ''}"><span class="dot"></span><div class="st">${esc(s.title)}</div><div class="sd">${esc(s.detail)}</div>
+    <div class="sm">${s.ms ? (s.ms / 1000).toFixed(1).replace('.', ',') + ' с' : ''}${s.cost ? ' · ' + rub(s.cost) + ' ₽' : ''}</div></div>`;
+const totalsText = tr => `Шагов: ${tr.length} · время: ${(tr.reduce((a, s) => a + s.ms, 0) / 1000).toFixed(1).replace('.', ',')} с · стоимость: ${rub(tr.reduce((a, s) => a + s.cost, 0))} ₽`;
+/* Трасса во время работы агента: готовые шаги + строка «что происходит сейчас» */
+function liveTrace(trace, pending) {
+  traceTimers.forEach(clearTimeout); traceTimers = [];
+  $('#drawer-body').innerHTML = trace.map(s => stepHtml(s, true)).join('')
+    + (pending ? `<div class="step shown k-pending"><span class="dot"></span><div class="st">${esc(pending)}</div></div>` : '');
+  $('#drawer-totals').textContent = trace.length ? totalsText(trace) : 'План → инструменты → черновик → самопроверка. Обычно около минуты.';
+}
 function openTrace(i) {
   traceTimers.forEach(clearTimeout); traceTimers = [];
   const body = $('#drawer-body');
-  body.innerHTML = i.trace.map(s => `<div class="step k-${s.kind}"><span class="dot"></span><div class="st">${esc(s.title)}</div><div class="sd">${esc(s.detail)}</div>
-    <div class="sm">${s.ms ? (s.ms / 1000).toFixed(1).replace('.', ',') + ' с' : ''}${s.cost ? ' · ' + s.cost.toFixed(2).replace('.', ',') + ' ₽' : ''}</div></div>`).join('');
-  const total = i.trace.reduce((a, s) => a + s.cost, 0), time = i.trace.reduce((a, s) => a + s.ms, 0);
-  $('#drawer-totals').textContent = `Шагов: ${i.trace.length} · время: ${(time / 1000).toFixed(1).replace('.', ',')} с · стоимость: ${total.toFixed(2).replace('.', ',')} ₽`;
+  body.innerHTML = i.trace.map(s => stepHtml(s, false)).join('');
+  $('#drawer-totals').textContent = totalsText(i.trace);
   $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
   let t = 150;
   [...body.querySelectorAll('.step')].forEach((el, k) => { traceTimers.push(setTimeout(() => el.classList.add('shown'), t)); t += Math.min(900, 250 + i.trace[k].ms / 6); });
