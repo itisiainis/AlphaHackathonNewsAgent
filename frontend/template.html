@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Новости для бизнеса — прототип</title>
+<style>
+:root{
+  --brand:#e3262f; --brand-soft:#fdecec;
+  --ink:#16181d; --ink-2:#4a4f5a; --ink-3:#8a909c;
+  --line:#e6e8ec; --bg:#f4f5f7; --card:#fff;
+  --fact:#5b6472; --fact-bg:#eef0f3;
+  --bank:#e3262f; --bank-bg:#fdecec;
+  --ai:#6b4fd8; --ai-bg:#efebfc;
+  --risk:#d23b3b; --opp:#1f9d60; --info:#6b7280;
+  --r:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;overflow-x:hidden;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+.top{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:10px 20px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700}
+.logo i{width:30px;height:30px;border-radius:8px;background:var(--brand);color:#fff;display:grid;place-items:center;font-style:normal}
+.logo small{font-weight:400;color:var(--ink-3)}
+.switch{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.switch label{font-size:12px;color:var(--ink-3)}
+select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;max-width:260px}
+.demo-tag{font-size:11px;background:#fff7e0;color:#8a6200;border:1px solid #f1dc9c;border-radius:6px;padding:2px 8px}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 54px)}
+nav.side{background:#fff;border-right:1px solid var(--line);padding:16px 10px}
+nav.side a{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--ink-2);margin-bottom:2px}
+nav.side a.on{background:var(--bg);color:var(--ink);font-weight:600}
+nav.side a.dis{color:var(--ink-3);pointer-events:none}
+.badge{background:var(--brand);color:#fff;border-radius:10px;font-size:11px;padding:0 7px;font-weight:600}
+main{padding:24px;max-width:1080px;width:100%}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:16px;margin:0 0 12px}
+.muted{color:var(--ink-3)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.ph{height:10px;border-radius:5px;background:#eceef1;margin:8px 0}
+.ph.w60{width:60%}.ph.w40{width:40%}.ph.w80{width:80%}
+.widget{border:1px solid var(--line);border-left:4px solid var(--brand);margin-top:16px}
+.widget-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--brand);padding-left:0}
+.item{display:block;text-decoration:none;padding:14px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.item:hover .it-title{color:var(--brand)}
+.it-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.it-title{font-weight:600;font-size:15px;margin:4px 0 2px}
+.it-why{color:var(--ink-2)}
+.tag{font-size:11px;font-weight:600;border-radius:6px;padding:2px 8px;text-transform:uppercase;letter-spacing:.02em}
+.tag.risk{background:#fdeaea;color:var(--risk)}.tag.opportunity{background:#e6f6ee;color:var(--opp)}.tag.info{background:#eef0f3;color:var(--info)}
+.imp{font-size:11px;color:var(--ink-3)}
+.chip{font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-2)}
+.chip.match{background:#fff;border-color:#d9d2f7;color:var(--ai)}
+.src-line{font-size:12px;color:var(--ink-3);margin-top:6px}
+.forwho{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0 16px}
+.filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.filters button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px}
+.filters button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.dq{background:#fff7e0;border:1px solid #f1dc9c;color:#6b4d00;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.crumbs{font-size:13px;margin-bottom:10px}
+.crumbs a{color:var(--ink-3)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:12px 0 4px;color:var(--ink-2)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend .l-fact::before{background:var(--fact)}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}
+.blocks{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.blk{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.blk.wide{grid-column:1/-1}
+.blk h3{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.blk h3 b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--bg);color:var(--ink-2);font-size:11px}
+.stmt{position:relative;padding:6px 10px 6px 12px;margin:6px 0;border-left:3px solid;border-radius:0 6px 6px 0}
+.stmt.fact{border-color:var(--fact);background:var(--fact-bg)}
+.stmt.bank{border-color:var(--bank);background:var(--bank-bg)}
+.stmt.ai{border-color:var(--ai);background:var(--ai-bg)}
+.stmt .p{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-right:6px}
+.stmt.fact .p{color:var(--fact)}.stmt.bank .p{color:var(--bank)}.stmt.ai .p{color:var(--ai)}
+.stmt sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
+.str{font-size:11px;color:var(--ink-3);margin-left:6px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two h4{margin:0 0 4px;font-size:13px}
+.h-risk{color:var(--risk)}.h-opp{color:var(--opp)}
+.quote{border-left:3px solid var(--bank);background:var(--bank-bg);padding:10px 12px;border-radius:0 8px 8px 0;font-style:italic}
+.quote.stale{border-color:#c79200;background:#fff7e0}
+.stale-note{font-size:12px;color:#8a6200;font-weight:600;margin-top:6px}
+.srcs{margin:0;padding-left:18px}
+.srcs li{margin:3px 0}
+.kind{font-size:10px;font-weight:700;text-transform:uppercase;border-radius:4px;padding:1px 5px;margin-right:6px}
+.kind.news,.kind.stat{background:var(--fact-bg);color:var(--fact)}.kind.bank{background:var(--bank-bg);color:var(--bank)}
+.actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.fb{display:flex;gap:8px;align-items:center;margin-top:14px}
+.fb .btn.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chat{margin-top:12px}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.sugg button{border:1px solid #d9d2f7;background:#fff;color:var(--ai);border-radius:999px;padding:4px 12px}
+.msg{margin:10px 0;max-width:85%}
+.msg.u{margin-left:auto;background:var(--ink);color:#fff;border-radius:12px 12px 2px 12px;padding:8px 12px}
+.msg.a{background:#fff;border:1px solid var(--line);border-radius:12px 12px 12px 2px;padding:8px 12px}
+.chat-in{display:flex;gap:8px;margin-top:8px}
+.chat-in input{flex:1;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
+.chart{margin-top:8px}
+.chart .cap{font-size:12px;color:var(--ink-2);font-weight:600}
+.chart .note{font-size:11px;color:var(--ink-3)}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .25s,visibility .25s;visibility:hidden;z-index:40;display:flex;flex-direction:column}
+.drawer.open{transform:none;visibility:visible}
+.drawer header{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.drawer .body{padding:16px 18px;overflow:auto;flex:1}
+.step{position:relative;padding:0 0 16px 26px;opacity:.25;transition:opacity .3s}
+.step.shown{opacity:1}
+.step::before{content:"";position:absolute;left:7px;top:18px;bottom:0;width:2px;background:var(--line)}
+.step:last-child::before{display:none}
+.dot{position:absolute;left:0;top:3px;width:16px;height:16px;border-radius:50%;border:2px solid var(--ink-3);background:#fff}
+.step.shown .dot{border-color:var(--ai);background:var(--ai)}
+.step.k-check.shown .dot{border-color:#c79200;background:#c79200}
+.step.k-done.shown .dot{border-color:var(--opp);background:var(--opp)}
+.step .st{font-weight:600;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-word}
+.step .sd{color:var(--ink-2);font-size:13px}
+.step .sm{font-size:11px;color:var(--ink-3)}
+.totals{border-top:1px solid var(--line);padding:12px 18px;font-size:13px;color:var(--ink-2)}
+.overlay{position:fixed;inset:0;background:rgba(15,17,22,.35);display:none;z-index:30}
+.overlay.on{display:block}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:22px;width:min(380px,92%);z-index:50;display:none}
+.modal.on{display:block}
+.empty{padding:30px;text-align:center;color:var(--ink-3)}
+footer.note{font-size:11px;color:var(--ink-3);margin-top:28px}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr}
+  nav.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 10px}
+  nav.side a{white-space:nowrap}
+  .grid3,.blocks,.two{grid-template-columns:1fr}
+  main{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><i>Б</i>Бизнес-банк <small>· прототип</small></div>
+  <span class="demo-tag">демо-режим</span>
+  <div class="switch">
+    <label for="sel-company">Компания</label><select id="sel-company"></select>
+    <label for="sel-role">Роль</label><select id="sel-role"></select>
+  </div>
+</div>
+<div class="layout">
+  <nav class="side" id="nav"></nav>
+  <main id="app"></main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-label="Шаги агента">
+  <header><b>Как ИИ пришёл к выводу</b><button class="btn" id="drawer-close">Закрыть</button></header>
+  <div class="body" id="drawer-body"></div>
+  <div class="totals" id="drawer-totals"></div>
+</aside>
+<div class="modal" id="modal">
+  <h2 id="modal-title">Заявка отправлена</h2>
+  <p class="muted" id="modal-text">Персональный менеджер свяжется с вами в течение рабочего дня. К заявке приложена карточка события.</p>
+  <button class="btn pri" id="modal-ok">Понятно</button>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const state = {
+  company: DATA.companies[0].id,
+  role: DATA.roles[0].id,
+  filter: 'all',
+  feedback: {},
+  chats: {}
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const IMPACT = {high: 3, medium: 2, low: 1};
+const IMPACT_RU = {high: 'высокое влияние', medium: 'среднее влияние', low: 'низкое влияние'};
+const TYPE_RU = {risk: 'риск', opportunity: 'возможность', info: 'к сведению'};
+const P_RU = {fact: 'факт', bank: 'позиция банка', ai: 'вывод ИИ'};
+const STR_RU = {high: 'сильно', medium: 'умеренно', low: 'слабо'};
+const fmtDate = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'});
+
+const company = () => DATA.companies.find(c => c.id === state.company);
+const role = () => DATA.roles.find(r => r.id === state.role);
+function ranked() {
+  const w = role().weights;
+  return (DATA.insights[state.company] || [])
+    .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + (w[t] || 0), 0)}))
+    .sort((a, b) => b.score - a.score);
+}
+
+/* ---------- шапка и навигация ---------- */
+function initSwitchers() {
+  $('#sel-company').innerHTML = DATA.companies.map(c =>
+    `<option value="${c.id}">${esc(c.display)} · ${c.id}</option>`).join('');
+  $('#sel-role').innerHTML = DATA.roles.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  $('#sel-company').onchange = e => { state.company = e.target.value; if (location.hash.startsWith('#insight')) location.hash = '#feed'; render(); };
+  $('#sel-role').onchange = e => { state.role = e.target.value; render(); };
+}
+function renderNav(route) {
+  const risks = ranked().filter(i => i.type === 'risk' && i.impact === 'high').length;
+  $('#nav').innerHTML = `
+    <a href="#home" class="${route === 'home' ? 'on' : ''}">Главная</a>
+    <a class="dis">Счета</a><a class="dis">Платежи</a><a class="dis">Документы</a>
+    <a href="#feed" class="${route !== 'home' ? 'on' : ''}">Новости для бизнеса ${risks ? `<span class="badge">${risks}</span>` : ''}</a>`;
+}
+
+/* ---------- элементы ---------- */
+const tagHtml = i => `<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>`;
+function srcLine(i) {
+  const first = i.sources[0];
+  const more = i.sources.length - 1;
+  return `${esc(first.name)}${more > 0 ? ` +${more}` : ''} · ${fmtDate(i.published)}`;
+}
+function itemHtml(i, withChips = true) {
+  return `<a class="item" href="#insight/${i.id}">
+    <div class="it-row">${tagHtml(i)}</div>
+    <div class="it-title">${esc(i.title)}</div>
+    <div class="it-why">${esc(i.why_short)}</div>
+    ${withChips ? `<div class="it-row" style="margin-top:6px">${i.matched.map(m => `<span class="chip match">${esc(m)}</span>`).join('')}</div>` : ''}
+    <div class="src-line">${srcLine(i)}</div>
+  </a>`;
+}
+function stmtHtml(s, i) {
+  const ref = (s.src !== undefined && i) ? ` <sup><a href="#src-${s.src}" title="${esc(i.sources[s.src].name)}">[${s.src + 1}]</a></sup>` : '';
+  const str = s.strength ? `<span class="str">${STR_RU[s.strength]}</span>` : '';
+  return `<div class="stmt ${s.p}"><span class="p">${P_RU[s.p]}</span>${esc(s.t)}${ref}${str}</div>`;
+}
+function forWho(c) {
+  const chips = [c.okved + ' ' + c.industry, c.revenue_bn.toLocaleString('ru-RU') + ' млрд ₽', c.region,
+    ...c.products, ...(c.ved.length ? ['ВЭД: ' + c.ved.join(', ')] : []),
+    ...(c.group_size > 1 ? ['группа: ' + c.group_size + ' юрлиц'] : [])];
+  return `<div class="forwho"><span class="muted">Подобрано для:</span>${chips.map(x => `<span class="chip">${esc(x)}</span>`).join('')}<span class="muted">· роль: ${esc(role().name)}</span></div>`;
+}
+
+/* ---------- экраны ---------- */
+function viewHome() {
+  const c = company(); const top = ranked().slice(0, 3);
+  const risks = top.filter(i => i.type === 'risk' && i.impact === 'high').length;
+  return `
+    <h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${c.id}</div>
+    <div class="grid3" style="margin-top:16px">
+      ${['Расчётный счёт', 'Валютный счёт', 'Кредиты и лизинг'].map(t => `<div class="card"><div class="muted">${t}</div><div class="ph w60"></div><div class="ph w40"></div></div>`).join('')}
+    </div>
+    <div class="card widget">
+      <div class="widget-head">
+        <h2 style="margin:0">Важное для вашего бизнеса ${risks ? `<span class="badge">${risks} риск${risks > 1 ? 'а' : ''}</span>` : ''}</h2>
+        <a class="btn ghost" href="#feed">Вся лента →</a>
+      </div>
+      ${top.length ? top.map(i => itemHtml(i, false)).join('') : '<div class="empty">Значимых событий за сутки нет</div>'}
+    </div>
+    <div class="grid3" style="margin-top:16px">
+      ${['Последние платежи', 'Документы на подпись', 'Предложения'].map(t => `<div class="card"><div class="muted">${t}</div><div class="ph w80"></div><div class="ph w60"></div><div class="ph w40"></div></div>`).join('')}
+    </div>`;
+}
+function viewFeed() {
+  const c = company();
+  let items = ranked();
+  if (state.filter !== 'all') items = items.filter(i => i.type === state.filter);
+  const f = (id, label) => `<button data-f="${id}" class="${state.filter === id ? 'on' : ''}">${label}</button>`;
+  return `
+    <h1>Новости для бизнеса</h1>
+    ${forWho(c)}
+    ${c.data_quality.length ? `<div class="dq"><b>Качество данных:</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
+    <div class="filters">${f('all', 'Все')}${f('risk', 'Риски')}${f('opportunity', 'Возможности')}${f('info', 'К сведению')}</div>
+    <div class="card">${items.length ? items.map(i => itemHtml(i)).join('') : '<div class="empty">В этой категории событий нет</div>'}</div>
+    <footer class="note">Порядок: сила влияния × вес тем для роли «${esc(role().name)}». Смените роль в шапке — порядок изменится.</footer>`;
+}
+function viewInsight(id) {
+  const i = ranked().find(x => x.id === id);
+  if (!i) return `<div class="empty">Событие не найдено для этой компании. <a href="#feed">К ленте</a></div>`;
+  const b = i.blocks;
+  const list = arr => arr.length ? arr.map(s => stmtHtml(s, i)).join('') : '<div class="muted">—</div>';
+  const fb = state.feedback[i.id];
+  const ctas = b.actions.filter(a => a.cta).map(a => `<button class="btn pri" data-cta="${a.cta.kind}" data-label="${esc(a.cta.label)}">${esc(a.cta.label)}</button>`).join('');
+  return `
+    <div class="crumbs"><a href="#feed">← Новости для бизнеса</a></div>
+    <div class="it-row">${tagHtml(i)}</div>
+    <h1 style="margin-top:6px">${esc(i.title)}</h1>
+    <div class="it-why" style="font-size:15px">${esc(i.why_short)}</div>
+    <div class="it-row" style="margin-top:8px">${i.matched.map(m => `<span class="chip match">${esc(m)}</span>`).join('')}</div>
+    <div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span><span class="l-ai">вывод ИИ</span>
+      <button class="btn" id="open-trace" style="margin-left:auto">Как ИИ пришёл к выводу</button></div>
+    <div class="blocks">
+      <div class="blk wide"><h3><b>1</b>Что произошло</h3>${list(b.what)}</div>
+      <div class="blk wide"><h3><b>2</b>Почему это важно вам</h3>${list(b.why)}</div>
+      <div class="blk wide"><h3><b>3</b>Последствия</h3>
+        <div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities)}</div></div></div>
+      <div class="blk"><h3><b>4</b>Что можно сделать</h3>${list(b.actions)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>
+      <div class="blk"><h3><b>5</b>Как оценивает банк</h3>
+        <div class="quote ${b.bank.stale ? 'stale' : ''}">«${esc(b.bank.quote)}»</div>
+        <div class="src-line">${esc(b.bank.doc)} · ${fmtDate(b.bank.date)}</div>
+        ${b.bank.stale ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}</div>
+      <div class="blk wide"><h3><b>6</b>На чём основан вывод</h3>
+        <div class="two">
+          <div><h4>Источники</h4><ol class="srcs">${i.sources.map((s, k) => `<li id="src-${k}"><span class="kind ${s.kind}">${s.kind === 'bank' ? 'банк' : s.kind === 'stat' ? 'статистика' : 'новость'}</span><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a> <span class="muted">· ${fmtDate(s.date)}</span></li>`).join('')}</ol></div>
+          <div><h4>Признаки компании</h4>${b.basis.features.map(f => `<div class="chip match" style="display:inline-block;margin:2px 4px 2px 0">${esc(f)}</div>`).join('')}
+            ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div>
+        </div></div>
+    </div>
+    <div class="fb"><span class="muted">Это было полезно?</span>
+      <button class="btn ${fb === 'up' ? 'sel' : ''}" data-fb="up">Полезно</button>
+      <button class="btn ${fb === 'down' ? 'sel' : ''}" data-fb="down">Не про нас</button>
+      ${fb ? '<span class="muted">Спасибо — учтём в подборке</span>' : ''}</div>
+    <div class="card chat"><h2>Уточнить у ИИ</h2>
+      ${i.chat.length ? `<div class="sugg">${i.chat.map((c, k) => `<button data-q="${k}">${esc(c.q)}</button>`).join('')}</div>` : ''}
+      <div id="chat-log">${(state.chats[i.id] || []).map(m => m.html).join('')}</div>
+      <form class="chat-in" id="chat-form"><input id="chat-input" placeholder="Задайте вопрос по этому событию" autocomplete="off"><button class="btn pri">Спросить</button></form>
+    </div>`;
+}
+
+/* ---------- чат и график ---------- */
+function chartSvg(ch) {
+  const W = 420, H = 170, pad = 28, max = Math.max(...ch.points.map(p => p[1])) * 1.15;
+  const bw = (W - pad * 2) / ch.points.length * 0.55, step = (W - pad * 2) / ch.points.length;
+  const bars = ch.points.map((p, k) => {
+    const h = (p[1] / max) * (H - 50), x = pad + k * step + (step - bw) / 2, y = H - 24 - h;
+    return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="4" fill="var(--ai)" opacity="${0.55 + 0.45 * (k + 1) / ch.points.length}"/>
+      <text x="${x + bw / 2}" y="${y - 6}" text-anchor="middle" font-size="12" fill="var(--ink)">${String(p[1]).replace('.', ',')}</text>
+      <text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${esc(p[0])}</text>`;
+  }).join('');
+  return `<div class="chart"><div class="cap">${esc(ch.title)}</div><svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">${bars}</svg>${ch.note ? `<div class="note">${esc(ch.note)}</div>` : ''}</div>`;
+}
+function pushChat(id, q, answerHtml) {
+  const log = state.chats[id] = state.chats[id] || [];
+  log.push({html: `<div class="msg u">${esc(q)}</div>`});
+  log.push({html: `<div class="msg a">${answerHtml}</div>`});
+  $('#chat-log').innerHTML = log.map(m => m.html).join('');
+}
+
+/* ---------- трасса агента ---------- */
+let traceTimers = [];
+function openTrace(i) {
+  traceTimers.forEach(clearTimeout); traceTimers = [];
+  const body = $('#drawer-body');
+  body.innerHTML = i.trace.map(s => `<div class="step k-${s.kind}"><span class="dot"></span>
+    <div class="st">${esc(s.title)}</div><div class="sd">${esc(s.detail)}</div>
+    <div class="sm">${s.ms ? (s.ms / 1000).toFixed(1).replace('.', ',') + ' с' : ''}${s.cost ? ' · ' + s.cost.toFixed(2).replace('.', ',') + ' ₽' : ''}</div></div>`).join('');
+  const total = i.trace.reduce((a, s) => a + s.cost, 0), time = i.trace.reduce((a, s) => a + s.ms, 0);
+  $('#drawer-totals').textContent = `Шагов: ${i.trace.length} · время: ${(time / 1000).toFixed(1).replace('.', ',')} с · стоимость: ${total.toFixed(2).replace('.', ',')} ₽`;
+  $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
+  const steps = [...body.querySelectorAll('.step')];
+  let t = 150;
+  steps.forEach((el, k) => { traceTimers.push(setTimeout(() => el.classList.add('shown'), t)); t += Math.min(900, 250 + i.trace[k].ms / 6); });
+}
+function closeOverlays() {
+  $('#drawer').classList.remove('open'); $('#overlay').classList.remove('on'); $('#modal').classList.remove('on');
+}
+
+/* ---------- роутинг ---------- */
+function render() {
+  const h = location.hash || '#home';
+  const [route, arg] = h.slice(1).split('/');
+  closeOverlays();
+  renderNav(route);
+  const app = $('#app');
+  if (route === 'feed') app.innerHTML = viewFeed();
+  else if (route === 'insight') app.innerHTML = viewInsight(arg);
+  else app.innerHTML = viewHome();
+  window.scrollTo(0, 0);
+  bind(route, arg);
+}
+function bind(route, arg) {
+  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { state.filter = b.dataset.f; render(); });
+  if (route !== 'insight') return;
+  const i = ranked().find(x => x.id === arg); if (!i) return;
+  $('#open-trace').onclick = () => openTrace(i);
+  document.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render(); });
+  document.querySelectorAll('[data-cta]').forEach(b => b.onclick = () => {
+    $('#modal-title').textContent = b.dataset.cta === 'manager' ? 'Заявка отправлена' : b.dataset.label;
+    $('#modal-text').textContent = b.dataset.cta === 'manager'
+      ? 'Персональный менеджер свяжется с вами в течение рабочего дня. К заявке приложена карточка события.'
+      : 'В рабочей версии здесь откроется страница продукта с условиями, подобранными под профиль компании.';
+    $('#modal').classList.add('on'); $('#overlay').classList.add('on');
+  });
+  document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
+    const c = i.chat[+b.dataset.q];
+    pushChat(i.id, c.q, c.a.map(s => stmtHtml(s)).join('') + (c.chart ? chartSvg(c.chart) : ''));
+  });
+  $('#chat-form').onsubmit = e => {
+    e.preventDefault();
+    const q = $('#chat-input').value.trim(); if (!q) return;
+    pushChat(i.id, q, `<div class="muted">В прототипе работают подсказанные вопросы. В рабочей версии ответ соберёт агент: найдёт данные через инструменты и вернёт ответ с той же разметкой «факт / банк / ИИ».</div>`);
+    $('#chat-input').value = '';
+  };
+}
+$('#overlay').onclick = closeOverlays;
+$('#drawer-close').onclick = closeOverlays;
+$('#modal-ok').onclick = closeOverlays;
+window.addEventListener('hashchange', render);
+initSwitchers();
+render();
+</script>
+</body>
+</html>
