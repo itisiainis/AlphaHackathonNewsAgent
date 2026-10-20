@@ -65,3 +65,32 @@ def test_provider_errors_become_unavailable(tmp_path, monkeypatch):
     llm = make(tmp_path, lambda req: httpx.Response(503, json={}))
     with pytest.raises(LLMUnavailable, match="не ответил"):
         llm.complete("deepseek", [{"role": "user", "content": "x"}])
+
+
+def test_provider_cost_used_when_present(tmp_path):
+    def h(req):
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                                         "usage": {"prompt_tokens": 10, "completion_tokens": 5, "cost": 0.0355}})
+    c = make(tmp_path, h).complete("glm", [{"role": "user", "content": "x"}])
+    assert c.cost_rub == pytest.approx(0.0355)
+
+
+def test_budget_exceeded_is_not_retried(tmp_path):
+    calls = []
+
+    def h(req):
+        calls.append(1)
+        return httpx.Response(400, json={"error": {"message": "Budget has been exceeded! Current cost: 500.1"}})
+    with pytest.raises(LLMUnavailable, match="бюджет"):
+        make(tmp_path, h).complete("gemma", [{"role": "user", "content": "x"}])
+    assert len(calls) == 1
+
+
+def test_reasoning_ate_all_tokens(tmp_path):
+    def h(req):
+        return httpx.Response(200, json={"choices": [{"message": {"content": ""}, "finish_reason": "length"}],
+                                         "usage": {"prompt_tokens": 10, "completion_tokens": 6000, "cost": 0.5}})
+    llm = make(tmp_path, h)
+    with pytest.raises(LLMUnavailable, match="рассуждения"):
+        llm.complete("qwen", [{"role": "user", "content": "x"}])
+    assert llm.spent_today() == pytest.approx(0.5), "расход учитывается даже при пустом ответе"

@@ -10,7 +10,7 @@ from datetime import date
 from pathlib import Path
 
 from . import okved, profiles
-from .kb import BM25Index, load_bank_index
+from .kb import BM25Index, load_bank_index, load_bank_meta
 from .llm import LLM
 from .loop import Agent, Result
 from .matching import Match, match, rank
@@ -50,6 +50,7 @@ class Pipeline:
         self.llm = llm
         self.today = today or date.today()
         self.bank = load_bank_index(ROOT / "data" / "bank" / "docs.json")
+        self.bank_meta = load_bank_meta(ROOT / "data" / "bank" / "docs.json")
         self.reload_news()
 
     def reload_news(self):
@@ -63,5 +64,5 @@ class Pipeline:
     def analyze(self, event: dict, company_id: str) -> tuple[Result, Match]:
         p = profiles.get(company_id)
         m = match(event, profiles.features(p), p["bank_products"])
-        agent = Agent(self.llm, self.bank, self.news, today=self.today)
+        agent = Agent(self.llm, self.bank, self.news, today=self.today, bank_meta=self.bank_meta)
         return agent.run(event, company_id, m), m

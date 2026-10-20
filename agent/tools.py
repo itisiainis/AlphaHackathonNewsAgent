@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from . import profiles
-from .kb import BM25Index, Hit
+from .kb import BM25Index, Hit, industry_assessment
 
 
 @dataclass
@@ -41,10 +41,16 @@ class ToolSession:
     bank: BM25Index
     news: BM25Index
     today: date
+    bank_meta: list[dict] = field(default_factory=list)
     sources: list[Source] = field(default_factory=list)
     log: list[dict] = field(default_factory=list)
 
     def __post_init__(self):
+        p = profiles.get(self.company_id)
+        # коды ОКВЭД компании: основной полный и классы её группы с долей от 10%
+        self.okved_codes = [p["okved"]] + [g["okved2"] for g in p["group"]["industries"] if g["share"] >= 0.1]
+        self.sectors = set(profiles.features(p)["own_sectors"])
+        self.industry = industry_assessment(self.bank_meta, self.okved_codes, self.today)
         ev = self.event
         self._register(Source("", ev.get("source", "Новость"), ev.get("kind", "news"), ev.get("published", ""),
                               ev.get("url", ""), (ev.get("title", "") + "\n" + ev.get("text", "")).strip()))
@@ -80,16 +86,18 @@ class ToolSession:
                 "top": [{"amount_rub": t["amount_rub"], "industry": t["industry"], "intragroup": t["intragroup"]}
                         for t in s["top"][:10]]}
 
-    def search_bank_analytics(self, query: str, max_age_days: int = 365) -> list[dict]:
-        hits = self.bank.search(query, top_k=4, today=self.today)
+    def search_bank_analytics(self, query: str, industry: str = "auto", max_age_days: int = 365) -> dict:
+        """industry: "auto" — поднимать фрагменты про отрасли компании; код ОКВЭД2 — про эту отрасль; "none" — без фильтра."""
+        boost = self.sectors if industry == "auto" else (set() if industry == "none" else {industry[:2]})
+        hits = self.bank.search(query, top_k=4, today=self.today, boost_sectors=boost)
         out = []
         for h in hits:
             s = self._hit_source(h)
-            out.append({"label": s.label, "doc": h.title, "date": h.date, "page": h.page, "stale": h.stale,
-                        "too_old_for_conclusions": bool(h.date) and
+            out.append({"label": s.label, "doc": h.title, "doc_kind": h.doc_kind, "date": h.date, "page": h.page,
+                        "stale": h.stale, "too_old_for_conclusions": bool(h.date) and
                         (self.today - date.fromisoformat(h.date)).days > max_age_days,
                         "text": h.text[:900]})
-        return out
+        return {"industry_assessment": self.industry, "fragments": out}
 
     def search_news(self, query: str, days: int = 30) -> list[dict]:
         out = []
@@ -107,8 +115,9 @@ class ToolSession:
         "get_event": {"args": {}, "about": "текст анализируемой новости (источник S1)"},
         "get_company_profile": {"args": {}, "about": "профиль выбранной компании: отрасль, масштаб, продукты банка, ВЭД, группа, контрагенты, качество данных"},
         "get_counterparties": {"args": {"side": "customers|suppliers"}, "about": "крупнейшие покупатели или поставщики и их отрасли"},
-        "search_bank_analytics": {"args": {"query": "str", "max_age_days": "int, по умолчанию 365"},
-                                  "about": "поиск по аналитике Альфа-Банка; у каждого фрагмента метка источника и дата"},
+        "search_bank_analytics": {"args": {"query": "str", "industry": "auto | код ОКВЭД2 | none", "max_age_days": "int, по умолчанию 365"},
+                                  "about": "поиск по аналитике Альфа-Банка: фрагменты с меткой источника, датой и типом документа "
+                                           "+ есть ли у банка отраслевая оценка по отрасли компании"},
         "search_news": {"args": {"query": "str", "days": "int, по умолчанию 30"}, "about": "поиск связанных новостей за период"},
     }
 

@@ -24,6 +24,8 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
+from .. import okved
+
 MONTHS = {
     "январ": 1, "феврал": 2, "март": 3, "апрел": 4, "ма": 5, "июн": 6,
     "июл": 7, "август": 8, "сентябр": 9, "октябр": 10, "ноябр": 11, "декабр": 12,
@@ -110,15 +112,42 @@ def _ocr_page(path: Path, page_no: int) -> str:
             return ""
 
 
+# Латинские буквы, которые OCR путает с кириллическими (правятся только внутри смешанных слов)
+HOMOGLYPHS = str.maketrans({"a": "а", "e": "е", "o": "о", "p": "р", "c": "с", "x": "х", "y": "у", "k": "к",
+                            "m": "м", "n": "п", "r": "г", "u": "и", "A": "А", "B": "В", "E": "Е", "K": "К",
+                            "M": "М", "H": "Н", "O": "О", "P": "Р", "C": "С", "T": "Т", "X": "Х"})
+# Типовые ошибки OCR в макроаналитике, найденные в материалах кейса (замер: ~50 на 161 тыс. символов)
+OCR_FIXES = [
+    (r"\b(?:r/r|rir|г/r|r/г)\b", "г/г"),          # «год к году»
+    (r"\b1?1126\b", "1П26"),                     # «первое полугодие 2026»
+    (r"\b([1-4])[KК]([0-9]{2})\b", r"\1К\2"),    # кварталы: латинская K → кириллическая К
+    (r"\b6\.п\.", "б.п."),                        # базисные пункты
+    (r"\bpy[6б]\.", "руб."),
+    (r"[|`©~^_=]{2,}", " "),                      # мусор с графиков
+]
+
+
+def _fix_mixed_word(m: re.Match) -> str:
+    w = m.group(0)
+    return w.translate(HOMOGLYPHS) if re.search(r"[а-яёА-ЯЁ]", w) and re.search(r"[A-Za-z]", w) else w
+
+
 def clean_ocr(text: str) -> str:
-    text = text.replace("py6.", "руб.").replace("pyб.", "руб.")
+    """Склейка строк абзаца, переносов и исправление типовых ошибок распознавания. Идемпотентна."""
     text = re.sub(r"-\n(?=[а-яё])", "", text)            # перенос слова по слогам
     text = re.sub(r"(?<![.:;!?\n])\n(?!\n)", " ", text)  # строка внутри абзаца
+    for pat, rep in OCR_FIXES:
+        text = re.sub(pat, rep, text)
+    text = re.sub(r"[A-Za-zА-Яа-яЁё]+", _fix_mixed_word, text)
     return re.sub(r"[ \t]+", " ", text).strip()
 
 
 def chunk_pages(pages: list[str], size: int = CHUNK_CHARS) -> list[dict]:
-    """Фрагменты по абзацам: [{page, text}], страницы нумеруются с 1."""
+    """Фрагменты по абзацам: [{page, text, sectors, topics}], страницы нумеруются с 1.
+
+    Отрасли (ОКВЭД2) и темы размечаются у каждого фрагмента автоматически словарями okved.py —
+    новый документ размечается без ручной работы. Тип документа (макро / ставка / облигации /
+    отраслевой обзор) задаётся в overrides.json, потому что словарь по всему документу шумит."""
     chunks = []
     for no, page in enumerate(pages, start=1):
         buf = ""
@@ -132,6 +161,9 @@ def chunk_pages(pages: list[str], size: int = CHUNK_CHARS) -> list[dict]:
             buf = f"{buf}\n{para}".strip()
         if buf:
             chunks.append({"page": no, "text": buf})
+    for ch in chunks:
+        ch["sectors"] = okved.sectors_in(ch["text"])
+        ch["topics"] = okved.topics_in(ch["text"])
     return chunks
 
 
@@ -164,6 +196,9 @@ def build_index(raw_dir: Path, out_path: Path, overrides: dict | None = None) ->
     for pdf in sorted(raw_dir.glob("*.pdf")):
         h = file_hash(pdf)
         doc = old[pdf.name] if pdf.name in old and old[pdf.name]["hash"] == h else parse_pdf(pdf)
+        # чистка и нарезка дешёвые — пересчитываются всегда, дорогой OCR берётся из кеша
+        doc["pages"] = [clean_ocr(pg) for pg in doc["pages"]]
+        doc["chunks"] = chunk_pages(doc["pages"])
         doc.update((overrides or {}).get(pdf.name, {}))
         doc["id"] = "bank-" + h[:8]
         docs.append(doc)

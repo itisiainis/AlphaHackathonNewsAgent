@@ -114,3 +114,23 @@ def test_no_key_gives_honest_error():
             raise LLMUnavailable("ключ модели не задан")
     res = run(Offline())
     assert res.card is None and "ключ" in res.error
+
+
+def test_industry_assessment_rule_on_real_bank_meta():
+    """Правило «есть ли отраслевая оценка банка» на настоящих метаданных 9 документов кейса."""
+    from pathlib import Path
+
+    from agent.kb import industry_assessment, load_bank_meta
+    meta = load_bank_meta(Path(__file__).parents[1] / "data" / "bank" / "docs.json")
+    assert industry_assessment(meta, ["46.72"], TODAY)["status"] == "stale", "опт металлами: только сталь 2021 года"
+    assert industry_assessment(meta, ["24.41"], TODAY)["status"] == "fresh", "драгметаллы: обзор золота август 2026"
+    assert industry_assessment(meta, ["45.31.1"], TODAY)["status"] == "none"
+    assert "золота" not in industry_assessment(meta, ["46.72"], TODAY)["note"], "обзор золота — не оценка для опта металлами"
+
+
+def test_card_basis_states_missing_industry_assessment():
+    meta = [{"id": "x", "title": "Российская сталь", "date": "2021-04-15", "kind": "industry", "okved_prefixes": ["24.1"]}]
+    p = profiles.get("U_25835")
+    m = match(EVENT, profiles.features(p), p["bank_products"])
+    res = Agent(ScriptedLLM(), BANK, NEWS, today=TODAY, bank_meta=meta).run(EVENT, "U_25835", m)
+    assert res.card and res.card["blocks"]["basis"]["coverage"].startswith("Отраслевой оценки банка по ОКВЭД 45.31.1 нет")

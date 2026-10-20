@@ -26,6 +26,13 @@ from .prompts import AGENT_SYSTEM, CHECK_SYSTEM, DRAFT_SYSTEM, ROLES_RU, tools_b
 from .tools import ToolSession
 
 MAX_TOOL_STEPS = 5
+
+
+def _count(result) -> int:
+    """Сколько объектов вернул инструмент: список, фрагменты поиска по аналитике или один объект."""
+    if isinstance(result, dict) and "fragments" in result:
+        return len(result["fragments"])
+    return len(result) if isinstance(result, list) else 1
 MAX_REVISIONS = 1
 
 
@@ -39,12 +46,14 @@ class Result:
 
 
 class Agent:
-    def __init__(self, llm: LLM, bank: BM25Index, news: BM25Index, today: date | None = None):
+    def __init__(self, llm: LLM, bank: BM25Index, news: BM25Index, today: date | None = None,
+                 bank_meta: list[dict] | None = None):
         self.llm, self.bank, self.news = llm, bank, news
+        self.bank_meta = bank_meta or []
         self.today = today or date.today()
 
     # ---------- вспомогательное ----------
-    def _ask(self, role: str, messages: list[dict], trace: list, kind: str, title: str, max_tokens=2500):
+    def _ask(self, role: str, messages: list[dict], trace: list, kind: str, title: str, max_tokens=6000):
         """Вызов модели с одной повторной попыткой, если ответ не JSON."""
         c = self.llm.complete(ROUTING[role], messages, max_tokens=max_tokens, json_mode=True)
         cost, ms = c.cost_rub, c.ms
@@ -69,7 +78,7 @@ class Agent:
     # ---------- основной сценарий ----------
     def run(self, event: dict, company_id: str, match: Match) -> Result:
         trace: list[dict] = []
-        ses = ToolSession(company_id, event, self.bank, self.news, self.today)
+        ses = ToolSession(company_id, event, self.bank, self.news, self.today, self.bank_meta)
         try:
             observations = self._explore(ses, match, trace)
             draft = self._draft(ses, match, observations, trace, issues=[])
@@ -83,7 +92,7 @@ class Agent:
                 if q:
                     res, entry = ses.call("search_bank_analytics", {"query": q})
                     trace.append({"kind": "research", "title": f"search_bank_analytics(\"{q}\")",
-                                  "detail": f"повторный поиск по замечанию проверки: {len(res) if isinstance(res, list) else 0} фрагм.",
+                                  "detail": f"повторный поиск по замечанию проверки: {_count(res)} фрагм.",
                                   "ms": entry["ms"], "cost": 0})
                     observations.append({"tool": "search_bank_analytics", "args": {"query": q}, "result": res})
                 draft = self._draft(ses, match, observations, trace, issues=issues)
@@ -125,7 +134,7 @@ class Agent:
             args = ", ".join(f"{k}={json.dumps(v, ensure_ascii=False)}" for k, v in (act.get("args") or {}).items())
             trace.append({"kind": "tool", "title": f"{name}({args})", "ms": entry["ms"] + think["ms"], "cost": think["cost"],
                           "detail": (act.get("thought") or "")[:200] + (" · ошибка: " + result["error"] if not entry["ok"] else
-                                     f" · результат: {len(result) if isinstance(result, list) else 1} объект(ов)")})
+                                     f" · результат: {_count(result)} объект(ов)")})
             observations.append({"tool": name, "args": act.get("args"), "result": result})
             messages += [{"role": "assistant", "content": json.dumps(act, ensure_ascii=False)},
                          {"role": "user", "content": f"Результат {name}: " + json.dumps(result, ensure_ascii=False)[:6000]}]
@@ -140,7 +149,7 @@ class Agent:
             user += "\n\nЗамечания проверки, которые нужно исправить:\n- " + "\n- ".join(issues[:10])
         system = DRAFT_SYSTEM.format(roles=", ".join(f"{k} — {v}" for k, v in ROLES_RU.items()))
         draft = self._ask("draft", [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                          trace, "draft", "Черновик карточки" if not issues else "Правка черновика", max_tokens=3500)
+                          trace, "draft", "Черновик карточки" if not issues else "Правка черновика", max_tokens=10000)
         n = sum(len(draft.get("blocks", {}).get(b, [])) for b in ("what", "why", "risks", "opportunities", "actions"))
         trace[-1]["detail"] = f"{n} утверждений, источников в работе: {len(ses.sources)}"
         return draft
@@ -148,7 +157,7 @@ class Agent:
     def _check(self, card: dict, ses: ToolSession, trace: list) -> dict:
         user = f"Черновик:\n{json.dumps(card, ensure_ascii=False)}\n\nИсточники:\n{self._sources_block(ses)}"
         verdict = self._ask("check", [{"role": "system", "content": CHECK_SYSTEM}, {"role": "user", "content": user}],
-                            trace, "check", "Самопроверка (модель)", max_tokens=800)
+                            trace, "check", "Самопроверка (модель)", max_tokens=6000)
         trace[-1]["detail"] = "замечаний нет" if verdict.get("ok") else "; ".join(verdict.get("issues", [])[:3])
         return verdict
 
@@ -189,8 +198,10 @@ class Agent:
         p = profiles.get(company_id)
         dq = profiles.data_quality(p)
         cust = p["customers"]
-        coverage = "; ".join(dq) or (f"Отрасль известна для {round(cust['known_industry_share'] * 100)}% входящего потока."
-                                     if cust["n"] else "")
+        flow = (f"Отрасль известна для {round(cust['known_industry_share'] * 100)}% входящего потока."
+                if cust["n"] and not dq else "")
+        # отраслевая оценка банка: есть / устарела / нет — решает код, текст попадает в карточку дословно
+        coverage = " ".join(x for x in [ses.industry["note"], "; ".join(dq), flow] if x)
         sources = [{"name": by_label[lbl].name, "kind": by_label[lbl].kind, "date": by_label[lbl].date or self.today.isoformat(),
                     "url": by_label[lbl].url} for lbl in cited]
         card = {
