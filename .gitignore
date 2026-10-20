@@ -1,0 +1,24 @@
+# секреты
+.env
+*.session
+tg_session*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# данные и базы (большие CSV и локальные БД не коммитим)
+*.db
+*.sqlite
+data/raw/
+
+# Node (если фронт будет на React)
+node_modules/
+dist/
+
+# мусор ОС и редакторов
+.DS_Store
+.idea/
+.vscode/
