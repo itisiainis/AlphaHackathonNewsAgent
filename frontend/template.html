@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Новости для бизнеса — прототип</title>
+<title>Новости для бизнеса</title>
 <link rel="icon" href="data:,">
 <style>
 :root{
@@ -29,7 +29,6 @@ button{font:inherit;cursor:pointer}
 .switch{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .switch label{font-size:12px;color:var(--ink-3)}
 select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;max-width:260px}
-.demo-tag{font-size:11px;background:#fff7e0;color:#8a6200;border:1px solid #f1dc9c;border-radius:6px;padding:2px 8px}
 .layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 54px)}
 nav.side{background:#fff;border-right:1px solid var(--line);padding:16px 10px}
 nav.side a{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--ink-2);margin-bottom:2px}
@@ -190,8 +189,7 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
 </head>
 <body>
 <div class="top">
-  <div class="logo"><i>Б</i>Бизнес-банк <small>· прототип</small></div>
-  <span class="demo-tag">демо-режим</span>
+  <div class="logo"><i>Б</i>Бизнес-банк</div>
   <div class="switch">
     <label for="sel-company">Компания</label><select id="sel-company"></select>
     <label for="sel-role">Роль</label><select id="sel-role"></select>
@@ -252,11 +250,13 @@ function ranked() {
 const newCount = () => ranked().filter(isNew).length;
 
 function companyOptions() {
-  const demo = DATA.companies.map(c => `<option value="${c.id}">${esc(c.display)} · ${c.id}</option>`).join('');
+  const label = c => `${c.display} · ${c.revenue_bn.toLocaleString('ru-RU')} млрд ₽${c.region ? ' · ' + c.region : ''}`;
+  const all = [...DATA.companies, ...(DATA.all_companies || []).filter(c => !DATA.companies.some(d => d.id === c.id))];
+  const seen = {}; all.forEach(c => { seen[label(c)] = (seen[label(c)] || 0) + 1; });
+  const opt = c => `<option value="${c.id}">${esc(label(c))}${seen[label(c)] > 1 ? ' · ' + c.id : ''}</option>`;
   const shown = new Set(DATA.companies.map(c => c.id));
-  const rest = (DATA.all_companies || []).filter(c => !shown.has(c.id))
-    .map(c => `<option value="${c.id}">${esc(c.display)} · ${c.revenue_bn.toLocaleString('ru-RU')} млрд ₽ · ${c.id}</option>`).join('');
-  return rest ? `<optgroup label="С карточками">${demo}</optgroup><optgroup label="Все компании выборки">${rest}</optgroup>` : demo;
+  const rest = all.filter(c => !shown.has(c.id)).map(opt).join('');
+  return rest ? `<optgroup label="Подробные разборы">${DATA.companies.map(opt).join('')}</optgroup><optgroup label="Все компании">${rest}</optgroup>` : DATA.companies.map(opt).join('');
 }
 async function loadCompany(id) {
   if (!API || DATA.companies.some(c => c.id === id)) return;
@@ -283,10 +283,7 @@ function renderNav(route) {
     <a href="#quality" class="${route === 'quality' ? 'on' : ''}">Качество</a>` : ''}`;
 }
 function renderStatus() {
-  if (!API || !DATA.status) return;
-  const s = DATA.status;
-  $('.demo-tag').textContent = s.llm_online ? `модель подключена · расход сегодня ${s.spent_today_rub.toLocaleString('ru-RU')} из ${s.budget_rub} ₽`
-    : 'без ключа модели: доступны отбор и готовые карточки';
+  // состояние модели и расход — служебная информация: только на странице «Качество», не в шапке
 }
 function showModal(title, text) { $('#modal-title').textContent = title; $('#modal-text').textContent = text;
   $('#modal').classList.add('on'); $('#overlay').classList.add('on'); }
@@ -299,7 +296,8 @@ function stmtHtml(s, i) {
   const str = s.strength ? `<span class="str">${STR_RU[s.strength]}</span>` : '';
   return `<div class="stmt ${s.p}"><span class="p">${P_FULL[s.p]}</span>${esc(s.t)}${ref(s, i)}${str}</div>`;
 }
-const SIGN_RU = {risk: 'риск', opportunity: 'возможность', neutral: 'ориентир'};
+const CALC_STR = {high: 'высокая', medium: 'средняя', low: 'низкая'};
+const ORIGIN_RU = {seed: 'подготовлены аналитиками', agent: 'ИИ-аналитик', rules: 'краткие разборы'};
 // сумма по-русски, как в agent/impact.py: «1,3 млрд ₽», «20 млн ₽»
 function rubFmt(x, signed = true) {
   const a = Math.abs(x), sg = x < 0 ? '−' : x > 0 && signed ? '+' : '';
@@ -309,7 +307,7 @@ function rubFmt(x, signed = true) {
 function calcHtml(c, i) {
   const sc = c.scale ? `<label class="calc-s">${esc(c.scale.label)} <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="напр. 5" data-per="${c.scale.per_bn}" data-signed="${c.sign !== 'neutral'}" data-period="${esc(c.scale.period)}"> <output>→ введите сумму, чтобы пересчитать</output></label>` : '';
   return `<div class="calc ${c.sign}"><div class="calc-h"><span>${esc(c.title)}</span><span class="calc-v">${esc(c.value)}</span></div>
-    <div class="calc-f">Формула: <code>${esc(c.formula)}</code> · расчёт кодом, не моделью · ${SIGN_RU[c.sign]}${c.strength ? ', надёжность: ' + STR_RU[c.strength] : ''}</div>${sc}
+    <div class="calc-f">Формула: <code>${esc(c.formula)}</code>${c.strength ? ' · надёжность оценки: ' + CALC_STR[c.strength] : ''}</div>${sc}
     <details><summary>Данные и допущения</summary>${c.inputs.map(s => stmtHtml(s, i)).join('')}<ul>${c.assumptions.map(a => `<li>${esc(a)}</li>`).join('')}</ul></details></div>`;
 }
 const list = (arr, i) => arr && arr.length ? arr.map(s => stmtHtml(s, i)).join('') : '<div class="muted">—</div>';
@@ -326,7 +324,7 @@ function cardHtml(i) {
   const kp = (i.key_points || []).map(s => `<li><span class="pdot ${s.p}">${P_RU[s.p]}</span><span>${esc(s.t)}${ref(s, i)}</span></li>`).join('');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'seed' ? '<span class="chip" title="Карточка подготовлена командой по материалам кейса, не агентом">пример</span>' : origin(i) === 'rules' ? '<span class="chip" title="Модель была недоступна: факты, данные компании, позиция банка и расчёт собраны правилами, без выводов ИИ">без ИИ</span>' : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка и расчёт — без выводов ИИ">краткий разбор</span>' : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
       <div class="ic-event">${esc(i.title)}</div>
       <div class="ic-take">${esc(takeaway(i))}</div>
       <ul class="kp">${kp}</ul>
@@ -372,7 +370,7 @@ function bodyHtml(i) {
 /* ---------- экраны ---------- */
 function viewHome() {
   const c = company(), top = ranked().slice(0, 3), n = newCount();
-  return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${c.id} · ${esc(role().name)}</div>
+  return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
     <div class="grid3" style="margin-top:16px">${['Расчётный счёт', 'Валютный счёт', 'Кредиты и лизинг'].map(t => `<div class="card"><div class="muted">${t}</div><div class="ph w60"></div><div class="ph w40"></div></div>`).join('')}</div>
     <div class="card widget">
       <div class="widget-head"><h2>Важное для вашего бизнеса ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
@@ -393,19 +391,21 @@ function viewFeed() {
     ${c.data_quality.length ? `<div class="dq"><b>Качество данных:</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
     <div class="filters">${f('all', 'Все')}${f('risk', 'Риски')}${f('opportunity', 'Возможности')}${f('info', 'К сведению')}</div>
     ${items.length ? items.map(cardHtml).join('') : '<div class="card empty">В этой категории событий нет</div>'}
-    ${API ? `<div class="sec"><h3>Отобрано для компании из свежих новостей</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}
-    <footer class="note">Главный вывод сформулирован для роли «${esc(role().name)}». Порядок: сила влияния × важность тем для роли.</footer>`;
+    ${API ? `<div class="sec"><h3>Свежие новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
 }
 /* События, прошедшие отбор правилами (без LLM): видно, на какие признаки компании они сработали */
+const EVENTS_SHOWN = 5;
 function eventsHtml() {
   const ev = state.events[state.company];
-  if (ev === undefined) return '<div class="muted">Подбираем события…</div>';
-  if (!ev.length) return '<div class="card empty">Среди собранных новостей нет событий, значимых для этой компании</div>';
-  return ev.map(e => `<div class="card" style="margin-bottom:8px">
-    <div class="ic-meta"><span class="imp">${esc(e.source)}${e.also ? ` +${e.also}` : ''}</span><span class="imp">релевантность ${String(e.score).replace('.', ',')}</span><span class="ic-date">${fmtDate(e.published)}</span></div>
+  if (ev === undefined) return '<div class="muted">Подбираем новости…</div>';
+  if (!ev.length) return '<div class="card empty">Значимых для компании новостей за последние дни нет</div>';
+  const more = state.moreEvents ? ev : ev.slice(0, EVENTS_SHOWN);
+  return more.map(e => `<div class="card" style="margin-bottom:8px">
+    <div class="ic-meta"><span class="imp">${esc(e.source)}${e.also ? ` +${e.also}` : ''}</span><span class="ic-date">${fmtDate(e.published)}</span></div>
     <div class="ic-event">${srcLink(e, esc(e.title))}</div>
     <div style="margin-top:6px">${e.matched.map(m => `<span class="chip f">${esc(m)}</span>`).join('')}</div>
-    <div class="actions-row">${e.analyzed ? '<span class="muted">Разобрано — карточка в ленте</span>' : `<button class="btn" data-ev="${e.id}" ${state.busy ? 'disabled' : ''}>Разобрать агентом</button>`}</div></div>`).join('');
+    <div class="actions-row">${e.analyzed ? '<span class="muted">Разобрано — карточка в ленте</span>' : `<button class="btn" data-ev="${e.id}" ${state.busy ? 'disabled' : ''}>Разобрать для компании</button>`}</div></div>`).join('')
+    + (ev.length > more.length ? `<button class="btn" data-more-events>Показать ещё ${ev.length - more.length}</button>` : '');
 }
 async function loadEvents() {
   if (!API || state.events[state.company] !== undefined) return;
@@ -450,13 +450,15 @@ async function runAgent(path, body) {
     ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.mode === 'rules' ? 'rules' : 'agent';
     delete state.events[cid];
     closeOverlays(); location.hash = '#feed/' + r.card.id;
-    state.flash = r.mode === 'rules' ? r.notice + ' Полный разбор агентом можно запустить снова, когда модель станет доступна.' : '';
+    state.flash = r.mode === 'rules' ? r.notice + ' Подробный разбор можно запустить позже.' : '';
     return r.card;
   } catch (e) { closeOverlays(); showModal('Агент не запустился', e.message); return null; }
   finally { state.busy = false; }
 }
 function bindEvents() {
   document.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => runAgent(`/api/companies/${state.company}/events/${b.dataset.ev}/analyze`, {}));
+  const more = document.querySelector('[data-more-events]');
+  if (more) more.onclick = () => { state.moreEvents = true; $('#events-box').innerHTML = eventsHtml(); bindEvents(); };
 }
 function viewAnalyze() {
   return `<h1>Разобрать новость</h1><div class="muted">Вставьте ссылку (статья, пост в Telegram, PDF) или текст новости, которой нет в ленте, — агент разберёт её для компании «${esc(company().display)}» и роли «${esc(role().name)}». Достаточно одной ссылки: текст мы прочитаем сами.</div>
@@ -478,7 +480,7 @@ async function loadQuality() {
       <div><div class="muted">Полезно / не про нас</div><h2>${f.useful} / ${f.not_relevant}</h2><div class="muted">доля полезных ${pct(f.useful_share)}</div></div>
       <div><div class="muted">Запусков агента</div><h2>${r.total}</h2><div class="muted">прошли проверку ${pct(r.pass_rate)}</div></div>
       <div><div class="muted">Расход модели</div><h2>${r.cost_rub.toLocaleString('ru-RU')} ₽</h2><div class="muted">среднее время ${(r.avg_ms / 1000).toFixed(1).replace('.', ',')} с</div></div></div>
-      <div class="src-line">Карточек: ${Object.entries(m.cards).map(([k, v]) => `${k === 'seed' ? 'примеры' : 'агент'} — ${v}`).join(', ')}</div>`;
+      <div class="src-line">Разборов в базе: ${Object.entries(m.cards).map(([k, v]) => `${ORIGIN_RU[k] || k} — ${v}`).join(', ')}</div>`;
   } catch (e) { $('#q-box').textContent = e.message; }
 }
 
@@ -502,7 +504,15 @@ function chartSvg(ch) {
 }
 let traceTimers = [];
 const rub = x => x > 0 && x < 0.01 ? '<0,01' : x.toFixed(2).replace('.', ',');
-const stepHtml = (s, shown) => `<div class="step k-${s.kind}${shown ? ' shown' : ''}"><span class="dot"></span><div class="st">${esc(s.title)}</div><div class="sd">${esc(s.detail)}</div>
+// названия инструментов агента → понятные шаги
+const TOOL_RU = {get_event: 'Чтение новости', get_company_profile: 'Профиль компании', get_counterparties: 'Контрагенты компании',
+  search_bank_analytics: 'Поиск в аналитике банка', search_news: 'Поиск связанных новостей', calculate_impact: 'Расчёт эффекта в рублях'};
+function stepTitle(t) {
+  const m = /^(\w+)\((.*)\)$/s.exec(t); if (!m || !TOOL_RU[m[1]]) return t;
+  const q = /(?:query=)?"([^"]+)"/.exec(m[2]);
+  return TOOL_RU[m[1]] + (q && m[1].startsWith('search') ? `: «${q[1]}»` : '');
+}
+const stepHtml = (s, shown) => `<div class="step k-${s.kind}${shown ? ' shown' : ''}"><span class="dot"></span><div class="st">${esc(stepTitle(s.title))}</div><div class="sd">${esc(s.detail)}</div>
     <div class="sm">${s.ms ? (s.ms / 1000).toFixed(1).replace('.', ',') + ' с' : ''}${s.cost ? ' · ' + rub(s.cost) + ' ₽' : ''}</div></div>`;
 const totalsText = tr => `Шагов: ${tr.length} · время: ${(tr.reduce((a, s) => a + s.ms, 0) / 1000).toFixed(1).replace('.', ',')} с · стоимость: ${rub(tr.reduce((a, s) => a + s.cost, 0))} ₽`;
 /* Трасса во время работы агента: готовые шаги + строка «что происходит сейчас» */
@@ -510,13 +520,13 @@ function liveTrace(trace, pending) {
   traceTimers.forEach(clearTimeout); traceTimers = [];
   $('#drawer-body').innerHTML = trace.map(s => stepHtml(s, true)).join('')
     + (pending ? `<div class="step shown k-pending"><span class="dot"></span><div class="st">${esc(pending)}</div></div>` : '');
-  $('#drawer-totals').textContent = trace.length ? totalsText(trace) : 'План → инструменты → черновик → самопроверка. Обычно около минуты.';
+  $('#drawer-totals').textContent = trace.length ? totalsText(trace) : 'План → поиск данных → черновик → проверка. Обычно около минуты.';
 }
 function openTrace(i) {
   traceTimers.forEach(clearTimeout); traceTimers = [];
   const body = $('#drawer-body');
   body.innerHTML = i.trace.map(s => stepHtml(s, false)).join('');
-  $('#drawer-totals').textContent = totalsText(i.trace);
+  $('#drawer-totals').textContent = origin(i) === 'seed' ? 'Разбор подготовлен аналитиками по материалам банка' : totalsText(i.trace);
   $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
   let t = 150;
   [...body.querySelectorAll('.step')].forEach((el, k) => { traceTimers.push(setTimeout(() => el.classList.add('shown'), t)); t += Math.min(900, 250 + i.trace[k].ms / 6); });
@@ -568,7 +578,7 @@ function bind() {
     const mgr = b.dataset.cta === 'manager';
     $('#modal-title').textContent = mgr ? 'Заявка отправлена' : b.dataset.label;
     $('#modal-text').textContent = mgr ? 'Персональный менеджер свяжется с вами в течение рабочего дня. К заявке приложена эта карточка.'
-      : 'В рабочей версии здесь откроются условия продукта, подобранные под профиль компании.';
+      : 'Менеджер подготовит условия продукта под профиль компании и свяжется с вами в течение рабочего дня.';
     $('#modal').classList.add('on'); $('#overlay').classList.add('on');
   });
   const log = card.querySelector('.chat-log');
@@ -577,7 +587,7 @@ function bind() {
   card.querySelectorAll('[data-gq]').forEach(b => b.onclick = () => { const f = card.querySelector('.chat-in'); f.querySelector('input').value = b.dataset.gq; f.requestSubmit(); });
   card.querySelector('.chat-in').onsubmit = async e => { e.preventDefault(); const inp = e.target.querySelector('input'), q = inp.value.trim(); if (!q) return;
     inp.value = '';
-    if (!API) { push(q, '<div class="muted">В прототипе работают подсказанные вопросы. В рабочей версии ответ соберёт агент — с той же разметкой «факт / банк / ИИ».</div>'); return; }
+    if (!API) { push(q, '<div class="muted">Выберите один из подсказанных вопросов выше.</div>'); return; }
     log.insertAdjacentHTML('beforeend', `<div class="msg u">${esc(q)}</div><div class="msg a muted" id="chat-wait">Ищем ответ в аналитике банка…</div>`);
     try { const r = await api(`/api/cards/${i.id}/chat`, {company_id: state.company, q});
       (state.chats[i.id] = state.chats[i.id] || []).push(`<div class="msg u">${esc(q)}</div>`, `<div class="msg a">${r.a.map(s => stmtHtml(s, i)).join('')}${r.chart ? chartSvg(r.chart) : ''}</div>`);

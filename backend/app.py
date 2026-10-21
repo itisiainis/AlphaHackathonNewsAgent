@@ -145,7 +145,7 @@ def bootstrap():
         rows = store.cards(cid)
         insights[cid] = [c for c, _ in rows]
         origins[cid] = {c["id"]: o for c, o in rows}
-    all_c = sorted(({"id": i, "display": profiles.view(profiles.get(i))["display"],
+    all_c = sorted(({"id": i, "display": profiles.short_industry(profiles.get(i)), "region": profiles.get(i)["region"],
                      "revenue_bn": round(profiles.get(i)["revenue_rub"] / 1e9, 1)} for i in profiles.all_ids()),
                    key=lambda x: -x["revenue_bn"])
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
@@ -349,5 +349,6 @@ def refresh_news(hours: int = 48):
 # ---------- интерфейс ----------
 @app.get("/", response_class=HTMLResponse)
 def index():
-    tpl = (ROOT / "frontend" / "template.html").read_text(encoding="utf-8")
-    return tpl.replace("__DATA__", "null")
+    from frontend.page import render
+
+    return render("null")

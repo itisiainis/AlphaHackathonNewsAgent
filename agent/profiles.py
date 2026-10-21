@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -52,6 +53,12 @@ def _side_view(side: dict, with_intragroup: bool) -> dict:
     if with_intragroup:
         v["intragroup_share"] = round(side.get("intragroup_share") or 0, 2)  # в данных бывает null
     return v
+
+
+def short_industry(p: dict, limit: int = 48) -> str:
+    """Вид деятельности для списка компаний: «Торговля оптовая металлами и металлическими рудами»."""
+    name = re.sub(r"\s*\(.*?\)|,? кроме .*$", "", p["industry"]).strip()
+    return name if len(name) <= limit else name[:limit].rsplit(" ", 1)[0].rstrip(",") + "…"
 
 
 def data_quality(p: dict) -> list[str]:

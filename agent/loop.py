@@ -96,6 +96,7 @@ class Agent:
         ses = ToolSession(company_id, event, self.bank, self.news, self.today, self.bank_meta)
         try:
             observations = self._explore(ses, match, trace)
+            self._ensure_bank(ses, observations, trace)
             self._calculate(ses, observations, trace)
             draft = self._draft(ses, match, observations, trace, issues=[])
             card, rep = self._assemble(draft, ses, event, company_id, match, trace)
@@ -129,8 +130,10 @@ class Agent:
                   .replace("{max_steps}", str(MAX_TOOL_STEPS)))
         reasons = "; ".join(f"{r['feature']} ({r['why']})" for r in match.reasons) or "явных совпадений нет"
         messages = [{"role": "system", "content": system},
-                    {"role": "user", "content": f"Событие: «{ses.event.get('title')}» ({ses.event.get('published')}).\n"
-                     f"Компания: {ses.company_id}. Предварительный отбор сработал на признаки: {reasons}.\n"
+                    {"role": "user", "content": f"Событие (источник S1): {json.dumps(ses.get_event(), ensure_ascii=False)[:4000]}\n\n"
+                     f"Профиль компании: {json.dumps(ses.get_company_profile(), ensure_ascii=False)}\n\n"
+                     f"Предварительный отбор сработал на признаки: {reasons}.\n"
+                     "Новость и профиль уже даны — не запрашивай их повторно. Ищи позицию банка и связанные события.\n"
                      "В первом ответе добавь поле \"plan\" — список шагов анализа."}]
         observations = []
         for step in range(MAX_TOOL_STEPS + 1):
@@ -158,6 +161,18 @@ class Agent:
             messages += [{"role": "assistant", "content": json.dumps(act, ensure_ascii=False)},
                          {"role": "user", "content": f"Результат {name}: " + json.dumps(result, ensure_ascii=False)[:6000]}]
         return observations
+
+    def _ensure_bank(self, ses: ToolSession, observations: list[dict], trace: list) -> None:
+        """Позиция банка — обязательная часть разбора (кейс): если модель не искала её сама, ищет код."""
+        if any(o["tool"] == "search_bank_analytics" and isinstance(o["result"], dict) and "fragments" in o["result"]
+               for o in observations):
+            return
+        q = " ".join([ses.event.get("title", "")[:150], *ses.event.get("topics", [])])
+        res, entry = ses.call("search_bank_analytics", {"query": q})
+        observations.append({"tool": "search_bank_analytics", "args": {"query": q}, "result": res})
+        trace.append({"kind": "tool", "title": f"search_bank_analytics(\"{q[:60]}\")", "ms": entry["ms"], "cost": 0,
+                      "detail": f"обязательный шаг (модель не искала позицию банка): {_count(res)} фрагм."})
+        self._emit(trace)
 
     def _calculate(self, ses: ToolSession, observations: list[dict], trace: list) -> None:
         """Расчёт эффекта кодом — всегда, даже если модель не вызвала калькулятор: цифры не зависят от модели."""
@@ -192,8 +207,14 @@ class Agent:
 
     def _check(self, card: dict, ses: ToolSession, trace: list) -> dict:
         user = f"Черновик:\n{json.dumps(card, ensure_ascii=False)}\n\nИсточники:\n{self._sources_block(ses)}"
-        verdict = self._ask("check", [{"role": "system", "content": CHECK_SYSTEM}, {"role": "user", "content": user}],
-                            trace, "check", "Самопроверка (модель)", max_tokens=6000)
+        try:
+            verdict = self._ask("check", [{"role": "system", "content": CHECK_SYSTEM}, {"role": "user", "content": user}],
+                                trace, "check", "Самопроверка (модель)", max_tokens=6000)
+        except (LLMUnavailable, ValueError) as e:
+            # проверяющая модель не ответила — карточка, прошедшая проверку кодом, не теряется; в трассе это видно
+            trace.append({"kind": "check", "title": "Самопроверка (модель)", "detail": f"не выполнена: {e}", "ms": 0, "cost": 0})
+            self._emit(trace)
+            return {"ok": True, "issues": []}
         trace[-1]["detail"] = "замечаний нет" if verdict.get("ok") else "; ".join(verdict.get("issues", [])[:3])
         self._emit(trace)
         return verdict
