@@ -36,7 +36,7 @@ nav.side a{display:flex;justify-content:space-between;align-items:center;padding
 nav.side a.on{background:var(--bg);color:var(--ink);font-weight:600}
 nav.side a.dis{color:var(--ink-3);pointer-events:none}
 .badge-new{white-space:nowrap;display:inline-block;background:var(--new);color:#fff;border-radius:10px;font-size:11px;padding:0 7px;font-weight:600}
-main{padding:24px;max-width:860px;width:100%}
+main{padding:24px;max-width:860px;width:100%;min-width:0}
 h1{font-size:22px;margin:0 0 4px}
 h2{font-size:16px;margin:0}
 .muted{color:var(--ink-3)}
@@ -123,13 +123,21 @@ h2{font-size:16px;margin:0}
 .chat.on{display:block}
 .sugg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .sugg button{border:1px solid #d9d2f7;background:#fff;color:var(--ai);border-radius:999px;padding:4px 12px}
-.msg{margin:8px 0;max-width:88%}
+.msg{margin:8px 0;max-width:88%;overflow-wrap:anywhere}
+.chart svg{display:block}
 .msg.u{margin-left:auto;background:var(--ink);color:#fff;border-radius:12px 12px 2px 12px;padding:8px 12px;width:fit-content}
 .msg.a{background:#fff;border:1px solid var(--line);border-radius:12px 12px 12px 2px;padding:8px 12px}
 .chat-in{display:flex;gap:8px;margin-top:8px}
-.chat-in input{flex:1;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
+.chat-in input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
 .chart .cap{font-size:12px;color:var(--ink-2);font-weight:600;margin-top:8px}
 .chart .note{font-size:11px;color:var(--ink-3)}
+.hb{display:grid;gap:6px;margin:6px 0}
+.hb-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:8px;align-items:center;font-size:12.5px}
+.hb-l{color:var(--ink-2);overflow-wrap:anywhere}
+.hb-t{background:var(--bg);border-radius:4px;height:12px}
+.hb-b{display:block;height:100%;border-radius:4px;background:var(--ai)}
+.hb-b.unk{opacity:.3}
+.hb-v{font-variant-numeric:tabular-nums;color:var(--ink)}
 /* панель трассы */
 .drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.08);transform:translateX(100%);visibility:hidden;transition:transform .25s,visibility .25s;z-index:40;display:flex;flex-direction:column}
 .drawer.open{transform:none;visibility:visible}
@@ -158,7 +166,7 @@ h2{font-size:16px;margin:0}
 .empty{padding:30px;text-align:center;color:var(--ink-3)}
 footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
 @media (max-width:860px){
-  .layout{grid-template-columns:1fr}
+  .layout{grid-template-columns:minmax(0,1fr)}
   nav.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 10px}
   nav.side a{white-space:nowrap}
   .grid3,.two{grid-template-columns:1fr}
@@ -327,7 +335,7 @@ function bodyHtml(i) {
       <button class="btn ${fb === 'down' ? 'sel' : ''}" data-fb="down">Не про нас</button>
     </div>
     <div class="chat ${state.chatOpen[i.id] ? 'on' : ''}">
-      ${i.chat.length ? `<div class="sugg">${i.chat.map((c, k) => `<button data-q="${k}">${esc(c.q)}</button>`).join('')}</div>` : ''}
+      ${i.chat.length || (API && DATA.chat_suggestions) ? `<div class="sugg">${i.chat.map((c, k) => `<button data-q="${k}">${esc(c.q)}</button>`).join('')}${API ? (DATA.chat_suggestions || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}</div>` : ''}
       <div class="chat-log">${chatLog}</div>
       <form class="chat-in"><input placeholder="Вопрос по этому событию" autocomplete="off"><button class="btn pri">Спросить</button></form>
     </div>
@@ -444,7 +452,16 @@ async function loadQuality() {
 }
 
 /* ---------- чат, график, трасса ---------- */
+/* Горизонтальные столбцы для длинных подписей (отрасли) — на HTML, а не SVG: текст не мельчит на телефоне */
+function hbarSvg(ch) {
+  const max = Math.max(...ch.points.map(p => p[1])) || 1, unit = ch.unit === '%' ? '%' : '';
+  const rows = ch.points.map(p => `<div class="hb-row"><span class="hb-l">${esc(p[0])}</span>
+    <span class="hb-t"><span class="hb-b${/неизвестн/i.test(p[0]) ? ' unk' : ''}" style="width:${Math.max(p[1] / max * 100, 1).toFixed(1)}%"></span></span>
+    <span class="hb-v">${String(p[1]).replace('.', ',')}${unit}</span></div>`).join('');
+  return `<div class="chart"><div class="cap">${esc(ch.title)}${ch.unit && ch.unit !== '%' ? ', ' + esc(ch.unit) : ''}</div><div class="hb">${rows}</div>${ch.note ? `<div class="note">${esc(ch.note)}</div>` : ''}</div>`;
+}
 function chartSvg(ch) {
+  if (ch.points.some(p => String(p[0]).length > 9)) return hbarSvg(ch);
   const W = 420, H = 160, pad = 24, max = Math.max(...ch.points.map(p => p[1])) * 1.15, step = (W - pad * 2) / ch.points.length, bw = step * 0.55;
   const bars = ch.points.map((p, k) => { const h = p[1] / max * (H - 46), x = pad + k * step + (step - bw) / 2, y = H - 22 - h;
     return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="4" fill="var(--ai)" opacity="${.55 + .45 * (k + 1) / ch.points.length}"/>
@@ -520,6 +537,7 @@ function bind() {
   const log = card.querySelector('.chat-log');
   const push = (q, html) => { (state.chats[i.id] = state.chats[i.id] || []).push(`<div class="msg u">${esc(q)}</div>`, `<div class="msg a">${html}</div>`); log.innerHTML = state.chats[i.id].join(''); };
   card.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const c = i.chat[+b.dataset.q]; push(c.q, c.a.map(s => stmtHtml(s)).join('') + (c.chart ? chartSvg(c.chart) : '')); });
+  card.querySelectorAll('[data-gq]').forEach(b => b.onclick = () => { const f = card.querySelector('.chat-in'); f.querySelector('input').value = b.dataset.gq; f.requestSubmit(); });
   card.querySelector('.chat-in').onsubmit = async e => { e.preventDefault(); const inp = e.target.querySelector('input'), q = inp.value.trim(); if (!q) return;
     inp.value = '';
     if (!API) { push(q, '<div class="muted">В прототипе работают подсказанные вопросы. В рабочей версии ответ соберёт агент — с той же разметкой «факт / банк / ИИ».</div>'); return; }
