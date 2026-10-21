@@ -70,9 +70,22 @@ class Pipeline:
         self.events = load_events()
         self.news = news_index(self.events)
 
+    learner = None  # agent/learning.py: подключает бэкенд, если есть хранилище опыта
+
     def ranked(self, company_id: str, limit: int = 20) -> list[tuple[dict, Match]]:
         p = profiles.get(company_id)
-        return rank(self.events, profiles.features(p), p["bank_products"])[:limit]
+        pairs = rank(self.events, profiles.features(p), p["bank_products"])
+        if self.learner:  # шаблоны, которые сервис узнал по истории потока, опускаются (agent/stories.py)
+            from .learning import ROUTINE_FACTOR
+
+            for e, m in pairs:
+                days = self.learner.routine_days(e)
+                if days:
+                    m.score = round(m.score * ROUTINE_FACTOR, 2)
+                    m.reasons.append({"feature": "повторяющийся шаблон", "weight": ROUTINE_FACTOR,
+                                      "why": f"источник публикует такой заголовок ежедневно ({days} дн.), меняются только даты и числа"})
+            pairs = sorted([x for x in pairs if x[1].selected], key=lambda x: -x[1].score)
+        return pairs[:limit]
 
     def full_text(self, event: dict) -> dict:
         """Дополняет короткую новость (анонс RSS) полным текстом статьи по ссылке; результат кешируется.
@@ -101,6 +114,9 @@ class Pipeline:
         m = match(event, profiles.features(p), p["bank_products"])
         agent = Agent(self.llm, self.bank, self.news, today=self.today, bank_meta=self.bank_meta)
         agent.on_step = on_step
+        if self.learner:  # опыт: уроки прошлых проверок и прошлые разборы этой же компании
+            agent.lessons = self.learner.active_lessons()
+            agent.precedents = self.learner.precedents(company_id, event)
         return agent.run(event, company_id, m), m
 
     def rules(self, event: dict, company_id: str, fetch: bool = True) -> tuple[dict | None, list[dict], Match]:

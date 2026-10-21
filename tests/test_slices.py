@@ -37,4 +37,8 @@ def test_chat_endpoint_answers_slices_without_key(tmp_path):
     c = TestClient(m.app)
     r = c.post("/api/cards/i-rate-auto/chat", json={"company_id": "U_25835", "q": "Покупатели по отраслям"})
     assert r.status_code == 200 and r.json()["chart"]["points"]
-    assert c.post("/api/cards/i-rate-auto/chat", json={"company_id": "U_25835", "q": "Что банк думает о курсе?"}).status_code == 503
+    # без модели свободный вопрос не отклоняется: ответ из материалов карточки, с пометкой
+    r = c.post("/api/cards/i-rate-auto/chat", json={"company_id": "U_25835", "q": "Что банк думает о курсе?"})
+    assert r.status_code == 200 and r.json()["a"][1]["p"] == "bank" and "материалов разбора" in r.json()["a"][-1]["t"]
+    r = c.post("/api/cards/i-rate-auto/chat", json={"company_id": "U_25835", "q": "С другой стороны"})
+    assert any(s["p"] == "ai" and "Возможн" not in s["t"] for s in r.json()["a"][1:-1]), "возможности и риски карточки"

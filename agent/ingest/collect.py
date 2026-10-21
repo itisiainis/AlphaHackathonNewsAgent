@@ -26,6 +26,7 @@ from pathlib import Path
 from .. import okved
 from ..kb import tokens
 from ..llm import ROUTING, LLMUnavailable, extract_json
+from ..stories import conflict
 from .feeds import fetch_feed_posts
 from .post import Post
 from .webcollector import UA, fetch_recent_web
@@ -98,7 +99,9 @@ def to_events(posts: list[tuple[Post, dict]]) -> list[dict]:
         sig = set(tokens(_title(p)))
         ref = {"name": src["name"], "url": p.link, "date": p.date.date().isoformat()}
         for ev, s in zip(events, sigs, strict=True):
-            if sig and s and len(sig & s) / len(sig | s) >= DUP_JACCARD:
+            # похожие заголовки с разными датами, числами, названиями — разные события (agent/stories.py)
+            if sig and s and len(sig & s) / len(sig | s) >= DUP_JACCARD and not conflict(
+                    ev["title"], _title(p), ev["source"], src["name"], ev["published"], p.date.date().isoformat()):
                 ev["also"].append(ref)
                 if len(text) > len(ev["text"]):
                     ev["text"] = text
@@ -161,8 +164,11 @@ def merge_store(path: Path, fresh: list[dict], today: datetime) -> list[dict]:
     return events
 
 
-def collect(hours: int = 48, llm=None) -> dict:
+def collect(hours: int = 48, llm=None, disabled: set[str] | None = None) -> dict:
+    """disabled — названия источников, отключённых сотрудником банка в панели управления."""
     sources = json.loads((ROOT / "data" / "sources.json").read_text(encoding="utf-8"))
+    for kind in ("rss", "telegram"):
+        sources[kind] = [x for x in sources.get(kind, []) if x["name"] not in (disabled or set())]
     posts, failures = asyncio.run(fetch_all(sources, hours))
     events = to_events(posts)
     triaged = triage(llm, events) if llm is not None and getattr(llm, "online", False) else 0
