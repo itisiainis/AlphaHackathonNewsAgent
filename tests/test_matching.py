@@ -64,3 +64,20 @@ def test_native_ad_and_crime_news_filtered():
     crime = score("U_3263", "Бывший управленец РЖД получил 11 лет колонии за взятку", "Суд вынес приговор по уголовному делу.")
     market = score("U_3263", "РЖД снизила погрузку на 8%", "Погрузка на сети РЖД в сентябре снизилась на 8%.")
     assert crime.score < market.score and any(r["feature"] == "криминальная хроника" for r in crime.reasons)
+
+
+@pytest.mark.parametrize("text,sector", [
+    ("Детали взлома стали известны вчера", "24"), ("Холдинг расширяет медиабизнес", "24"),
+    ("Цены на бумажную нефть выросли", "17"), ("Правительство утвердило дорожную карту по цифровому рублю", "42"),
+    ("Платёжная инфраструктура банков работает штатно", "42"), ("США отправляют авианосец в Средиземное море", "50"),
+])
+def test_sector_false_friends(text, sector):
+    assert sector not in okved.sectors_in(text)
+
+
+@pytest.mark.parametrize("text,sector", [
+    ("Цены на медь обновили максимум", "24"), ("Производители картона подняли цены", "17"),
+    ("Авиакомпании сокращают рейсы", "51"), ("Страховщики ужесточают тарифы", "65"), ("Сеть клиник открыла центр", "86"),
+])
+def test_sector_dictionary_covers_more_industries(text, sector):
+    assert sector in okved.sectors_in(text)
