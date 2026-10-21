@@ -224,6 +224,36 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
   main{padding:16px}
   .ic-take{font-size:16px}
 }
+/* панель управления банка */
+body.adm .switch{display:none}
+body.adm main{max-width:1120px}
+.adm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.adm-login{display:grid;gap:12px;max-width:420px;margin-top:16px}.adm-login label{display:grid;gap:4px;font-size:13px;color:var(--ink-2)}
+.adm-login input,.fld input,.fld select{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.tabs{display:flex;gap:4px;margin:16px 0;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:8px 12px;color:var(--ink-2);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--brand)}
+.adm-h{margin:20px 0 8px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}.kpi b{display:block;font-size:22px;margin:2px 0}.kpi .muted{font-size:12px}
+.alert{border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:13px;border:1px solid var(--line);background:#fff}
+.alert.high{border-color:#f3c2c2;background:#fdf1f1}.alert.medium{border-color:#f1dc9c;background:#fff9e8}.alert.ok{border-color:#bfe6d2;background:#effaf4}
+.tblw{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:12px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}.tbl th{text-align:left;font-weight:600;color:var(--ink-3);font-size:12px;background:var(--bg)}
+.tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}.tbl tr:last-child td{border-bottom:0}
+.tbl tr.off td{opacity:.55}.tbl .acts{white-space:nowrap}.tbl .acts .linkbtn{margin-right:10px}
+.tbl .cm{font-style:italic;color:var(--ink-2);margin-top:2px}
+.up{color:var(--opp)}.down{color:var(--risk)}
+.adm-empty{background:#fff;border:1px dashed var(--line);border-radius:12px;padding:14px}
+.adm-filter{font-size:13px;color:var(--ink-2)}
+.bar-s{display:inline-block;height:8px;border-radius:4px;background:var(--ai);margin-right:6px;vertical-align:middle}
+.learn-intro{margin-bottom:12px}
+.sw{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin:10px 0;font-size:14px}.sw small,.fld small{color:var(--ink-3);font-size:12px;flex-basis:100%;padding-left:24px}
+.fld{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:4px 16px;align-items:center;margin:10px 0}.fld small{grid-column:1/-1;padding-left:0}
+.srcs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 12px;font-size:13px;margin:6px 0}
+.adm-save{display:flex;gap:12px;align-items:center;margin-top:16px}
+.adm-card{padding:10px 0 14px;border-bottom:1px solid var(--line);margin-bottom:10px}.adm-card p{margin:6px 0 0;color:var(--ink-2)}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fld{grid-template-columns:1fr}.srcs{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -249,7 +279,7 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
   <h2 id="modal-title"></h2>
   <p class="muted" id="modal-text"></p>
   <form id="modal-form" hidden><textarea name="comment" rows="3" maxlength="1000" placeholder="Что обсудить (необязательно)"></textarea>
-    <button class="btn pri">Отправить менеджеру</button> <button type="button" class="btn" data-close>Отмена</button></form>
+    <button class="btn pri" id="modal-submit">Отправить менеджеру</button> <button type="button" class="btn" data-close>Отмена</button></form>
   <button class="btn pri" id="modal-ok">Понятно</button>
 </div>
 
@@ -291,11 +321,15 @@ const ageDays = i => Math.max(0, (today() - new Date(i.published + 'T00:00:00'))
 const NEW_DAYS = 14;
 const isNew = i => i.is_new && ageDays(i) <= NEW_DAYS && !state.read.has(state.company + ':' + i.id);
 const takeaway = i => (i.takeaway && (i.takeaway[state.role] || Object.values(i.takeaway)[0])) || i.why_short;
+// Вес темы для роли: правила + чему научили оценки клиентов (для роли и для этой компании) — backend agent/learning.py
+function topicWeight(t) {
+  const L = DATA.learned || {}, r = (L.roles || {})[state.role] || {}, c = ((L.companies || {})[state.company] || {})[state.role] || {};
+  return (role().weights[t] || 0) + (r[t] || 0) + (c[t] || 0);
+}
 function scored() {
-  const w = role().weights;
   return (DATA.insights[state.company] || [])
     // старое событие опускается: после недели — минус 0,35 за день (месячное событие ≈ на уровень влияния ниже свежего)
-    .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + (w[t] || 0), 0) - Math.max(0, ageDays(i) - 7) * 0.35}));
+    .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + topicWeight(t), 0) - Math.max(0, ageDays(i) - 7) * 0.35}));
 }
 // Группы ленты: на что тратить время в первую очередь
 const PRIORITY = [['act', 'Требует решения'], ['watch', 'Следить'], ['info', 'К сведению'], ['old', 'Ранее']];
@@ -362,13 +396,15 @@ function renderNav(route) {
   $('#nav').innerHTML = `
     <a href="#home" class="${route === 'home' ? 'on' : ''}">Главная</a>
     <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>
-    ${API ? `<div class="nav-foot">Для сотрудников банка<a href="#quality" class="${route === 'quality' ? 'on' : ''}">Качество сервиса</a></div>` : ''}`;
+    ${API ? `<div class="nav-foot">Для сотрудников банка<a href="#admin" class="${route === 'admin' ? 'on' : ''}">Панель управления</a></div>` : ''}`;
 }
 function renderStatus() {
-  // состояние модели и расход — служебная информация: только на странице «Качество», не в шапке
+  // состояние модели и расход — служебная информация: только в панели управления, не в шапке
 }
-function showModal(title, text, form = false) { $('#modal-title').textContent = title; $('#modal-text').textContent = text;
+function showModal(title, text, form = false, submit = 'Отправить менеджеру', placeholder = 'Что обсудить (необязательно)') {
+  $('#modal-title').textContent = title; $('#modal-text').textContent = text;
   $('#modal-form').hidden = !form; $('#modal-ok').hidden = form; if (form) $('#modal-form').reset();
+  $('#modal-submit').textContent = submit; $('#modal-form').comment.placeholder = placeholder;
   $('#modal').classList.add('on'); $('#overlay').classList.add('on'); }
 
 /* ---------- фрагменты ---------- */
@@ -684,6 +720,7 @@ async function analyzeNow(key, label, briefPath, path, body) {
   ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.origin;
   delete state.events[cid];
   if (location.hash === '#feed/' + r.card.id) { state.open = null; render(true); } else location.hash = '#feed/' + r.card.id;
+  if (r.reused) { toast('Этот сюжет уже разбирали для вашей компании — полный разбор открыт сразу', 5000); return; }
   if (r.origin === 'agent') return;  // полный разбор этого события уже есть
   if (!r.llm_online) { toast('Краткий разбор готов. Полный разбор ИИ можно будет запустить, когда модель станет доступна.', 6000); return; }
   startJob(key, label, path, body, true);
@@ -716,7 +753,8 @@ function finishJob(j, r) {
     state.read.delete(cid + ':' + r.card.id); saveRead();  // новый разбор — снова «Новое»
     delete state.events[cid];
     j.status = 'done'; j.cardId = r.card.id; j.rules = r.mode === 'rules'; j.trace = r.card.trace || j.trace;
-    toast(j.rules ? 'ИИ сейчас недоступен — готов краткий разбор без выводов ИИ. Полный разбор можно запустить позже.'
+    toast(r.reused ? 'Этот сюжет уже разбирали для вашей компании — разбор взят из памяти, без ожидания'
+      : j.rules ? 'ИИ сейчас недоступен — готов краткий разбор без выводов ИИ. Полный разбор можно запустить позже.'
       : `Разбор готов: ${j.label}`, 8000);
   }
   if (state.drawer === 'job:' + j.key) liveTrace(j.trace, '');
@@ -750,21 +788,185 @@ function bindEvents() {
   const more = document.querySelector('[data-more-events]');
   if (more) more.onclick = () => { state.moreEvents = true; $('#events-box').innerHTML = eventsHtml(); bindEvents(); };
 }
-function viewQuality() {
-  return `<h1>Качество сервиса</h1><div class="muted">Метрики для регулярного мониторинга: обратная связь, проверка карточек, расход модели.</div><div id="q-box" class="card" style="margin-top:16px">Загружаем…</div>`;
+/* ---------- панель управления банка ---------- */
+// Токен сотрудника хранится только на время вкладки браузера (sessionStorage), в коде страницы его нет
+const ADM = {tab: 'overview', company: '', data: {}};
+const admToken = () => { try { return sessionStorage.getItem('adm-token') || ''; } catch (e) { return ADM.token || ''; } };
+const admName = () => { try { return sessionStorage.getItem('adm-name') || ''; } catch (e) { return ADM.name || ''; } };
+function admSave(token, name) { ADM.token = token; ADM.name = name;
+  try { if (token) { sessionStorage.setItem('adm-token', token); sessionStorage.setItem('adm-name', name); } else sessionStorage.removeItem('adm-token'); } catch (e) { /* без хранилища — до перезагрузки */ } }
+async function aapi(path, method = 'GET', body) {
+  const r = await fetch('/api/admin' + path, {method, headers: {'Content-Type': 'application/json', 'X-Admin-Token': admToken(),
+    'X-Admin-Name': encodeURIComponent(admName())}, body: body === undefined ? undefined : JSON.stringify(body)});
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401) { admSave('', ''); ADM.error = 'Токен не подошёл'; render(); throw new Error('нужен токен сотрудника'); }
+  if (!r.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'неверный запрос');
+  return data;
 }
-async function loadQuality() {
-  try {
-    const m = await api('/api/metrics'), f = m.feedback, r = m.agent_runs, pct = x => x === null ? '—' : Math.round(x * 100) + '%';
-    $('#q-box').innerHTML = `<div class="grid3">
-      <div><div class="muted">Полезно / не про нас</div><h2>${f.useful} / ${f.not_relevant}</h2><div class="muted">доля полезных ${pct(f.useful_share)}</div></div>
-      <div><div class="muted">Запросы менеджеру из карточек</div><h2>${m.requests ? m.requests.total : 0}</h2><div class="muted">по ${m.requests ? m.requests.cards : 0} разборам</div></div>
-      <div><div class="muted">Запусков агента</div><h2>${r.total}</h2><div class="muted">прошли проверку ${pct(r.pass_rate)}</div></div>
-      <div><div class="muted">Расход модели</div><h2>${r.cost_rub.toLocaleString('ru-RU')} ₽</h2><div class="muted">среднее время ${(r.avg_ms / 1000).toFixed(1).replace('.', ',')} с</div></div></div>
-      <div class="src-line">Разборов в базе: ${Object.entries(m.cards).map(([k, v]) => `${ORIGIN_RU[k] || k} — ${v}`).join(', ')}</div>
-      ${m.matching_eval ? `<div class="src-line">Отбор новостей на размеченном наборе (${m.matching_eval.pairs} пар «новость × компания»): точность ${pct(m.matching_eval.precision)}, полнота ${pct(m.matching_eval.recall)}</div>` : ''}
-      ${m.status ? `<div class="src-line">Модель: ${m.status.llm_online ? 'подключена' : 'не подключена — работает краткий разбор'} · расход сегодня ${m.status.spent_today_rub.toLocaleString('ru-RU')} из ${m.status.budget_rub} ₽</div>` : ''}`;
-  } catch (e) { $('#q-box').textContent = e.message; }
+const ADM_TABS = [['overview', 'Обзор'], ['clients', 'Клиенты'], ['cards', 'Разборы'], ['learning', 'Обучение'], ['settings', 'Настройки'], ['audit', 'Журнал']];
+const pct = x => x === null || x === undefined ? '—' : Math.round(x * 100) + '%';
+const sec = ms => ms ? (ms / 1000).toFixed(1).replace('.', ',') + ' с' : '—';
+const num = x => (+x || 0).toLocaleString('ru-RU', {maximumFractionDigits: 2});
+const dt = ts => new Date(ts * 1000).toLocaleString('ru-RU', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
+const ROLE_RU = {cfo: 'Фин. директор', ceo: 'Ген. директор', treasurer: 'Казначей'};
+const REQ_RU = {new: 'Новый', in_work: 'В работе', done: 'Закрыт'};
+const TASK_RU = {triage: 'Разметка новостей при сборе', agent: 'Выбор следующего шага агента', draft: 'Черновик разбора',
+  check: 'Проверка черновика', chat: 'Ответы на вопросы клиента', vision: 'Сканы и графики'};
+function viewAdmin() {
+  if (!admToken()) return `<h1>Панель управления</h1><div class="muted">Для сотрудников банка: качество разборов, опыт клиентов, настройки сервиса.</div>
+    <form class="card adm-login" id="adm-login"><label>Токен доступа<input name="token" type="password" autocomplete="off" required></label>
+    <label>Ваше имя — для журнала изменений<input name="name" maxlength="40" placeholder="Например, И. Петров"></label>
+    <button class="btn pri">Войти</button>${ADM.error ? `<div class="down" role="alert">${esc(ADM.error)}</div>` : ''}<div class="foot-note">Токен задаёт администратор сервиса (переменная ADMIN_TOKEN). Он хранится только до закрытия вкладки.</div></form>`;
+  return `<div class="adm-head"><div><h1>Панель управления</h1><div class="muted">Как работает сервис, что видят клиенты и что можно поменять. Все изменения — в журнале.</div></div>
+    <button class="btn" id="adm-out">Выйти</button></div>
+    <div class="tabs" role="tablist">${ADM_TABS.map(([id, n]) => `<button role="tab" class="${ADM.tab === id ? 'on' : ''}" data-tab="${id}" aria-selected="${ADM.tab === id}">${n}</button>`).join('')}</div>
+    <div id="adm-box">Загружаем…</div>`;
+}
+function bindAdmin() {
+  const f = $('#adm-login');
+  if (f) { f.onsubmit = e => { e.preventDefault(); ADM.error = ''; admSave(e.target.token.value.trim(), e.target.name.value.trim()); render(); }; return; }
+  $('#adm-out').onclick = () => { admSave('', ''); render(); };
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { ADM.tab = b.dataset.tab; render(); });
+  loadAdmin();
+}
+async function loadAdmin() {
+  const box = $('#adm-box');
+  try { box.innerHTML = await ({overview: admOverview, clients: admClients, cards: admCards, learning: admLearning, settings: admSettings, audit: admAudit})[ADM.tab]();
+    bindAdminTab(); }
+  catch (e) { if (admToken()) box.innerHTML = `<div class="card empty">${esc(e.message)} <button class="linkbtn" data-retry>Повторить</button></div>`;
+    const b = document.querySelector('[data-retry]'); if (b) b.onclick = loadAdmin; }
+}
+const kpi = (label, value, note) => `<div class="kpi"><div class="muted">${label}</div><b>${value}</b>${note ? `<div class="muted">${note}</div>` : ''}</div>`;
+const table = (head, rows, empty) => rows.length ? `<div class="tblw"><table class="tbl"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`
+  : `<div class="muted adm-empty">${empty}</div>`;
+async function admOverview() {
+  const o = await aapi('/overview'), m = o.metrics, f = m.feedback, r = m.agent_runs, st = o.status;
+  const al = o.attention.length ? o.attention.map(a => `<div class="alert ${a.level}">${esc(a.text)}</div>`).join('') : '<div class="alert ok">Всё в норме: модель отвечает, новости свежие, необработанных запросов нет.</div>';
+  return `<h2 class="adm-h">Требует внимания</h2>${al}
+    <h2 class="adm-h">Опыт клиентов</h2><div class="kpis">
+      ${kpi('Полезные разборы', pct(f.useful_share), `${f.useful} полезно · ${f.not_relevant} не про нас`)}
+      ${kpi('Запросы менеджеру', m.requests.total, `новых: ${o.requests_new} · по ${m.requests.cards} разборам`)}
+      ${kpi('Ответ из памяти', o.reused, 'раз сюжет уже был разобран — ответ мгновенно')}
+      ${kpi('Скрыто сотрудниками', o.hidden, 'разборов не видно клиентам')}</div>
+    <h2 class="adm-h">Под капотом</h2><div class="kpis">
+      ${kpi('Разборы ИИ проходят проверку', pct(r.pass_rate), `${r.passed_validation} из ${r.total} запусков`)}
+      ${kpi('Среднее время разбора', sec(r.avg_ms), 'краткий разбор — меньше секунды')}
+      ${kpi('Расход сегодня', `${num(st.spent_today_rub)} ₽`, `лимит ${num(st.budget_rub)} ₽ · модель ${st.llm_online ? 'подключена' : 'не подключена'}`)}
+      ${kpi('Новости', o.news.events, o.news.hours_ago === null ? 'нет данных о свежести' : `последняя ${num(o.news.hours_ago)} ч назад`)}</div>
+    <div class="src-line">Разборов в базе: ${Object.entries(m.cards).map(([k, v]) => `${ORIGIN_RU[k] || k} — ${v}`).join(', ') || 'нет'}</div>
+    ${m.matching_eval ? `<div class="src-line">Отбор новостей на размеченном наборе (${m.matching_eval.pairs} пар «новость × компания»): точность ${pct(m.matching_eval.precision)}, полнота ${pct(m.matching_eval.recall)}</div>` : ''}
+    <div class="src-line">Последний сбор новостей: ${o.collect.at ? `${new Date(o.collect.at).toLocaleString('ru-RU')} · ${esc(JSON.stringify(Object.fromEntries(Object.entries(o.collect).filter(([k]) => k !== 'at'))))}` : 'в этом запуске не было'}
+      <button class="linkbtn" data-collect>Собрать сейчас</button></div>`;
+}
+async function admClients() {
+  const [req, fb] = await Promise.all([aapi('/requests'), aapi('/feedback')]);
+  const reqRows = req.map(x => `<tr><td>${dt(x.ts)}</td><td>${esc(x.company)}<div class="muted">${esc(ROLE_RU[x.role] || x.role)}</div></td>
+    <td>${esc(x.label)}<div class="muted">${esc(x.title)}</div>${x.comment ? `<div class="cm">«${esc(x.comment)}»</div>` : ''}</td>
+    <td><select data-req="${x.id}" aria-label="Статус запроса">${Object.entries(REQ_RU).map(([k, v]) => `<option value="${k}"${x.status === k ? ' selected' : ''}>${v}</option>`).join('')}</select></td></tr>`);
+  const fbRows = fb.map(x => `<tr><td>${dt(x.ts)}</td><td>${esc(x.company)}</td><td>${esc(ROLE_RU[x.role] || x.role)}</td>
+    <td class="${x.vote === 'up' ? 'up' : 'down'}">${x.vote === 'up' ? 'Полезно' : 'Не про нас'}</td><td>${esc(x.title)}</td></tr>`);
+  return `<h2 class="adm-h">Запросы менеджеру из разборов</h2>${table(['Когда', 'Клиент', 'Запрос и разбор', 'Статус'], reqRows, 'Запросов пока нет.')}
+    <h2 class="adm-h">Оценки клиентов</h2><div class="foot-note">Оценки «не про нас» опускают такие темы для роли в ленте — это видно на вкладке «Обучение».</div>
+    ${table(['Когда', 'Клиент', 'Роль', 'Оценка', 'Разбор'], fbRows, 'Оценок пока нет.')}`;
+}
+async function admCards() {
+  const [all, runs] = await Promise.all([aapi('/cards'), aapi('/runs')]);
+  const cards = ADM.data.cards = all.filter(c => !ADM.company || c.company_id === ADM.company);
+  const comps = [...new Map(all.map(c => [c.company_id, c.company])).entries()];
+  const sel = `<label class="adm-filter">Клиент <select id="adm-company"><option value="">все</option>${comps
+    .map(([id, n]) => `<option value="${esc(id)}"${ADM.company === id ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
+  const rows = cards.map((c, k) => `<tr class="${c.hidden ? 'off' : ''}"><td>${esc(c.title)}<div class="muted">${esc(c.company)} · ${c.published ? fmtDate(c.published) : ''}</div></td>
+    <td>${ORIGIN_RU[c.origin] || c.origin}</td><td>${c.votes.up} / ${c.votes.down}</td>
+    <td class="acts"><button class="linkbtn" data-look="${k}">Под капотом</button>
+      <button class="linkbtn" data-hide="${k}">${c.hidden ? 'Вернуть клиенту' : 'Скрыть'}</button>
+      ${c.rerun === 'running' ? '<span class="muted">пересчёт идёт…</span>' : c.rerunnable ? `<button class="linkbtn" data-rerun="${k}">Пересчитать ИИ</button>` : ''}
+      ${c.rerun === 'failed' ? '<span class="down">пересчёт не удался</span>' : ''}</td></tr>`);
+  const runRows = runs.slice(0, 30).map(x => `<tr><td>${dt(x.ts)}</td><td>${x.ok ? '<span class="up">прошёл</span>' : '<span class="down">не прошёл</span>'}</td>
+    <td>${sec(x.ms)}</td><td>${x.revisions}</td><td>${num(x.cost)} ₽</td><td class="muted">${esc((x.errors || []).slice(0, 2).join('; '))}</td></tr>`);
+  return `${sel}<h2 class="adm-h">Разборы, которые видят клиенты</h2>
+    <div class="foot-note">«Скрыть» — разбор пропадёт из ленты клиента и не будет выдаваться из памяти. «Пересчитать ИИ» — новый разбор по тому же событию, расход из дневного лимита.</div>
+    ${table(['Разбор', 'Откуда', 'Полезно / нет', ''], rows, 'Разборов нет.')}
+    <h2 class="adm-h">Последние запуски ИИ-аналитика</h2>${table(['Когда', 'Проверка', 'Время', 'Правок', 'Расход', 'Замечания'], runRows, 'Запусков ИИ пока не было.')}`;
+}
+async function admLearning() {
+  const s = await aapi('/learning'), c = s.constants;
+  const maxRuns = Math.max(1, ...s.trend.map(t => t.runs));
+  const trend = s.trend.map(t => `<tr><td>${fmtDate(t.day)}</td><td><span class="bar-s" style="width:${Math.round(t.runs / maxRuns * 60) + 4}px"></span>${t.runs}</td>
+    <td>${pct(t.pass_rate)}</td><td>${sec(t.avg_ms)}</td><td>${num(t.revisions)}</td><td>${num(t.cost)} ₽</td></tr>`);
+  const w = s.weights_readable.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).map(x => `<tr><td>${esc(x.scope)}</td><td>${esc(x.topic)}</td>
+    <td class="${x.delta > 0 ? 'up' : 'down'}">${x.delta > 0 ? 'выше' : 'ниже'} на ${num(Math.abs(x.delta))}</td></tr>`);
+  const rt = s.routine.map(x => `<tr><td>${esc(x.example)}</td><td>${x.days} дн.</td></tr>`);
+  const ls = s.lessons.map(x => `<tr><td>${esc(x.lesson)}</td><td>${x.seen}</td><td>${x.active ? '<span class="up">в задании агенту</span>' : `<span class="muted">с ${c.min_lesson} повторов</span>`}</td></tr>`);
+  return `<div class="card learn-intro"><b>Сервис учится на своём опыте.</b> Модели по условиям кейса только разрешённые, дообучать их нельзя — поэтому учится всё вокруг них, и каждый шаг виден здесь.
+      <label class="sw"><input type="checkbox" data-learning ${s.enabled ? 'checked' : ''}> Применять накопленный опыт</label>
+      <div class="foot-note">Если выключить — сервис работает как в первый день, но опыт продолжает копиться.</div></div>
+    <div class="kpis">${kpi('Разборов ИИ в памяти', s.memory, `ответов из памяти: ${s.reused}`)}${kpi('Сюжетов в потоке', s.stories, `наблюдаем ${s.days_observed} дн.`)}
+      ${kpi('Узнано рутины', s.routine.length, `сюжет встречался ≥ ${c.routine_days} разных дней`)}${kpi('Уроков в задании агенту', s.lessons.filter(x => x.active).length, `всего замечаний: ${s.lessons.reduce((a, x) => a + x.seen, 0)}`)}</div>
+    <h2 class="adm-h">1. Становится ли лучше и быстрее</h2><div class="foot-note">По дням: доля разборов, прошедших проверку с первого раза, время и число правок. Уроки и память должны снижать время и правки.</div>
+    ${table(['День', 'Разборов ИИ', 'Прошли проверку', 'Среднее время', 'Правок в среднем', 'Расход'], trend, 'Разборов ИИ ещё не было — динамика появится после первых запусков.')}
+    <h2 class="adm-h">2. Чему научили оценки клиентов</h2><div class="foot-note">«Полезно / не про нас» сдвигает вес темы для роли (сглажено: пока оценок мало, сдвиг небольшой; предел — ±3).</div>
+    ${table(['Роль', 'Тема', 'В ленте'], w, 'Оценок пока нет — порядок новостей задают правила под роль.')}
+    <h2 class="adm-h">3. Что сервис узнал как рутину</h2><div class="foot-note">Сюжет, выходящий одинаковым ${c.routine_days} и больше дней, опускается в отборе (вес ×${String(c.routine_factor).replace('.', ',')}). Ручных списков нет — только история потока.</div>
+    ${table(['Сюжет', 'Встречался'], rt, `Повторяющихся сюжетов пока нет: история потока — ${s.days_observed} дн.`)}
+    <h2 class="adm-h">4. Уроки проверки</h2><div class="foot-note">Частые замечания проверки становятся правилами в задании агенту — меньше правок, быстрее ответ.</div>
+    ${table(['Урок', 'Замечаний', 'Статус'], ls, 'Замечаний проверки пока нет.')}
+    <div class="foot-note">Память: тот же сюжет для той же компании за ${c.dup_days} дн. (сходство заголовков ≥ ${pct(c.dup_jaccard)}) отдаётся готовым разбором. Прошлые разборы других клиентов агенту не показываются.</div>`;
+}
+async function admSettings() {
+  const s = await aapi('/settings'), v = s.values; ADM.data.settings = s;
+  const field = (k, label, hint, attrs) => `<label class="fld"><span>${label}</span><input name="${k}" type="number" ${attrs} value="${v[k]}"><small>${hint}</small></label>`;
+  const check = (k, label, hint) => `<label class="sw"><input type="checkbox" name="${k}" ${v[k] ? 'checked' : ''}> ${label}<small>${hint}</small></label>`;
+  return `<form id="adm-settings" class="card">
+    <h2 class="adm-h">Расход и нагрузка</h2>
+    ${field('budget_rub', 'Дневной лимит расхода, ₽', `не больше ${s.limits.budget_rub} ₽ — доля сервиса в общем ключе; при исчерпании клиенты получают краткий разбор`, `min="0" max="${s.limits.budget_rub}" step="1"`)}
+    ${field('rate_limit', 'Запросов к ИИ в минуту с одного адреса', 'защита от повторов и перебора', 'min="1" max="60" step="1"')}
+    <h2 class="adm-h">Отбор и лента</h2>
+    ${field('select_min', 'Порог значимости события', 'выше — меньше новостей и точнее; ниже — больше, но и шума больше', 'min="1" max="6" step="0.1"')}
+    ${field('briefs', 'Кратких разборов на компанию сразу', 'готовы без ИИ при открытии компании', 'min="0" max="6" step="1"')}
+    ${check('learning', 'Применять накопленный опыт', 'память разборов, оценки клиентов, рутина, уроки')}
+    <h2 class="adm-h">Сбор новостей</h2>
+    ${field('collect_every_min', 'Собирать каждые, минут', 'от 5 минут до суток', 'min="5" max="1440" step="5"')}
+    ${check('collect_triage', 'Размечать новости моделью при сборе', '≈0,003 ₽ за 20 новостей; выключено — только словари')}
+    <div class="srcs">${s.sources.map(n => `<label><input type="checkbox" name="src" value="${esc(n)}" ${v.sources_off.includes(n) ? '' : 'checked'}> ${esc(n)}</label>`).join('')}</div>
+    <h2 class="adm-h">Модели по задачам</h2><div class="foot-note">Только модели из списка кейса.</div>
+    ${s.tasks.map(t => `<label class="fld"><span>${TASK_RU[t] || t}</span><select name="route:${t}">${Object.entries(s.models).map(([k, n]) => `<option value="${k}"${v.routing[t] === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`).join('')}
+    <div class="adm-save"><button class="btn pri">Сохранить</button><span id="adm-msg" class="muted" role="status"></span></div></form>`;
+}
+async function admAudit() {
+  const a = await aapi('/audit');
+  return `<h2 class="adm-h">Журнал действий сотрудников</h2>${table(['Когда', 'Кто', 'Действие', 'Подробности'],
+    a.map(x => `<tr><td>${dt(x.ts)}</td><td>${esc(x.actor)}</td><td>${esc(x.action)}</td><td class="muted">${esc(x.detail)}</td></tr>`), 'Изменений пока не было.')}`;
+}
+function bindAdminTab() {
+  const col = document.querySelector('[data-collect]');
+  if (col) col.onclick = async () => { try { await aapi('/collect', 'POST'); toast('Сбор новостей запущен — обычно до минуты', 4000); } catch (e) { toast(e.message, 5000); } };
+  document.querySelectorAll('[data-req]').forEach(s => s.onchange = async () => {
+    try { await aapi('/requests/' + s.dataset.req, 'POST', {status: s.value}); toast('Статус запроса обновлён', 2500); } catch (e) { toast(e.message, 5000); } });
+  const cs = $('#adm-company'); if (cs) cs.onchange = () => { ADM.company = cs.value; loadAdmin(); };
+  const card = k => ADM.data.cards[+k];
+  const hide = async (c, note) => { try { await aapi(`/cards/${c.company_id}/${c.id}/hide`, 'POST', {hidden: !c.hidden, note}); closeOverlays(); loadAdmin(); }
+    catch (e) { toast(e.message, 5000); } };
+  document.querySelectorAll('[data-hide]').forEach(b => b.onclick = () => { const c = card(b.dataset.hide);
+    if (c.hidden) { hide(c, ''); return; }
+    showModal('Скрыть разбор', 'Разбор пропадёт из ленты клиента и не будет выдаваться из памяти. Причина попадёт в журнал.', true, 'Скрыть', 'Причина: например, вывод не подтверждается');
+    $('#modal-form').onsubmit = e => { e.preventDefault(); hide(c, e.target.comment.value.trim()); }; });
+  document.querySelectorAll('[data-rerun]').forEach(b => b.onclick = async () => { const c = card(b.dataset.rerun);
+    try { await aapi(`/cards/${c.company_id}/${c.id}/rerun`, 'POST'); toast('Пересчёт запущен — обычно 1–2 минуты. Обновите вкладку позже.', 5000); loadAdmin(); } catch (e) { toast(e.message, 6000); } });
+  document.querySelectorAll('[data-look]').forEach(b => b.onclick = async () => { const c = card(b.dataset.look);
+    try { const full = await aapi(`/cards/${c.company_id}/${c.id}`);
+      $('#drawer-body').innerHTML = `<div class="adm-card"><b>${esc(full.title)}</b><p>${esc((full.takeaway || {}).cfo || full.why_short || '')}</p></div>` + (full.trace || []).map(s => stepHtml(s, true)).join('');
+      $('#drawer-totals').textContent = (full.trace || []).length ? totalsText(full.trace) : 'Шагов нет: разбор подготовлен заранее';
+      state.drawer = 'admin'; $('#drawer').classList.add('open'); $('#overlay').classList.add('on'); } catch (e) { toast(e.message, 5000); } });
+  const lt = document.querySelector('[data-learning]');
+  if (lt) lt.onchange = async () => { try { await aapi('/settings', 'PUT', {learning: lt.checked}); toast(lt.checked ? 'Опыт применяется' : 'Опыт не применяется — копится', 3000); } catch (e) { toast(e.message, 5000); lt.checked = !lt.checked; } };
+  const f = $('#adm-settings');
+  if (f) f.onsubmit = async e => { e.preventDefault(); const s = ADM.data.settings, body = {};
+    ['budget_rub', 'select_min'].forEach(k => body[k] = parseFloat(f[k].value));
+    ['rate_limit', 'briefs', 'collect_every_min'].forEach(k => body[k] = parseInt(f[k].value, 10));
+    body.learning = f.learning.checked; body.collect_triage = f.collect_triage.checked;
+    body.sources_off = [...f.querySelectorAll('[name=src]')].filter(x => !x.checked).map(x => x.value);
+    body.routing = Object.fromEntries(s.tasks.map(t => [t, f['route:' + t].value]));
+    try { await aapi('/settings', 'PUT', body); $('#adm-msg').textContent = 'Сохранено и применено'; } catch (err) { $('#adm-msg').textContent = err.message; } };
 }
 
 /* ---------- чат, график, трасса ---------- */
@@ -822,17 +1024,18 @@ function closeOverlays() { state.drawer = null; $('#drawer').classList.remove('o
 // keep — перерисовка по готовому разбору: открытые панель шагов и диалог не закрываем
 function render(scrollToOpen = false, keep = false) {
   const [route, arg] = (location.hash || '#home').slice(1).split('/');
-  const r = route === 'insight' ? 'feed' : route;   // старые ссылки #insight/id
+  const r = route === 'insight' ? 'feed' : route === 'quality' ? 'admin' : route;   // старые ссылки #insight/id и #quality
   if (r === 'feed' && arg && state.open !== arg) { state.open = arg; markRead(arg); scrollToOpen = true; }
   if (!keep) closeOverlays();
   renderNav(r); renderStatus();
   if (r === 'analyze') { location.replace('#feed'); return; }  // старые ссылки на отдельную страницу
-  const views = {feed: viewFeed, quality: viewQuality};
+  const views = {feed: viewFeed, admin: viewAdmin};
+  document.body.classList.toggle('adm', r === 'admin' && API);
   $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))();
   state.firstPaint = false;
   bind();
   if (r === 'feed') { loadEvents(); bindEvents(); }
-  if (r === 'quality' && API) loadQuality();
+  if (r === 'admin' && API) bindAdmin();
   if (r === 'feed' && API && $('#quick-an')) {
     $('#quick-an').onsubmit = e => { e.preventDefault(); const url = e.target.url.value.trim(); if (!url) return;
       e.target.reset(); analyzeNow(state.company + ':url:' + url, hostOf(url), '/api/brief', '/api/analyze', {company_id: state.company, url}); };

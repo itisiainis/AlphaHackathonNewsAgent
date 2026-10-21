@@ -80,6 +80,8 @@ class Agent:
         self.bank_meta = bank_meta or []
         self.today = today or date.today()
         self.on_step = None  # обратный вызов для показа шагов в интерфейсе в реальном времени
+        self.lessons: list[str] = []      # уроки прошлых проверок (agent/learning.py)
+        self.precedents: list[dict] = []  # прошлые разборы этой же компании по теме
 
     def _emit(self, trace: list, pending: str = "") -> None:
         """Отдаёт текущее состояние трассы наружу (поток SSE). pending — что агент делает прямо сейчас."""
@@ -231,6 +233,12 @@ class Agent:
         if ses.calcs:
             user += "\n\nРасчёты эффекта (код):\n" + "\n".join(
                 f"- {c['title']}: {c['value']} ({c['formula']}); допущения: {'; '.join(c['assumptions'])}" for c in ses.calcs)
+        if self.precedents:
+            user += ("\n\nПрошлые разборы для этой компании (контекст, не источник — цифры из них не бери): "
+                     "если тема та же, скажи, что изменилось с тех пор.\n" + "\n".join(
+                         f"- {pr['date']}: «{pr['title']}» → {pr['takeaway']}" for pr in self.precedents))
+        if self.lessons:
+            user += "\n\nУроки прошлых разборов (частые замечания проверки — не повторяй):\n- " + "\n- ".join(self.lessons)
         if issues:
             user += "\n\nЗамечания проверки, которые нужно исправить:\n- " + "\n- ".join(issues[:10])
         system = DRAFT_SYSTEM.format(roles=", ".join(f"{k} — {v}" for k, v in ROLES_RU.items()))
