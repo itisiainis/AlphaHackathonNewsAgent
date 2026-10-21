@@ -241,8 +241,9 @@ def company_events(cid: str, limit: int = 10, role: str = ""):
     _company(cid)
     have = {c["id"] for c, _ in store.cards(cid)}
     learned = learner.topic_weights()
-    w = {t: v + learned["roles"].get(role, {}).get(t, 0) + learned["companies"].get(cid, {}).get(role, {}).get(t, 0)
-         for t, v in _role_weights(role).items()}
+    own, common = learned["companies"].get(cid, {}).get(role, {}), learned["roles"].get(role, {})
+    # опыт самой компании (если она оценивала тему) заменяет общий опыт роли — он уже учтён в нём как априорный
+    w = {t: v + own.get(t, common.get(t, 0)) for t, v in _role_weights(role).items()}
     ranked = pipe.ranked(cid, limit)
     if w:
         ranked = sorted(ranked, key=lambda x: -(x[1].score + sum(w.get(t, 0) for t in x[0]["topics"]) / 2))
@@ -275,7 +276,7 @@ def _rules(event: dict, cid: str, reason: str) -> dict:
 
 def _run(event: dict, cid: str, on_step=None, fresh: bool = False) -> dict:
     if not fresh:
-        dup = learner.remembered(cid, event["title"], TODAY)
+        dup = learner.remembered(cid, event, TODAY)
         if dup:  # тот же сюжет из другого источника уже разобран — ответ из памяти, без модели и расхода
             store.log_reuse(cid, dup["id"])
             return {"ok": True, "card": dup, "reused": True, "warnings": [], "tool_log": []}
@@ -388,7 +389,7 @@ def _brief(ev: dict, cid: str) -> dict:
     existing = next(((c, o) for c, o in store.cards(cid) if c["id"] == f"{ev['id']}-{cid}"), None)
     if existing and existing[1] == "agent":
         return {"card": existing[0], "origin": "agent", "llm_online": llm.online}
-    dup = learner.remembered(cid, ev["title"], TODAY)
+    dup = learner.remembered(cid, ev, TODAY)
     if dup:  # тот же сюжет уже разобран ИИ — сразу полный разбор из памяти
         store.log_reuse(cid, dup["id"])
         return {"card": dup, "origin": "agent", "llm_online": llm.online, "reused": True}
