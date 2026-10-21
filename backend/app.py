@@ -22,7 +22,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agent import impact, profiles
-from agent.chat import answer
+from agent.chat import FOLLOW_UPS, answer, card_answer
 from agent.contract import validate_card
 from agent.llm import LLM, LLMUnavailable
 from agent.offline import UNAVAILABLE as OFFLINE_NOTICE
@@ -51,12 +51,14 @@ app = FastAPI(title="Новостная аналитика для Альфа-Б�
 # защита общего ключа с лимитом 500 ₽/день от случайных и намеренных повторов.
 RATE_LIMIT = int(os.environ.get("RATE_LIMIT_PER_MIN", "10"))
 COSTLY = ("/api/analyze", "/chat", "/events/", "/api/news/refresh")
+FREE = ("/feedback", "/brief", "/request")  # без вызова модели: лимит платных запросов на них не распространяется
 _hits: dict[str, deque] = defaultdict(deque)
 
 
 @app.middleware("http")
 async def guard(request: Request, call_next):
-    if request.method == "POST" and any(k in request.url.path for k in COSTLY) and not request.url.path.endswith("/feedback"):
+    path = request.url.path
+    if request.method == "POST" and any(k in path for k in COSTLY) and not path.endswith(FREE):
         ip = request.client.host if request.client else "?"
         q, now = _hits[ip], time.monotonic()
         while q and now - q[0] > 60:
@@ -180,7 +182,8 @@ def bootstrap():
                    key=lambda x: -x["revenue_bn"])
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
             "companies": [_company(i) for i in ids], "all_companies": all_c,
-            "insights": insights, "origins": origins, "status": _status(), "chat_suggestions": SUGGESTED}
+            "insights": insights, "origins": origins, "status": _status(), "chat_suggestions": SUGGESTED,
+            "follow_ups": FOLLOW_UPS}
 
 
 BRIEFS = int(os.environ.get("BRIEFS_PER_COMPANY", "3"))
@@ -210,15 +213,24 @@ def company(cid: str):
     return {"company": _company(cid), "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows}}
 
 
+def _role_weights(role: str) -> dict:
+    return next((r["weights"] for r in MOCK["roles"] if r["id"] == role), {})
+
+
 @app.get("/api/companies/{cid}/events")
-def company_events(cid: str, limit: int = 10):
-    """Отбор без LLM: события, прошедшие правила, с причинами (критерий 01)."""
+def company_events(cid: str, limit: int = 10, role: str = ""):
+    """Отбор без LLM: события, прошедшие правила, с причинами (критерий 01). role — порядок под роль:
+    финансовому директору раньше ставка и долг, генеральному — спрос и отрасль."""
     _company(cid)
     have = {c["id"] for c, _ in store.cards(cid)}
+    w = _role_weights(role)
+    ranked = pipe.ranked(cid, limit)
+    if w:
+        ranked = sorted(ranked, key=lambda x: -(x[1].score + sum(w.get(t, 0) for t in x[0]["topics"]) / 2))
     return [{"id": e["id"], "title": e["title"], "published": e["published"], "source": e["source"], "url": e["url"],
              "topics": e["topics"], "also": len(e.get("also", [])), "score": m.score, "matched": m.matched,
              "reasons": m.reasons, "analyzed": f"{e['id']}-{cid}" in have}
-            for e, m in pipe.ranked(cid, limit)]
+            for e, m in ranked]
 
 
 @app.get("/api/metrics")
@@ -320,15 +332,24 @@ class NewsIn(BaseModel):
     url: str = Field(default="", max_length=500)
 
 
+_ARTICLES: dict[str, object] = {}  # ссылка → прочитанная статья: краткий и полный разбор видят один и тот же текст
+ARTICLE_CACHE_MAX = 200
+
+
 def _news_event(body: NewsIn) -> dict:
     """Новость пользователя: текст, или ссылка (статья, пост Telegram, PDF), или и то и другое."""
     title, text = body.title.strip(), body.text.strip()
     if body.url and len(text) < 200:
         from agent.ingest.article import fetch_article
-        try:
-            a = fetch_article(body.url)
-        except ValueError as e:  # UnsafeURL — тоже ValueError: сообщение понятное, без деталей сервера
-            raise HTTPException(422, f"Не удалось прочитать ссылку: {e}") from e
+        a = _ARTICLES.get(body.url)
+        if a is None:
+            try:
+                a = fetch_article(body.url)
+            except ValueError as e:  # UnsafeURL — тоже ValueError: сообщение понятное, без деталей сервера
+                raise HTTPException(422, f"Не удалось прочитать ссылку: {e}") from e
+            if len(_ARTICLES) >= ARTICLE_CACHE_MAX:
+                _ARTICLES.pop(next(iter(_ARTICLES)))
+            _ARTICLES[body.url] = a
         title, text = title or a.title, (text + "\n\n" + a.text).strip()
         ev = event_from_text(title or text[:120], text, body.url, source=urlparse(body.url).netloc or "Ссылка",
                              published=a.published or None)
@@ -336,6 +357,30 @@ def _news_event(body: NewsIn) -> dict:
     if len(title) < 5 and len(text) < 40:
         raise HTTPException(422, "Нужен заголовок, текст новости или ссылка на неё")
     return event_from_text(title or text[:120], text, body.url)
+
+
+def _brief(ev: dict, cid: str) -> dict:
+    """Краткий разбор за секунды и без модели. Готовый разбор ИИ по тому же событию не затирается."""
+    existing = next(((c, o) for c, o in store.cards(cid) if c["id"] == f"{ev['id']}-{cid}"), None)
+    if existing and existing[1] == "agent":
+        return {"card": existing[0], "origin": "agent", "llm_online": llm.online}
+    card, _, _ = pipe.rules(ev, cid, fetch=False)
+    if card is None:
+        raise HTTPException(422, "Не удалось разобрать новость")
+    store.put_card(cid, card, "rules")
+    return {"card": card, "origin": "rules", "llm_online": llm.online}
+
+
+@app.post("/api/brief")
+def brief_news(body: NewsIn):
+    """Своя новость: краткий разбор сразу; полный разбор ИИ клиент запускает следом (/api/analyze/stream)."""
+    _company(body.company_id)
+    return _brief(_news_event(body), body.company_id)
+
+
+@app.post("/api/companies/{cid}/events/{eid}/brief")
+def brief_event(cid: str, eid: str):
+    return _brief(_event(cid, eid), cid)
 
 
 @app.post("/api/analyze")
@@ -367,10 +412,9 @@ def chat(card_id: str, body: ChatIn):
         return data
     try:
         res = answer(llm, pipe.bank, card, body.company_id, body.q, TODAY)
-    except LLMUnavailable as e:
-        raise HTTPException(503, str(e)) from e
-    except ValueError as e:
-        raise HTTPException(502, f"ответ модели не разобран: {e}") from e
+    except (LLMUnavailable, ValueError):
+        # модель недоступна или ответила не по делу — отвечаем материалами самой карточки, с источниками
+        return card_answer(card, body.q)
     return {k: v for k, v in res.items() if not k.startswith("_")}
 
 

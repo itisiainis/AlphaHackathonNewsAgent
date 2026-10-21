@@ -82,3 +82,21 @@ def test_any_company_gets_briefs_without_model(client):
     assert rules, "для компании с отобранными событиями должен быть краткий разбор"
     c = rules[0]
     assert all(s["p"] != "ai" for s in c["key_points"]) and c["takeaway"]["cfo"]
+
+
+def test_brief_is_instant_and_keeps_agent_card(client):
+    """Своя новость: краткий разбор сразу (без модели); готовый разбор ИИ по тому же событию не затирается."""
+    body = {"company_id": "U_25835", "title": "ЦБ снизил ключевую ставку",
+            "text": "Совет директоров Банка России снизил ключевую ставку с 16% до 14% годовых. Регулятор допустил дальнейшее снижение."}
+    r = client.post("/api/brief", json=body).json()
+    assert r["origin"] == "rules" and r["card"]["blocks"]["calc"]
+    import backend.app as m
+    m.store.put_card("U_25835", r["card"] | {"why_short": "разбор ИИ"}, "agent")
+    again = client.post("/api/brief", json=body).json()
+    assert again["origin"] == "agent" and again["card"]["why_short"] == "разбор ИИ"
+
+
+def test_events_order_depends_on_role(client):
+    cfo = [e["id"] for e in client.get("/api/companies/U_25835/events?role=cfo").json()]
+    ceo = [e["id"] for e in client.get("/api/companies/U_25835/events?role=ceo").json()]
+    assert sorted(cfo) == sorted(ceo), "тот же отбор, другой порядок под роль"

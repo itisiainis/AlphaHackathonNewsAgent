@@ -346,7 +346,7 @@ function initSwitchers() {
     try { await loadCompany(id); } catch (err) { showModal('Не удалось загрузить компанию', err.message); return; }
     state.company = id; state.open = null; state.firstPaint = true;
     if (location.hash.startsWith('#feed/')) location.hash = '#feed'; else render(); };
-  $('#sel-role').onchange = e => { state.role = e.target.value; render(); };
+  $('#sel-role').onchange = e => { state.role = e.target.value; state.events = {}; render(); };
 }
 function renderNav(route) {
   const n = newCount();
@@ -457,6 +457,7 @@ function bodyHtml(i) {
         ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></details>
     <div class="tools">
       ${origin(i) === 'rules' && API && DATA.status && DATA.status.llm_online ? `<button class="btn pri" data-upgrade ${running ? 'disabled' : ''}>${running ? jobMark(job, 'Разбор идёт · ') : 'Полный разбор ИИ'}</button>` : ''}
+      <button class="btn" data-share>Переслать</button>
       <button class="btn" data-trace="${i.id}">Как получен вывод</button>
       <button class="btn ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}">Задать вопрос</button>
       <span class="sp"></span>
@@ -465,7 +466,7 @@ function bodyHtml(i) {
       <button class="btn ${fb === 'down' ? 'sel' : ''}" data-fb="down">Не про нас</button>
     </div>
     <div class="chat ${state.chatOpen[i.id] ? 'on' : ''}">
-      ${i.chat.length || (API && DATA.chat_suggestions) ? `<div class="sugg">${i.chat.map((c, k) => `<button data-q="${k}">${esc(c.q)}</button>`).join('')}${API ? (DATA.chat_suggestions || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}</div>` : ''}
+      ${i.chat.length || API ? `<div class="sugg">${API ? (DATA.follow_ups || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}${i.chat.map((c, k) => `<button data-q="${k}">${esc(c.q)}</button>`).join('')}${API ? (DATA.chat_suggestions || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}</div>` : ''}
       <div class="chat-log">${chatLog}</div>
       <form class="chat-in"><input placeholder="Вопрос по этому событию" autocomplete="off"><button class="btn pri">Спросить</button></form>
     </div>
@@ -551,7 +552,7 @@ function eventsHtml() {
 async function loadEvents() {
   if (!API || state.events[state.company] !== undefined) return;
   const cid = state.company;
-  try { state.events[cid] = await api(`/api/companies/${cid}/events`); } catch (e) { state.events[cid] = []; }
+  try { state.events[cid] = await api(`/api/companies/${cid}/events?role=${state.role}`); } catch (e) { state.events[cid] = []; }
   const box = document.getElementById('events-box');
   if (box && cid === state.company) { box.innerHTML = eventsHtml(); bindEvents(); }
 }
@@ -639,6 +640,16 @@ function updateJobMarks() {
     find('data-jobkey', j.key).forEach(el => { el.textContent = el.dataset.prefix + Math.round(j.progress) + '%'; });
   }
 }
+// «Переслать»: короткая выжимка для коллеги — вывод под роль, обоснования с источниками, ссылка на разбор
+async function shareCard(i) {
+  const src = st => st.src !== undefined && i.sources[st.src] ? ` (${i.sources[st.src].name})` : '';
+  const text = [i.title, '', takeaway(i), ...(i.key_points || []).map(st => `— ${st.t}${src(st)}`), '',
+    `Разбор: ${location.origin}${location.pathname}#feed/${i.id}`].join('\n');
+  try {
+    if (navigator.share) { await navigator.share({title: i.title, text}); return; }
+    await navigator.clipboard.writeText(text); toast('Выжимка скопирована — вставьте в мессенджер или письмо', 3500);
+  } catch (e) { if (e.name !== 'AbortError') toast('Не удалось скопировать — выделите текст карточки вручную', 3500); }
+}
 function toast(text, ms = 6000) {
   const el = document.createElement('div');
   el.className = 'toast'; el.textContent = text;
@@ -650,13 +661,30 @@ function refreshView() {
   if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || $('#modal').classList.contains('on')) return;
   const y = window.scrollY; render(false, true); window.scrollTo(0, y);
 }
-function startJob(key, label, path, body) {
+// Деловой человек не ждёт: краткий разбор (факты, позиция банка, расчёт, что это затрагивает) приходит
+// за секунды и сразу открывается; полный разбор ИИ идёт фоновой задачей и заменяет его на месте.
+async function analyzeNow(key, label, briefPath, path, body) {
+  const old = state.jobs[key];
+  if (old && old.status === 'running') { toast('Этот разбор уже идёт — следите за ним в углу экрана'); return; }
+  let r;
+  try { r = await api(briefPath, body); } catch (e) { toast(e.message, 6000); return; }
+  const cid = state.company, list = DATA.insights[cid] || [];
+  DATA.insights[cid] = list.some(c => c.id === r.card.id) ? list.map(c => c.id === r.card.id ? r.card : c) : [r.card, ...list];
+  ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.origin;
+  delete state.events[cid];
+  if (location.hash === '#feed/' + r.card.id) { state.open = null; render(true); } else location.hash = '#feed/' + r.card.id;
+  if (r.origin === 'agent') return;  // полный разбор этого события уже есть
+  if (!r.llm_online) { toast('Краткий разбор готов. Полный разбор ИИ можно будет запустить, когда модель станет доступна.', 6000); return; }
+  startJob(key, label, path, body, true);
+}
+function startJob(key, label, path, body, afterBrief = false) {
   const old = state.jobs[key];
   if (old && old.status === 'running') { toast('Этот разбор уже идёт — следите за ним в углу экрана'); return; }
   const now = Date.now();
   const j = state.jobs[key] = {key, label, company: state.company, started: now, since: now, lo: 2, progress: 2,
     trace: [], pending: 'Агент запускается…', status: 'running'};
-  toast('ИИ готовит разбор — обычно 1–2 минуты. Можно продолжать работу: когда будет готово, появится уведомление.', 7000);
+  toast(afterBrief ? 'Краткий разбор перед вами. ИИ дополняет его в фоне — когда будет готово, карточка обновится на месте.'
+    : 'ИИ готовит разбор — обычно 1–2 минуты. Можно продолжать работу: когда будет готово, появится уведомление.', 7000);
   if (!state.ticker) state.ticker = setInterval(tickJobs, 1000);
   renderJobs(); refreshView();
   streamAgent(path + '/stream', body, st => {
@@ -705,7 +733,8 @@ const hostOf = u => { try { return new URL(u).hostname; } catch (e) { return u; 
 function bindEvents() {
   document.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => {
     const e = (state.events[state.company] || []).find(x => x.id === b.dataset.ev);
-    startJob(state.company + ':' + b.dataset.ev, e ? e.title : 'Новость', `/api/companies/${state.company}/events/${b.dataset.ev}/analyze`, {});
+    const base = `/api/companies/${state.company}/events/${b.dataset.ev}`;
+    analyzeNow(state.company + ':' + b.dataset.ev, e ? e.title : 'Новость', base + '/brief', base + '/analyze', {});
   });
   const more = document.querySelector('[data-more-events]');
   if (more) more.onclick = () => { state.moreEvents = true; $('#events-box').innerHTML = eventsHtml(); bindEvents(); };
@@ -795,11 +824,11 @@ function render(scrollToOpen = false, keep = false) {
   if (r === 'quality' && API) loadQuality();
   if (r === 'feed' && API && $('#quick-an')) {
     $('#quick-an').onsubmit = e => { e.preventDefault(); const url = e.target.url.value.trim(); if (!url) return;
-      e.target.reset(); startJob(state.company + ':url:' + url, hostOf(url), '/api/analyze', {company_id: state.company, url}); };
+      e.target.reset(); analyzeNow(state.company + ':url:' + url, hostOf(url), '/api/brief', '/api/analyze', {company_id: state.company, url}); };
     $('#quick-text-go').onclick = () => { const text = $('#quick-text').value.trim();
       if (text.length < 40) { $('#an-msg').textContent = 'Вставьте текст новости — хотя бы пару предложений'; return; }
       const title = text.split(/[.!?\n]/)[0].slice(0, 200);
-      $('#quick-text').value = ''; startJob(state.company + ':text:' + title, title, '/api/analyze', {company_id: state.company, title, text}); };
+      $('#quick-text').value = ''; analyzeNow(state.company + ':text:' + title, title, '/api/brief', '/api/analyze', {company_id: state.company, title, text}); };
   }
   if (scrollToOpen && state.open) { const el = document.getElementById('card-' + state.open); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
   else if (!arg) window.scrollTo(0, 0);
@@ -817,6 +846,7 @@ function bind() {
   const i = ranked().find(x => x.id === state.open); if (!i) return;
   const card = document.getElementById('card-' + i.id); if (!card) return;
   card.querySelector('[data-trace]').onclick = () => openTrace(i);
+  card.querySelector('[data-share]').onclick = () => shareCard(i);
   const up = card.querySelector('[data-upgrade]');  // краткий разбор → полный разбор агентом по тому же событию
   if (up) up.onclick = () => startJob(state.company + ':' + evId(i), i.title, `/api/companies/${state.company}/events/${evId(i)}/analyze`, {});
   card.querySelector('[data-chat]').onclick = () => { state.chatOpen[i.id] = !state.chatOpen[i.id]; render(); };
