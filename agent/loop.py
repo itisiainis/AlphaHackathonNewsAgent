@@ -21,7 +21,7 @@ from . import profiles
 from .contract import Report, validate_card
 from .contract.validator import numbers_in
 from .kb import BM25Index
-from .llm import LLM, ROUTING, LLMUnavailable, extract_json
+from .llm import LLM, NO_REASONING, ROUTING, LLMUnavailable, extract_json
 from .matching import Match
 from .prompts import AGENT_SYSTEM, CHECK_SYSTEM, DRAFT_SYSTEM, ROLES_RU, tools_block
 from .tools import ToolSession
@@ -67,10 +67,11 @@ class Agent:
                           "pending": pending})
 
     # ---------- вспомогательное ----------
-    def _ask(self, role: str, messages: list[dict], trace: list, kind: str, title: str, max_tokens=6000):
-        """Вызов модели с одной повторной попыткой, если ответ не JSON."""
+    def _ask(self, role: str, messages: list[dict], trace: list, kind: str, title: str, max_tokens=6000, think=None):
+        """Вызов модели с одной повторной попыткой, если ответ не JSON. think — включить скрытые рассуждения."""
         self._emit(trace, PENDING.get(title, "Модель работает…"))
-        c = self.llm.complete(ROUTING[role], messages, max_tokens=max_tokens, json_mode=True)
+        think = role not in NO_REASONING if think is None else think
+        c = self.llm.complete(ROUTING[role], messages, max_tokens=max_tokens, json_mode=True, reasoning=think)
         cost, ms = c.cost_rub, c.ms
         try:
             data = extract_json(c.text)
@@ -78,7 +79,7 @@ class Agent:
             c2 = self.llm.complete(ROUTING[role], messages + [
                 {"role": "assistant", "content": c.text},
                 {"role": "user", "content": "Ответ не разобрался как JSON. Верни только JSON-объект."}],
-                max_tokens=max_tokens, json_mode=True)
+                max_tokens=max_tokens, json_mode=True, reasoning=think)
             cost, ms = cost + c2.cost_rub, ms + c2.ms
             data = extract_json(c2.text)
         trace.append({"kind": kind, "title": title, "detail": "", "ms": ms, "cost": round(cost, 4),
@@ -112,8 +113,21 @@ class Agent:
                                   "detail": f"повторный поиск по замечанию проверки: {_count(res)} фрагм.",
                                   "ms": entry["ms"], "cost": 0})
                     observations.append({"tool": "search_bank_analytics", "args": {"query": q}, "result": res})
-                draft = self._draft(ses, match, observations, trace, issues=issues)
-                card, rep = self._assemble(draft, ses, event, company_id, match, trace)
+                good = (card, rep) if rep.ok else None
+                try:
+                    draft = self._draft(ses, match, observations, trace, issues=issues)
+                    card, rep = self._assemble(draft, ses, event, company_id, match, trace)
+                except (LLMUnavailable, ValueError, KeyError, TypeError) as e:
+                    if not good:
+                        raise
+                    # правка не удалась — остаётся черновик, прошедший проверку кодом; замечание видно в трассе
+                    card, rep = good
+                    trace.append({"kind": "check", "title": "Правка черновика", "ms": 0, "cost": 0,
+                                  "detail": f"не выполнена ({e}); оставлен черновик, прошедший проверку кодом"})
+                if rep.ok is False and good:
+                    card, rep = good
+                    trace.append({"kind": "check", "title": "Правка черновика", "ms": 0, "cost": 0,
+                                  "detail": "правка не прошла проверку кодом — оставлен прежний черновик, прошедший проверку"})
         except LLMUnavailable as e:
             return Result(None, Report(errors=[str(e)]), trace, ses.log, error=str(e), unavailable=True)
         except (ValueError, KeyError, TypeError) as e:
@@ -199,7 +213,7 @@ class Agent:
             user += "\n\nЗамечания проверки, которые нужно исправить:\n- " + "\n- ".join(issues[:10])
         system = DRAFT_SYSTEM.format(roles=", ".join(f"{k} — {v}" for k, v in ROLES_RU.items()))
         draft = self._ask("draft", [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                          trace, "draft", "Черновик карточки" if not issues else "Правка черновика", max_tokens=10000)
+                          trace, "draft", "Черновик карточки" if not issues else "Правка черновика", max_tokens=10000, think=not issues)
         n = sum(len(draft.get("blocks", {}).get(b, [])) for b in ("what", "why", "risks", "opportunities", "actions"))
         trace[-1]["detail"] = f"{n} утверждений, источников в работе: {len(ses.sources)}"
         self._emit(trace, "Код проверяет происхождение, ссылки и цифры…")
@@ -281,7 +295,7 @@ class Agent:
 
         b = draft.get("blocks", {})
         blocks = {k: stmts(b.get(k)) for k in ("what", "why", "risks", "opportunities", "actions")}
-        key_points = stmts(draft.get("key_points"))
+        key_points = stmts(draft.get("key_points"))[:3]
         bank_src = by_label.get((b.get("bank") or {}).get("src") or "")
         if bank_src and bank_src.kind == "bank":
             idx(bank_src.label)
