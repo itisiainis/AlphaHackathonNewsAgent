@@ -429,12 +429,13 @@ function bindEvents() {
   document.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => runAgent(`/api/companies/${state.company}/events/${b.dataset.ev}/analyze`, {}));
 }
 function viewAnalyze() {
-  return `<h1>Разобрать новость</h1><div class="muted">Вставьте новость, которой нет в ленте, — агент разберёт её для компании «${esc(company().display)}» и роли «${esc(role().name)}».</div>
+  return `<h1>Разобрать новость</h1><div class="muted">Вставьте ссылку (статья, пост в Telegram, PDF) или текст новости, которой нет в ленте, — агент разберёт её для компании «${esc(company().display)}» и роли «${esc(role().name)}». Достаточно одной ссылки: текст мы прочитаем сами.</div>
     <form class="card" id="an-form" style="margin-top:16px;display:grid;gap:10px">
-      <input name="title" placeholder="Заголовок новости" required minlength="5" maxlength="300" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px">
-      <textarea name="text" placeholder="Текст новости" rows="8" maxlength="8000" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px"></textarea>
-      <input name="url" placeholder="Ссылка на первоисточник (необязательно)" maxlength="500" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px">
-      <div><button class="btn pri" ${state.busy ? 'disabled' : ''}>Разобрать</button></div>
+      <input name="url" type="url" placeholder="Ссылка: https://… (статья, t.me/канал/пост, PDF)" maxlength="500" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px">
+      <div class="muted" style="font-size:13px">или вставьте текст, если ссылки нет или сайт закрыт для чтения</div>
+      <input name="title" placeholder="Заголовок (необязательно)" maxlength="300" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px">
+      <textarea name="text" placeholder="Текст новости" rows="8" maxlength="20000" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px"></textarea>
+      <div><button class="btn pri" ${state.busy ? 'disabled' : ''}>Разобрать</button> <span id="an-msg" class="muted" role="status"></span></div>
     </form>`;
 }
 function viewQuality() {
@@ -506,7 +507,9 @@ function render(scrollToOpen = false) {
   if (r === 'feed') { loadEvents(); bindEvents(); }
   if (r === 'quality' && API) loadQuality();
   if (r === 'analyze' && API) $('#an-form').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target);
-    runAgent('/api/analyze', {company_id: state.company, title: f.get('title'), text: f.get('text'), url: f.get('url')}); };
+    const body = {company_id: state.company, title: f.get('title').trim(), text: f.get('text').trim(), url: f.get('url').trim()};
+    if (!body.url && body.title.length < 5 && body.text.length < 40) { $('#an-msg').textContent = 'Нужна ссылка на новость, заголовок или текст'; return; }
+    runAgent('/api/analyze', body); };
   if (scrollToOpen && state.open) { const el = document.getElementById('card-' + state.open); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
   else if (!arg) window.scrollTo(0, 0);
 }

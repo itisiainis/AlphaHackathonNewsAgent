@@ -104,11 +104,13 @@ def to_events(posts: list[tuple[Post, dict]]) -> list[dict]:
         else:
             events.append({"id": _event_id(p), "title": _title(p), "text": text,
                            "published": p.date.date().isoformat(), "source": src["name"],
-                           "kind": src.get("kind", "news"), "url": p.link,
+                           "kind": src.get("kind", "news"), "url": p.link, "official": bool(src.get("official")),
                            "topics": topics, "sectors": sectors, "also": [], "importance": 0, "gist": ""})
             sigs.append(sig)
     for ev in events:
-        ev["importance"] = min(10, 4 + len(ev["also"]) + (1 if {"ставка", "курс"} & set(ev["topics"]) else 0))
+        # эвристика без LLM: чем больше изданий написали, тем важнее; регулятор и министерства — важнее
+        ev["importance"] = min(10, 4 + len(ev["also"]) + (1 if {"ставка", "курс"} & set(ev["topics"]) else 0)
+                               + (2 if ev.get("official") else 0))
     return events
 
 

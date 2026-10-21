@@ -258,7 +258,8 @@ class Agent:
         flow = (f"Отрасль известна для {round(cust['known_industry_share'] * 100)}% входящего потока."
                 if cust["n"] and not dq else "")
         # отраслевая оценка банка: есть / устарела / нет — решает код, текст попадает в карточку дословно
-        coverage = " ".join(x for x in [ses.industry["note"], "; ".join(dq), flow] if x)
+        text_note = "Текст новости — только анонс источника, полный текст недоступен." if event.get("text_kind") == "summary" else ""
+        coverage = " ".join(x for x in [ses.industry["note"], text_note, "; ".join(dq), flow] if x)
         sources = [{"name": by_label[lbl].name, "kind": by_label[lbl].kind, "date": by_label[lbl].date or self.today.isoformat(),
                     "url": by_label[lbl].url} for lbl in cited]
         card = {

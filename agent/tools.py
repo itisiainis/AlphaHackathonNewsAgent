@@ -108,7 +108,9 @@ class ToolSession:
 
     def get_event(self) -> dict:
         return {"label": "S1", "title": self.event.get("title"), "published": self.event.get("published"),
-                "source": self.event.get("source"), "text": self.event.get("text", "")[:4000]}
+                "source": self.event.get("source"), "text": self.event.get("text", "")[:6000],
+                "text_kind": {"full": "полный текст статьи", "summary": "только анонс источника — полный текст недоступен"}
+                .get(self.event.get("text_kind", ""), "текст, переданный пользователем")}
 
     # ---------- диспетчер ----------
     TOOLS = {

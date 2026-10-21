@@ -15,6 +15,7 @@ import time
 from collections import defaultdict, deque
 from datetime import date, datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -248,23 +249,41 @@ def analyze_event_stream(cid: str, eid: str):
 
 class NewsIn(BaseModel):
     company_id: str
-    title: str = Field(min_length=5, max_length=300)
-    text: str = Field(default="", max_length=8000)
+    title: str = Field(default="", max_length=300)
+    text: str = Field(default="", max_length=20000)
     url: str = Field(default="", max_length=500)
+
+
+def _news_event(body: NewsIn) -> dict:
+    """Новость пользователя: текст, или ссылка (статья, пост Telegram, PDF), или и то и другое."""
+    title, text = body.title.strip(), body.text.strip()
+    if body.url and len(text) < 200:
+        from agent.ingest.article import fetch_article
+        try:
+            a = fetch_article(body.url)
+        except ValueError as e:  # UnsafeURL — тоже ValueError: сообщение понятное, без деталей сервера
+            raise HTTPException(422, f"Не удалось прочитать ссылку: {e}") from e
+        title, text = title or a.title, (text + "\n\n" + a.text).strip()
+        ev = event_from_text(title or text[:120], text, body.url, source=urlparse(body.url).netloc or "Ссылка",
+                             published=a.published or None)
+        return ev | {"text_kind": "full"}
+    if len(title) < 5 and len(text) < 40:
+        raise HTTPException(422, "Нужен заголовок, текст новости или ссылка на неё")
+    return event_from_text(title or text[:120], text, body.url)
 
 
 @app.post("/api/analyze")
 def analyze_news(body: NewsIn):
     """Разбор новости, которой нет в базе (критерий 04: ранее не показанные новости)."""
     _company(body.company_id)
-    return _run(event_from_text(body.title, body.text, body.url), body.company_id)
+    return _run(_news_event(body), body.company_id)
 
 
 @app.post("/api/analyze/stream")
 def analyze_news_stream(body: NewsIn):
     """То же, что /api/analyze, но шаги агента приходят потоком SSE."""
     _company(body.company_id)
-    return _stream(event_from_text(body.title, body.text, body.url), body.company_id)
+    return _stream(_news_event(body), body.company_id)
 
 
 class ChatIn(BaseModel):
