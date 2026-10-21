@@ -22,3 +22,6 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+# рантайм сервиса
+data/cache/
+data/news/events.json

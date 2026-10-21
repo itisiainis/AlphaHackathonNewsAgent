@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false   # без .env сервис стартует: отбор, готовые разборы и краткий разбор без ИИ работают
+    volumes:
+      - cache:/app/data/cache   # карточки, обратная связь, кеш ответов модели переживают перезапуск
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  cache:

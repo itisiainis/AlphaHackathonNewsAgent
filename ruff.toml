@@ -1,0 +1,13 @@
+line-length = 160
+target-version = "py313"
+extend-exclude = ["frontend", "data"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "S"]
+# S101 — assert в тестах; S603/S607 — вызов tesseract/pdftoppm с фиксированными аргументами (bank_docs.py)
+ignore = ["S101", "S603", "S607"]
+
+[lint.per-file-ignores]
+# HTML-фикстуры веб-просмотра t.me и RSS перенесены из бота как есть
+"tests/test_webcollector.py" = ["E501"]
+"tests/test_feeds.py" = ["E501"]
