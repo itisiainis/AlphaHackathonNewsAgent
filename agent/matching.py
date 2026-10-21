@@ -108,7 +108,8 @@ def match(event: dict, feats: dict, products: list[str]) -> Match:
     # Уголовные дела и суды над людьми — не бизнес-событие для компании (если не о её контрагенте, а этого мы не знаем)
     if re.search(CRIME, text):
         m.score *= CRIME_FACTOR
-        m.reasons.append({"feature": "суд или уголовное дело", "why": "частный спор или уголовное дело, не рыночное событие: вес снижен", "weight": CRIME_FACTOR})
+        m.reasons.append({"feature": "суд или уголовное дело", "weight": CRIME_FACTOR,
+                          "why": "частный спор или уголовное дело, не рыночное событие: вес снижен"})
     # Ежедневная рутина (официальный курс на завтра) — не событие: изменения курса ловятся по другим новостям
     if re.search(ROUTINE, text):
         m.score *= ROUTINE_FACTOR
