@@ -24,6 +24,7 @@ from agent import profiles
 from agent.chat import answer
 from agent.llm import LLM, LLMUnavailable
 from agent.pipeline import Pipeline, event_from_text
+from agent.slices import SUGGESTED, data_answer
 
 from .store import Store
 
@@ -44,7 +45,7 @@ app = FastAPI(title="Новостная аналитика для Альфа-Б�
 
 # Платные эндпоинты (вызывают модель) — не чаще RATE_LIMIT запросов в минуту с одного адреса:
 # защита общего ключа с лимитом 500 ₽/день от случайных и намеренных повторов.
-RATE_LIMIT = int(os.environ.get("RATE_LIMIT_PER_MIN", "6"))
+RATE_LIMIT = int(os.environ.get("RATE_LIMIT_PER_MIN", "10"))
 COSTLY = ("/api/analyze", "/chat", "/events/", "/api/news/refresh")
 _hits: dict[str, deque] = defaultdict(deque)
 
@@ -80,23 +81,36 @@ def _seed() -> None:
 _seed()
 
 
-def _collect_background() -> None:
-    """Свежие новости при старте — чтобы лента строилась на сегодняшних событиях (критерий 04)."""
+COLLECT_EVERY_MIN = int(os.environ.get("COLLECT_EVERY_MIN", "60"))
+# Разметка новостей моделью Gemma при сборе: ~0,003 ₽ за пачку из 20 новостей. 0 — только словари, без расхода
+COLLECT_TRIAGE = os.environ.get("COLLECT_TRIAGE", "1") == "1"
+
+
+def _collect_once() -> None:
     from agent.ingest.collect import collect
 
     if not _collect_lock.acquire(blocking=False):
         return
     try:
-        collect(48, llm)
+        collect(48, llm if COLLECT_TRIAGE else None)
         pipe.reload_news()
     except Exception:  # нет сети — работаем на сохранённой выборке data/news/events.sample.json
-        log.warning("сбор новостей при старте не удался, используется сохранённая выборка", exc_info=True)
+        log.warning("сбор новостей не удался, используется сохранённая выборка", exc_info=True)
     finally:
         _collect_lock.release()
 
 
+def _collect_loop() -> None:
+    """Сбор свежих новостей при старте и затем каждые COLLECT_EVERY_MIN минут (критерий 04).
+
+    Уже собранные события не размечаются повторно: хранилище объединяет их по id."""
+    while True:
+        _collect_once()
+        time.sleep(max(COLLECT_EVERY_MIN, 5) * 60)
+
+
 if os.environ.get("COLLECT_ON_START", "0") == "1":
-    threading.Thread(target=_collect_background, daemon=True).start()
+    threading.Thread(target=_collect_loop, daemon=True).start()
 
 
 def _company(cid: str) -> dict:
@@ -134,7 +148,7 @@ def bootstrap():
                    key=lambda x: -x["revenue_bn"])
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
             "companies": [_company(i) for i in ids], "all_companies": all_c,
-            "insights": insights, "origins": origins, "status": _status()}
+            "insights": insights, "origins": origins, "status": _status(), "chat_suggestions": SUGGESTED}
 
 
 @app.get("/api/companies/{cid}")
@@ -263,6 +277,9 @@ def chat(card_id: str, body: ChatIn):
     card = store.card(body.company_id, card_id)
     if not card:
         raise HTTPException(404, "карточка не найдена")
+    data = data_answer(body.company_id, body.q)  # «другой разрез» из профиля — без модели и мгновенно
+    if data:
+        return data
     try:
         res = answer(llm, pipe.bank, card, body.company_id, body.q, TODAY)
     except LLMUnavailable as e:
@@ -292,7 +309,7 @@ def refresh_news(hours: int = 48):
     if not _collect_lock.acquire(blocking=False):
         raise HTTPException(409, "сбор уже идёт")
     try:
-        stats = collect(min(max(hours, 1), 168), llm)
+        stats = collect(min(max(hours, 1), 168), llm if COLLECT_TRIAGE else None)
     finally:
         _collect_lock.release()
     pipe.reload_news()
