@@ -19,6 +19,7 @@ from datetime import date
 
 from . import profiles
 from .contract import Report, validate_card
+from .contract.validator import numbers_in
 from .kb import BM25Index
 from .llm import LLM, ROUTING, LLMUnavailable, extract_json
 from .matching import Match
@@ -131,7 +132,7 @@ class Agent:
                      "В первом ответе добавь поле \"plan\" — список шагов анализа."}]
         observations = []
         for step in range(MAX_TOOL_STEPS + 1):
-            act = self._ask("draft", messages, trace, "plan", "План" if step == 0 else "Шаг")
+            act = self._ask("agent", messages, trace, "plan", "План" if step == 0 else "Шаг")
             if step == 0:
                 trace[-1]["detail"] = "; ".join(map(str, act.get("plan") or [])) or str(act.get("thought", ""))
                 think = {"ms": 0, "cost": 0}
@@ -191,10 +192,48 @@ class Agent:
                 cited.append(label)
             return cited.index(label)
 
+        repairs: list[str] = []
+
+        def ground(s: dict) -> dict | None:
+            """Сверка цифр утверждения с источником до проверки (исправляет, а не только ругается).
+
+            Если числа факта или позиции банка не встречаются в указанном источнике, ищем среди всех
+            найденных агентом источников тот, где они есть (для bank — только аналитику банка), и
+            перенаправляем ссылку. Не нашли — утверждение убирается: неподтверждённая цифра хуже,
+            чем отсутствие утверждения. Факт без чисел и без источника становится выводом ИИ."""
+            p, lbl = s.get("p"), s.get("src")
+            if p not in ("fact", "bank"):
+                return s
+            nums = numbers_in(s.get("t", ""))
+            ok = lambda src: (src.kind == "bank" or p == "fact") and nums <= numbers_in(src.text)  # noqa: E731
+            if lbl in by_label and ok(by_label[lbl]):
+                return s
+            alt = next((src for src in ses.sources if nums and ok(src)), None)
+            if alt:
+                repairs.append(f"ссылка {lbl or '—'}→{alt.label}")
+                return {**s, "src": alt.label}
+            if not nums and lbl not in by_label:
+                repairs.append("факт без источника → вывод ИИ")
+                return {**s, "p": "ai", "src": None}
+            repairs.append(f"убрано: «{s.get('t', '')[:50]}…»")
+            return None
+
         def stmts(arr, allow=("t", "p", "strength", "cta")):
             out = []
             for s in arr or []:
+                if not isinstance(s, dict) or not s.get("t"):
+                    continue
+                if s.get("p") not in ("fact", "bank", "ai"):
+                    s = {**s, "p": "ai"}  # происхождение не указано — честнее считать выводом модели
+                s = ground(s)
+                if s is None:
+                    continue
                 st = {k: s[k] for k in allow if k in s and s[k] not in (None, "")}
+                if st.get("strength") not in (None, "high", "medium", "low"):
+                    st.pop("strength")
+                cta = st.get("cta")
+                if cta and not (isinstance(cta, dict) and cta.get("label") and cta.get("kind") in ("manager", "product")):
+                    st.pop("cta")
                 i = idx(s.get("src"))
                 if i is not None:
                     st["src"] = i
@@ -237,6 +276,7 @@ class Agent:
         }
         texts = {i: by_label[lbl].text for i, lbl in enumerate(cited)}
         rep = validate_card(card, today=self.today, source_texts=texts)
-        trace.append({"kind": "check", "title": "Самопроверка (код)", "detail": rep.summary(), "ms": 0, "cost": 0})
+        detail = rep.summary() + (f" Исправлено до проверки: {'; '.join(repairs[:4])}." if repairs else "")
+        trace.append({"kind": "check", "title": "Самопроверка (код)", "detail": detail, "ms": 0, "cost": 0})
         self._emit(trace)
         return card, rep

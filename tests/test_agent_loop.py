@@ -98,14 +98,32 @@ def test_unknown_tool_rejected():
     assert not entry["ok"] and "не разрешён" in result["error"]
 
 
-def test_invented_number_triggers_revision():
+def test_invented_number_is_removed_and_revision_requested():
+    """Факт с выдуманной цифрой убирается; если блок «что произошло» опустел — черновик переписывается."""
     bad = json.loads(json.dumps(DRAFT))
     bad["blocks"]["what"][0]["t"] = "11 сентября ЦБ сохранил ключевую ставку на уровне 15%."
     llm = ScriptedLLM(draft=bad)
     res = run(llm)
-    assert res.card is None and any("15" in e for e in res.report.errors)
-    assert llm.calls.count("glm") >= 2 + 4, "после ошибки проверки черновик переписывается"
-    assert any(t["title"] == "Правка черновика" for t in res.trace)
+    assert res.card is None, "карточка без единого факта о событии не публикуется"
+    assert any("убрано" in t["detail"] for t in res.trace if t["title"] == "Самопроверка (код)")
+    assert llm.calls.count("glm") >= 2 and any(t["title"] == "Правка черновика" for t in res.trace)
+
+
+def test_wrong_citation_is_repointed_not_rejected():
+    """Цифра есть в другом найденном источнике — ссылка исправляется, карточка проходит."""
+    d = json.loads(json.dumps(DRAFT))
+    # «23 октября» есть только во фрагменте аналитики банка (S2), а модель сослалась на новость (S1)
+    d["key_points"][1] = {"t": "Следующее заседание по ставке — 23 октября", "p": "fact", "src": "S1"}
+    res = run(ScriptedLLM(draft=d))
+    assert res.card is not None, res.report.errors
+    assert res.card["key_points"][1]["src"] == 1
+
+
+def test_missing_provenance_defaults_to_ai():
+    d = json.loads(json.dumps(DRAFT))
+    d["blocks"]["actions"][0].pop("p")
+    res = run(ScriptedLLM(draft=d))
+    assert res.card is not None and res.card["blocks"]["actions"][0]["p"] == "ai"
 
 
 def test_no_key_gives_honest_error():
