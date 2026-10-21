@@ -344,7 +344,8 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
                 revenue_done = True
                 eff = R * ch / 100
                 calcs.append(_calc(
-                    f"Выручка: {what} в отрасли компании", f"{'+' if eff > 0 else ''}{rub(eff)} в год — верхняя оценка",
+                    f"Выручка, если ваши {'цены' if kind == 'price' else 'продажи'} изменятся как у рынка",
+                    f"до {'+' if eff > 0 else ''}{rub(eff)} в год — верхняя оценка",
                     f"{num(R / BN)} млрд ₽ × {'+' if ch > 0 else '−'}{num(abs(ch), 2)}%",
                     [fact(sh["quote"]), fact(f"Выручка компании за год: {num(R / BN)} млрд ₽", profile_src)],
                     [f"{what.capitalize()} компании меняются так же, как в отрасли в целом",

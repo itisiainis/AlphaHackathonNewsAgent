@@ -22,8 +22,9 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agent import impact, profiles
-from agent.chat import answer
+from agent.chat import FOLLOW_UPS, answer, card_answer
 from agent.contract import validate_card
+from agent.learning import Learner
 from agent.llm import LLM, LLMUnavailable
 from agent.offline import UNAVAILABLE as OFFLINE_NOTICE
 from agent.okved import short_name
@@ -41,6 +42,9 @@ CACHE = Path(os.environ.get("APP_CACHE_DIR", ROOT / "data" / "cache"))
 llm = LLM(CACHE / "llm")
 pipe = Pipeline(llm, today=TODAY)
 store = Store(CACHE / "app.db")
+learner = Learner(store)  # опыт сервиса: память разборов, оценки клиентов, рутина в потоке, уроки проверки
+pipe.learner = learner
+learner.observe(pipe.events)
 _collect_lock = threading.Lock()
 log = logging.getLogger("newsagent")
 
@@ -51,12 +55,14 @@ app = FastAPI(title="Новостная аналитика для Альфа-Б�
 # защита общего ключа с лимитом 500 ₽/день от случайных и намеренных повторов.
 RATE_LIMIT = int(os.environ.get("RATE_LIMIT_PER_MIN", "10"))
 COSTLY = ("/api/analyze", "/chat", "/events/", "/api/news/refresh")
+FREE = ("/feedback", "/brief", "/request")  # без вызова модели: лимит платных запросов на них не распространяется
 _hits: dict[str, deque] = defaultdict(deque)
 
 
 @app.middleware("http")
 async def guard(request: Request, call_next):
-    if request.method == "POST" and any(k in request.url.path for k in COSTLY) and not request.url.path.endswith("/feedback"):
+    path = request.url.path
+    if request.method == "POST" and any(k in path for k in COSTLY) and not path.endswith(FREE):
         ip = request.client.host if request.client else "?"
         q, now = _hits[ip], time.monotonic()
         while q and now - q[0] > 60:
@@ -107,6 +113,10 @@ _load_precomputed()
 COLLECT_EVERY_MIN = int(os.environ.get("COLLECT_EVERY_MIN", "60"))
 # Разметка новостей моделью Gemma при сборе: ~0,003 ₽ за пачку из 20 новостей. 0 — только словари, без расхода
 COLLECT_TRIAGE = os.environ.get("COLLECT_TRIAGE", "1") == "1"
+SOURCES_OFF: list[str] = []  # источники, отключённые в панели управления
+
+
+LAST_COLLECT: dict = {}  # сводка последнего сбора — в панели управления
 
 
 def _collect_once() -> None:
@@ -115,8 +125,11 @@ def _collect_once() -> None:
     if not _collect_lock.acquire(blocking=False):
         return
     try:
-        collect(48, llm if COLLECT_TRIAGE else None)
+        stats = collect(48, llm if COLLECT_TRIAGE else None, disabled=set(SOURCES_OFF))
+        LAST_COLLECT.clear()
+        LAST_COLLECT.update(stats | {"at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
         pipe.reload_news()
+        learner.observe(pipe.events)
     except Exception:  # нет сети — работаем на сохранённой выборке data/news/events.sample.json
         log.warning("сбор новостей не удался, используется сохранённая выборка", exc_info=True)
     finally:
@@ -165,13 +178,19 @@ def healthz():
     return {"ok": True}
 
 
+def _visible(cid: str) -> list[tuple[dict, str]]:
+    """Карточки компании без тех, что сотрудник банка скрыл в панели управления."""
+    hidden = {k for _, k in store.hidden(cid)}
+    return [(c, o) for c, o in store.cards(cid) if c["id"] not in hidden]
+
+
 @app.get("/api/bootstrap")
 def bootstrap():
     ids = list(dict.fromkeys(DEMO_IDS + store.companies_with_cards()))
     insights, origins = {}, {}
     for cid in ids:
         _ensure_briefs(cid)
-        rows = store.cards(cid)
+        rows = _visible(cid)
         insights[cid] = [c for c, _ in rows]
         origins[cid] = {c["id"]: o for c, o in rows}
     all_c = sorted(({"id": i, "display": profiles.short_industry(profiles.get(i)), "region": profiles.get(i)["region"],
@@ -180,7 +199,8 @@ def bootstrap():
                    key=lambda x: -x["revenue_bn"])
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
             "companies": [_company(i) for i in ids], "all_companies": all_c,
-            "insights": insights, "origins": origins, "status": _status(), "chat_suggestions": SUGGESTED}
+            "insights": insights, "origins": origins, "status": _status(), "chat_suggestions": SUGGESTED,
+            "follow_ups": FOLLOW_UPS, "learned": learner.topic_weights()}
 
 
 BRIEFS = int(os.environ.get("BRIEFS_PER_COMPANY", "3"))
@@ -206,19 +226,31 @@ def _ensure_briefs(cid: str) -> None:
 def company(cid: str):
     _company(cid)
     _ensure_briefs(cid)
-    rows = store.cards(cid)
+    rows = _visible(cid)
     return {"company": _company(cid), "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows}}
 
 
+def _role_weights(role: str) -> dict:
+    return next((r["weights"] for r in MOCK["roles"] if r["id"] == role), {})
+
+
 @app.get("/api/companies/{cid}/events")
-def company_events(cid: str, limit: int = 10):
-    """Отбор без LLM: события, прошедшие правила, с причинами (критерий 01)."""
+def company_events(cid: str, limit: int = 10, role: str = ""):
+    """Отбор без LLM: события, прошедшие правила, с причинами (критерий 01). role — порядок под роль:
+    финансовому директору раньше ставка и долг, генеральному — спрос и отрасль."""
     _company(cid)
     have = {c["id"] for c, _ in store.cards(cid)}
+    learned = learner.topic_weights()
+    own, common = learned["companies"].get(cid, {}).get(role, {}), learned["roles"].get(role, {})
+    # опыт самой компании (если она оценивала тему) заменяет общий опыт роли — он уже учтён в нём как априорный
+    w = {t: v + own.get(t, common.get(t, 0)) for t, v in _role_weights(role).items()}
+    ranked = pipe.ranked(cid, limit)
+    if w:
+        ranked = sorted(ranked, key=lambda x: -(x[1].score + sum(w.get(t, 0) for t in x[0]["topics"]) / 2))
     return [{"id": e["id"], "title": e["title"], "published": e["published"], "source": e["source"], "url": e["url"],
              "topics": e["topics"], "also": len(e.get("also", [])), "score": m.score, "matched": m.matched,
              "reasons": m.reasons, "analyzed": f"{e['id']}-{cid}" in have}
-            for e, m in pipe.ranked(cid, limit)]
+            for e, m in ranked]
 
 
 @app.get("/api/metrics")
@@ -242,7 +274,12 @@ def _rules(event: dict, cid: str, reason: str) -> dict:
     return {"ok": True, "card": card, "mode": "rules", "notice": OFFLINE_NOTICE, "reason": reason, "warnings": [], "tool_log": []}
 
 
-def _run(event: dict, cid: str, on_step=None) -> dict:
+def _run(event: dict, cid: str, on_step=None, fresh: bool = False) -> dict:
+    if not fresh:
+        dup = learner.remembered(cid, event, TODAY)
+        if dup:  # тот же сюжет из другого источника уже разобран — ответ из памяти, без модели и расхода
+            store.log_reuse(cid, dup["id"])
+            return {"ok": True, "card": dup, "reused": True, "warnings": [], "tool_log": []}
     res, m = pipe.analyze(event, cid, on_step)
     if res.unavailable:  # нет ключа, бюджет исчерпан, сбой провайдера
         return _rules(event, cid, res.error)
@@ -320,15 +357,24 @@ class NewsIn(BaseModel):
     url: str = Field(default="", max_length=500)
 
 
+_ARTICLES: dict[str, object] = {}  # ссылка → прочитанная статья: краткий и полный разбор видят один и тот же текст
+ARTICLE_CACHE_MAX = 200
+
+
 def _news_event(body: NewsIn) -> dict:
     """Новость пользователя: текст, или ссылка (статья, пост Telegram, PDF), или и то и другое."""
     title, text = body.title.strip(), body.text.strip()
     if body.url and len(text) < 200:
         from agent.ingest.article import fetch_article
-        try:
-            a = fetch_article(body.url)
-        except ValueError as e:  # UnsafeURL — тоже ValueError: сообщение понятное, без деталей сервера
-            raise HTTPException(422, f"Не удалось прочитать ссылку: {e}") from e
+        a = _ARTICLES.get(body.url)
+        if a is None:
+            try:
+                a = fetch_article(body.url)
+            except ValueError as e:  # UnsafeURL — тоже ValueError: сообщение понятное, без деталей сервера
+                raise HTTPException(422, f"Не удалось прочитать ссылку: {e}") from e
+            if len(_ARTICLES) >= ARTICLE_CACHE_MAX:
+                _ARTICLES.pop(next(iter(_ARTICLES)))
+            _ARTICLES[body.url] = a
         title, text = title or a.title, (text + "\n\n" + a.text).strip()
         ev = event_from_text(title or text[:120], text, body.url, source=urlparse(body.url).netloc or "Ссылка",
                              published=a.published or None)
@@ -336,6 +382,34 @@ def _news_event(body: NewsIn) -> dict:
     if len(title) < 5 and len(text) < 40:
         raise HTTPException(422, "Нужен заголовок, текст новости или ссылка на неё")
     return event_from_text(title or text[:120], text, body.url)
+
+
+def _brief(ev: dict, cid: str) -> dict:
+    """Краткий разбор за секунды и без модели. Готовый разбор ИИ по тому же событию не затирается."""
+    existing = next(((c, o) for c, o in store.cards(cid) if c["id"] == f"{ev['id']}-{cid}"), None)
+    if existing and existing[1] == "agent":
+        return {"card": existing[0], "origin": "agent", "llm_online": llm.online}
+    dup = learner.remembered(cid, ev, TODAY)
+    if dup:  # тот же сюжет уже разобран ИИ — сразу полный разбор из памяти
+        store.log_reuse(cid, dup["id"])
+        return {"card": dup, "origin": "agent", "llm_online": llm.online, "reused": True}
+    card, _, _ = pipe.rules(ev, cid, fetch=False)
+    if card is None:
+        raise HTTPException(422, "Не удалось разобрать новость")
+    store.put_card(cid, card, "rules")
+    return {"card": card, "origin": "rules", "llm_online": llm.online}
+
+
+@app.post("/api/brief")
+def brief_news(body: NewsIn):
+    """Своя новость: краткий разбор сразу; полный разбор ИИ клиент запускает следом (/api/analyze/stream)."""
+    _company(body.company_id)
+    return _brief(_news_event(body), body.company_id)
+
+
+@app.post("/api/companies/{cid}/events/{eid}/brief")
+def brief_event(cid: str, eid: str):
+    return _brief(_event(cid, eid), cid)
 
 
 @app.post("/api/analyze")
@@ -367,10 +441,9 @@ def chat(card_id: str, body: ChatIn):
         return data
     try:
         res = answer(llm, pipe.bank, card, body.company_id, body.q, TODAY)
-    except LLMUnavailable as e:
-        raise HTTPException(503, str(e)) from e
-    except ValueError as e:
-        raise HTTPException(502, f"ответ модели не разобран: {e}") from e
+    except (LLMUnavailable, ValueError):
+        # модель недоступна или ответила не по делу — отвечаем материалами самой карточки, с источниками
+        return card_answer(card, body.q)
     return {k: v for k, v in res.items() if not k.startswith("_")}
 
 
@@ -412,7 +485,7 @@ def refresh_news(hours: int = 48):
     if not _collect_lock.acquire(blocking=False):
         raise HTTPException(409, "сбор уже идёт")
     try:
-        stats = collect(min(max(hours, 1), 168), llm if COLLECT_TRIAGE else None)
+        stats = collect(min(max(hours, 1), 168), llm if COLLECT_TRIAGE else None, disabled=set(SOURCES_OFF))
     finally:
         _collect_lock.release()
     pipe.reload_news()
@@ -425,3 +498,11 @@ def index():
     from frontend.page import render
 
     return render("null")
+
+
+# ---------- панель управления банка (backend/admin.py) ----------
+from .admin import apply_saved  # noqa: E402
+from .admin import router as admin_router  # noqa: E402
+
+app.include_router(admin_router)
+apply_saved()

@@ -17,7 +17,38 @@ CHAT_SYSTEM = """Ты — аналитик Альфа-Банка. Отвечай
 Верни ОДИН JSON: {"a": [{"t": "...", "p": "fact|bank|ai", "src": "S…"}],
  "chart": {"title": "...", "unit": "...", "points": [["подпись", число], ...], "note": "источник данных"} или null}
 fact и bank — только с меткой источника из списка; всё остальное — ai. Цифры — только из источников или профиля.
-Если данных для ответа нет — так и скажи. График — только если вопрос просит данные в другом разрезе."""
+Если данных для ответа нет — так и скажи. График — только если вопрос просит данные в другом разрезе.
+«Подробнее» — глубже про причины и механизм влияния на эту компанию; «С другой стороны» — аргументы против главного
+вывода карточки и что может пойти иначе; «Что делать сейчас» — 2–3 конкретных шага на ближайшие недели.
+Не повторяй дословно то, что уже есть в карточке: добавляй новое."""
+
+# Уточнения, которые интерфейс предлагает под каждой карточкой: глубина — по запросу руководителя
+FOLLOW_UPS = ["Подробнее", "С другой стороны", "Что делать сейчас?"]
+
+
+def card_answer(card: dict, question: str) -> dict:
+    """Ответ без модели — из материалов самой карточки, с теми же метками происхождения и источниками.
+    Используется, когда модель недоступна: человек всё равно получает ответ, а не отказ."""
+    q = question.lower()
+    b = card["blocks"]
+    if any(w in q for w in ("сторон", "против", "иначе", "возможн", "плюс")):
+        picked, lead = b["opportunities"] + b["risks"], "С другой стороны — возможности и риски из разбора:"
+    elif any(w in q for w in ("дела", "делать", "шаг", "действ", "предприн")):
+        picked, lead = b["actions"], "Что можно сделать:"
+    elif "банк" in q:
+        bank = b["bank"]
+        picked = [{"t": bank["quote"], "p": "bank"}] if bank["quote"] else []
+        lead = f"Позиция банка — {bank['doc']}" if bank["quote"] else bank["doc"]
+    elif any(w in q for w in ("риск", "опасн", "угроз")):
+        picked, lead = b["risks"], "Риски:"
+    else:
+        picked, lead = b["why"] + b["what"], "Подробнее — почему это важно и что произошло:"
+    calc = [{"t": f"{c['title']}: {c['value']} ({c['formula']})", "p": "ai"} for c in b.get("calc", [])]
+    if any(w in q for w in ("подробн", "почему", "сколько", "деньг")):
+        picked = picked + calc
+    note = {"t": "Ответ собран из материалов разбора (ИИ-аналитик сейчас не ответил).", "p": "ai"}
+    body = picked[:5] or [{"t": "В разборе нет сведений по этому вопросу.", "p": "ai"}]
+    return {"q": question, "a": [{"t": lead, "p": "ai"}, *body, note]}
 
 
 def answer(llm: LLM, bank: BM25Index, card: dict, company_id: str, question: str, today) -> dict:
@@ -54,5 +85,7 @@ def answer(llm: LLM, bank: BM25Index, card: dict, company_id: str, question: str
     chart = data.get("chart")
     ok_chart = isinstance(chart, dict) and isinstance(chart.get("points"), list) and all(
         isinstance(p, list) and len(p) == 2 and isinstance(p[1], (int, float)) for p in chart["points"])
-    return {"q": question, "a": out or [{"t": "Не удалось сформулировать ответ по имеющимся данным.", "p": "ai"}],
+    if not out:
+        raise ValueError("модель не дала ответа по существу")
+    return {"q": question, "a": out,
             **({"chart": chart} if ok_chart and chart["points"] else {}), "_cost": c.cost_rub, "_model": c.model}

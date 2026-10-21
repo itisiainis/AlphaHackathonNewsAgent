@@ -11,6 +11,8 @@ services:
         sync: false
       - key: LLM_API_KEY
         sync: false
+      - key: ADMIN_TOKEN        # панель управления банка; пусто — панель выключена
+        sync: false
       - key: LLM_DAILY_BUDGET_RUB
         value: "50"
       - key: RATE_LIMIT_PER_MIN

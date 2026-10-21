@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS feedback(company_id TEXT, card_id TEXT, role TEXT, vo
 CREATE TABLE IF NOT EXISTS requests(ts REAL, company_id TEXT, card_id TEXT, role TEXT, kind TEXT, label TEXT, comment TEXT);
 CREATE TABLE IF NOT EXISTS runs(ts REAL, company_id TEXT, event_id TEXT, ok INTEGER, errors TEXT,
                                 cost REAL, ms INTEGER, tools INTEGER, revisions INTEGER);
+-- панель управления банка: настройки, модерация карточек, журнал действий сотрудников
+CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT, ts REAL);
+CREATE TABLE IF NOT EXISTS moderation(company_id TEXT, card_id TEXT, status TEXT, note TEXT, ts REAL,
+                                      PRIMARY KEY(company_id, card_id));
+CREATE TABLE IF NOT EXISTS audit(ts REAL, actor TEXT, action TEXT, detail TEXT);
+-- обучение на опыте: заголовки по источникам и дням (распознавание шаблонов) и ответы из памяти разборов
+CREATE TABLE IF NOT EXISTS story_titles(source TEXT, day TEXT, title TEXT, PRIMARY KEY(source, day, title));
+CREATE TABLE IF NOT EXISTS reuse(ts REAL, company_id TEXT, card_id TEXT);
 """
 
 
@@ -29,6 +37,10 @@ class Store:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.executescript(SCHEMA)
+        try:  # статус запроса менеджеру добавлен позже — старые базы дополняем
+            self.db.execute("ALTER TABLE requests ADD COLUMN status TEXT DEFAULT 'new'")
+        except sqlite3.OperationalError:
+            pass
         self.lock = threading.Lock()
 
     def _exec(self, sql, args=()):
@@ -71,7 +83,56 @@ class Store:
 
     def put_request(self, company_id: str, card_id: str, role: str, kind: str, label: str, comment: str) -> None:
         """Запрос клиента менеджеру из карточки: в рабочей версии уходит в CRM банка, здесь — в журнал."""
-        self._exec("INSERT INTO requests VALUES(?,?,?,?,?,?,?)", (time.time(), company_id, card_id, role, kind, label, comment))
+        self._exec("INSERT INTO requests(ts, company_id, card_id, role, kind, label, comment) VALUES(?,?,?,?,?,?,?)",
+                   (time.time(), company_id, card_id, role, kind, label, comment))
+
+    # ---------- панель управления ----------
+    def rows(self, sql: str, args=()) -> list[dict]:
+        cur = self._exec(sql, args)
+        names = [c[0] for c in cur.description]
+        return [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
+
+    def settings(self) -> dict:
+        return {k: json.loads(v) for k, v in self._exec("SELECT key, value FROM settings").fetchall()}
+
+    def set_setting(self, key: str, value) -> None:
+        self._exec("INSERT OR REPLACE INTO settings VALUES(?,?,?)", (key, json.dumps(value, ensure_ascii=False), time.time()))
+
+    def audit(self, actor: str, action: str, detail: str = "") -> None:
+        self._exec("INSERT INTO audit VALUES(?,?,?,?)", (time.time(), actor, action, detail))
+
+    def moderate(self, company_id: str, card_id: str, hidden: bool, note: str = "") -> None:
+        if hidden:
+            self._exec("INSERT OR REPLACE INTO moderation VALUES(?,?,?,?,?)", (company_id, card_id, "hidden", note, time.time()))
+        else:
+            self._exec("DELETE FROM moderation WHERE company_id=? AND card_id=?", (company_id, card_id))
+
+    def hidden(self, company_id: str | None = None) -> set[tuple[str, str]]:
+        rows = self._exec("SELECT company_id, card_id FROM moderation WHERE status='hidden'").fetchall()
+        return {(c, k) for c, k in rows if company_id is None or c == company_id}
+
+    def set_request_status(self, rowid: int, status: str) -> None:
+        self._exec("UPDATE requests SET status=? WHERE rowid=?", (status, rowid))
+
+    def all_cards(self, origin: str | None = None) -> list[tuple[str, dict, str, float]]:
+        rows = self._exec("SELECT company_id, json, origin, created FROM cards WHERE (? IS NULL OR origin=?) ORDER BY created DESC",
+                          (origin, origin)).fetchall()
+        return [(c, json.loads(j), o, t) for c, j, o, t in rows]
+
+    # ---------- обучение ----------
+    def observe_titles(self, rows: list[tuple[str, str, str]], keep_days: int = 30) -> None:
+        """(источник, день, заголовок); старше keep_days дней от самого свежего — удаляются."""
+        with self.lock:
+            self.db.executemany("INSERT OR IGNORE INTO story_titles VALUES(?,?,?)", rows)
+            self.db.execute("DELETE FROM story_titles WHERE day < date((SELECT MAX(day) FROM story_titles), ?)",
+                            (f"-{keep_days} days",))
+            self.db.commit()
+
+    def titles(self) -> list[tuple[str, str, str]]:
+        return self._exec("SELECT source, day, title FROM story_titles").fetchall()
+
+    def log_reuse(self, company_id: str, card_id: str) -> None:
+        self._exec("INSERT INTO reuse VALUES(?,?,?)", (time.time(), company_id, card_id))
 
     def metrics(self) -> dict:
         q = lambda sql: self._exec(sql).fetchone()  # noqa: E731
