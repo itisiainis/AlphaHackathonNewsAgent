@@ -84,12 +84,27 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .ic-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ic-date{margin-left:auto;font-size:12px;color:var(--ink-3)}
 .ic-event{font-size:13px;color:var(--ink-2);margin-top:8px;font-weight:600}
-.ic-take{font-size:18px;line-height:1.35;font-weight:700;margin:4px 0 10px}
-.kp{list-style:none;margin:0;padding:0}
-.kp li{display:flex;gap:8px;align-items:baseline;margin:5px 0;color:var(--ink-2)}
-.pdot{flex:0 0 auto;font-size:10px;font-weight:700;text-transform:uppercase;border-radius:4px;padding:1px 5px;letter-spacing:.03em}
-.pdot.fact{background:var(--fact-bg);color:var(--fact)}.pdot.bank{background:var(--bank-bg);color:var(--bank)}.pdot.ai{background:var(--ai-bg);color:var(--ai)}
-.ic-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:12px;color:var(--ink-3)}
+.ic-take{font-size:18px;line-height:1.35;font-weight:700;margin:8px 0 10px}
+
+.nchips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.nchip{font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 9px;color:var(--ink)}
+.kp-bank{border-left:3px solid var(--bank);background:var(--bank-bg);padding:5px 10px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:13.5px;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kp-bank sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
+.ic-ev{font-size:12.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.jobchip{font-size:11px;color:var(--ai);font-weight:600}
+.btn .jobchip{color:inherit;font-size:inherit}
+
+.grp{margin-top:18px}
+.grp-h{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2);margin:0 0 8px;display:flex;gap:8px;align-items:baseline}
+.grp-h .n{color:var(--ink-3);font-weight:400}
+
+.ic.row .ic-head{display:flex;gap:10px;align-items:center;padding:10px 16px}
+.ic.row .dot-new,.ic.row .dot-read{margin-top:0}
+.row-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.row-take{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ic.row .ic-date{margin-left:0;flex:0 0 auto}
+.ic-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;font-size:12px;color:var(--ink-3)}
+.ic-foot .more{flex:0 0 auto}
 .more{color:var(--ink);font-weight:600;font-size:13px;display:inline-flex;gap:6px;align-items:center}
 .more .chev{transition:transform .2s;display:inline-block}
 .ic.open .more .chev{transform:rotate(180deg)}
@@ -97,12 +112,11 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .ic.open .ic-body{display:block}
 .sec{margin-top:16px}
 .sec h3{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);margin:0 0 6px}
+
 .stmt{padding:6px 10px 6px 12px;margin:6px 0;border-left:3px solid;border-radius:0 6px 6px 0}
-.stmt.fact{border-color:var(--fact);background:var(--fact-bg)}
+.stmt.fact{border-color:#cdd1d8;background:transparent}
 .stmt.bank{border-color:var(--bank);background:var(--bank-bg)}
 .stmt.ai{border-color:var(--ai);background:var(--ai-bg)}
-.stmt .p{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-right:6px}
-.stmt.fact .p{color:var(--fact)}.stmt.bank .p{color:var(--bank)}.stmt.ai .p{color:var(--ai)}
 .stmt sup a,.kp sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .str{font-size:11px;color:var(--ink-3);margin-left:6px}
 
@@ -123,6 +137,11 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .h-risk{color:var(--risk)}.h-opp{color:var(--opp)}
 .quote{border-left:3px solid var(--bank);background:var(--bank-bg);padding:10px 12px;border-radius:0 8px 8px 0;font-style:italic}
 .quote.stale{border-color:#c79200;background:#fff7e0}
+.stmt.plain{font-style:normal}
+details.sec-d{margin-top:16px}
+details.sec-d>summary{cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
+details.sec-d>summary .muted{font-weight:400;text-transform:none;letter-spacing:0}
+details.sec-d[open]>summary{margin-bottom:6px}
 .stale-note{font-size:12px;color:#8a6200;font-weight:600;margin-top:6px}
 .src-line{font-size:12px;color:var(--ink-3);margin-top:6px}
 .srcs{margin:0;padding-left:18px}.srcs li{margin:3px 0}
@@ -134,7 +153,7 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .tools .sp{flex:1}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:12px}
 .legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
-.legend .l-fact::before{background:var(--fact)}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}
+.legend .l-fact::before{background:#cdd1d8}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}
 
 .chat{display:none;margin-top:12px;background:var(--bg);border-radius:12px;padding:12px}
 .chat.on{display:block}
@@ -181,6 +200,20 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:22px;width:min(380px,92%);z-index:50;display:none}
 .modal.on{display:block}
 .empty{padding:30px;text-align:center;color:var(--ink-3)}
+
+.dock{position:fixed;right:16px;bottom:16px;z-index:35;display:flex;flex-direction:column;gap:8px;width:min(340px,calc(100vw - 32px));pointer-events:none}
+.dock>div{display:flex;flex-direction:column;gap:8px}
+.job,.toast{pointer-events:auto}
+.job{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(20,24,32,.12);padding:12px 14px;font-size:13px}
+.job-h{display:flex;gap:8px;align-items:baseline}
+.job-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
+.bar{height:6px;background:var(--bg);border-radius:4px;margin:8px 0 6px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--ai);border-radius:4px;transition:width .9s linear}
+.job.done .bar span{background:var(--opp)}.job.failed .bar span{background:var(--risk)}
+.job-s{display:flex;justify-content:space-between;gap:8px;color:var(--ink-3);font-size:12px;align-items:center}
+.x{border:0;background:none;color:var(--ink-3);font-size:18px;line-height:1;padding:0 2px}
+.toast{background:var(--ink);color:#fff;border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:0 6px 24px rgba(20,24,32,.18)}
+@media (prefers-reduced-motion:reduce){.bar span{transition:none}}
 footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
 @media (max-width:860px){
   .layout{grid-template-columns:minmax(0,1fr)}
@@ -211,6 +244,7 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
   <div class="body" id="drawer-body"></div>
   <div class="totals" id="drawer-totals"></div>
 </aside>
+<div class="dock" aria-live="polite"><div id="toasts"></div><div id="jobs"></div></div>
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <h2 id="modal-title"></h2>
   <p class="muted" id="modal-text"></p>
@@ -224,8 +258,13 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
 
 let DATA = JSON.parse(document.getElementById('data').textContent);
 const API = DATA === null;
+
+const READ_KEY = 'news-read';
+function loadRead() { try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); } catch (e) { return new Set(); } }
+function saveRead() { try { localStorage.setItem(READ_KEY, JSON.stringify([...state.read].slice(-500))); } catch (e) {  } }
 const state = {company: null, role: null, open: null,
-  read: new Set(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {}, busy: false};
+  read: loadRead(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {},
+  jobs: {}, order: {}, drawer: null, ticker: null};
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   const data = await r.json().catch(() => ({}));
@@ -238,7 +277,6 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 const IMPACT = {high: 3, medium: 2, low: 1};
 const IMPACT_RU = {high: 'высокое влияние', medium: 'среднее влияние', low: 'низкое влияние'};
 const TYPE_RU = {risk: 'риск', opportunity: 'возможность', info: 'к сведению'};
-const P_RU = {fact: 'факт', bank: 'банк', ai: 'ИИ'};
 const P_FULL = {fact: 'факт', bank: 'позиция банка', ai: 'вывод ИИ'};
 const STR_RU = {high: 'сильное влияние', medium: 'умеренное влияние', low: 'слабое влияние'};
 const fmtDate = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'});
@@ -251,11 +289,28 @@ const ageDays = i => Math.max(0, (today() - new Date(i.published + 'T00:00:00'))
 const NEW_DAYS = 14;
 const isNew = i => i.is_new && ageDays(i) <= NEW_DAYS && !state.read.has(state.company + ':' + i.id);
 const takeaway = i => (i.takeaway && (i.takeaway[state.role] || Object.values(i.takeaway)[0])) || i.why_short;
-function ranked() {
+function scored() {
   const w = role().weights;
   return (DATA.insights[state.company] || [])
-    .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + (w[t] || 0), 0) - Math.max(0, ageDays(i) - 7) * 0.35}))
-    .sort((a, b) => b.score - a.score);
+    .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + (w[t] || 0), 0) - Math.max(0, ageDays(i) - 7) * 0.35}));
+}
+const PRIORITY = [['act', 'Требует решения'], ['watch', 'Следить'], ['info', 'К сведению']];
+const PR_IDX = {act: 0, watch: 1, info: 2};
+const priority = i => i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
+
+function ranked() {
+  const key = state.company + '|' + state.role, items = scored(), by = Object.fromEntries(items.map(i => [i.id, i]));
+  let o = state.order[key];
+  if (!o) {
+    const ids = [...items].sort((a, b) => PR_IDX[priority(a)] - PR_IDX[priority(b)] || isNew(b) - isNew(a) || b.score - a.score).map(i => i.id);
+    o = state.order[key] = {ids, group: Object.fromEntries(items.map(i => [i.id, priority(i)]))};
+  }
+  for (const i of items) {
+    if (o.group[i.id]) continue;
+    const g = o.group[i.id] = priority(i), at = o.ids.findIndex(id => PR_IDX[o.group[id]] >= PR_IDX[g]);
+    o.ids.splice(at < 0 ? o.ids.length : at, 0, i.id);
+  }
+  return o.ids.filter(id => by[id]).map(id => ({...by[id], group: o.group[id]}));
 }
 const newCount = () => ranked().filter(isNew).length;
 
@@ -304,7 +359,7 @@ const srcLink = (s, inner, title = '') => s.url ? `<a href="${esc(s.url)}" targe
 const ref = (s, i) => (s.src !== undefined && i && i.sources[s.src]) ? ` <sup>${srcLink(i.sources[s.src], `[${s.src + 1}]`, i.sources[s.src].name)}</sup>` : '';
 function stmtHtml(s, i) {
   const str = s.strength ? `<span class="str">${STR_RU[s.strength]}</span>` : '';
-  return `<div class="stmt ${s.p}"><span class="p">${P_FULL[s.p]}</span>${esc(s.t)}${ref(s, i)}${str}</div>`;
+  return `<div class="stmt ${s.p}" title="${P_FULL[s.p]}">${esc(s.t)}${ref(s, i)}${str}</div>`;
 }
 const CALC_STR = {high: 'высокая', medium: 'средняя', low: 'низкая'};
 const ORIGIN_RU = {seed: 'подготовлены аналитиками', agent: 'ИИ-аналитик', rules: 'краткие разборы'};
@@ -331,42 +386,63 @@ function forWho(c) {
   return `<div class="ctx">Учитываем: ${parts.join(' · ')}</div>`;
 }
 function srcShort(i) { const m = i.sources.length - 1; return esc(i.sources[0].name) + (m > 0 ? ` +${m}` : ''); }
+const plainFeat = s => s.replace(/\s*\(\d{2}\)|\s*(?:из\s+)?ОКВЭД\s*\d+(?:\.\d+)*/g, '').replace('входящего потока', 'поступлений').replace('исходящего потока', 'платежей');
+const numsOf = s => s.match(/\d+(?:[.,]\d+)?/g) || [];
+
+function numChips(i, take) {
+  const calc = (i.blocks.calc || []).slice(0, 1).map(c => `${c.title.split(/: | — /)[0]}: ${c.value
+    .replace(' на каждый ', ' на ').replace(/ с плавающей ставкой| — верхняя оценка| \((?:дороже|дешевле) в рублях\)/g, '')}`);
+  const flows = (i.matched || []).filter(m => /\d+%/.test(m)).map(plainFeat);
+  return [...calc, ...flows].filter(c => !numsOf(c).every(n => take.includes(n))).slice(0, 3);
+}
+const evId = i => i.id.slice(0, -(state.company.length + 1));
+const cardJob = i => state.jobs[state.company + ':' + evId(i)];
+const jobMark = (j, prefix) => `<span class="jobchip" data-jobkey="${esc(j.key)}" data-prefix="${prefix}">${prefix}${Math.round(j.progress)}%</span>`;
 
 
 function cardHtml(i) {
-  const open = state.open === i.id, nw = isNew(i);
-  const kp = (i.key_points || []).map(s => `<li><span class="pdot ${s.p}">${P_RU[s.p]}</span><span>${esc(s.t)}${ref(s, i)}</span></li>`).join('');
+  const open = state.open === i.id, nw = isNew(i), job = cardJob(i), take = takeaway(i);
+  const chips = numChips(i, take), bank = (i.key_points || []).find(s => s.p === 'bank');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка и расчёт — без выводов ИИ">краткий разбор</span>' : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
-      <div class="ic-event">${esc(i.title)}</div>
-      <div class="ic-take">${esc(takeaway(i))}</div>
-      <ul class="kp">${kp}</ul>
-      <div class="ic-foot"><span>${srcShort(i)}</span><span class="more">${open ? 'Свернуть' : 'Подробнее'} <span class="chev">▾</span></span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка и расчёт — без выводов ИИ">краткий разбор</span>' : ''}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-take">${esc(take)}</div>
+      ${chips.length ? `<div class="nchips">${chips.map(c => `<span class="nchip">${esc(c)}</span>`).join('')}</div>` : ''}
+      ${bank ? `<div class="kp-bank" title="Позиция банка">${esc(bank.t)}${ref(bank, i)}</div>` : ''}
+      <div class="ic-foot"><span class="ic-ev" title="${esc(i.title)}">${esc(i.title)} · ${srcShort(i)}</span><span class="more">${open ? 'Свернуть' : 'Подробнее'} <span class="chev">▾</span></span></div>
     </button>
     ${open ? bodyHtml(i) : ''}
   </article>`;
 }
+function rowHtml(i) {
+  const nw = isNew(i);
+  return `<article class="ic row ${nw ? 'is-new' : ''}" id="card-${i.id}"><button class="ic-head" data-toggle="${i.id}" aria-expanded="false">
+    <span class="${nw ? 'dot-new' : 'dot-read'}"></span><span class="row-main"><span class="row-take">${esc(takeaway(i))}</span><span class="ic-ev">${esc(i.title)}</span></span>
+    <span class="ic-date">${fmtDate(i.published)}</span><span class="more"><span class="chev">▾</span></span></button></article>`;
+}
+
 function bodyHtml(i) {
-  const b = i.blocks, fb = state.feedback[i.id];
+  const b = i.blocks, fb = state.feedback[i.id], job = cardJob(i), running = job && job.status === 'running';
   const ctas = b.actions.filter(a => a.cta).map(a => `<button class="btn pri" data-cta="${a.cta.kind}" data-label="${esc(a.cta.label)}">${esc(a.cta.label)}</button>`).join('');
   const chatLog = (state.chats[i.id] || []).join('');
+  const srcNames = [...new Set(i.sources.map(s => s.name))].slice(0, 3).join(', ');
   return `<div class="ic-body">
     <div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span><span class="l-ai">вывод ИИ</span></div>
-    <div class="sec"><h3>Что произошло</h3>${list(b.what, i)}</div>
-    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
-    ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${b.calc.map(c => calcHtml(c, i)).join('')}</div>` : ''}
-    ${b.risks.length || b.opportunities.length ? `<div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>` : ''}
     ${b.actions.length ? `<div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>` : ''}
+    ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${b.calc.map(c => calcHtml(c, i)).join('')}</div>` : ''}
+    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
+    ${b.risks.length || b.opportunities.length ? `<div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>` : ''}
     <div class="sec"><h3>Как оценивает банк</h3>${b.bank.quote ? `<div class="quote ${b.bank.stale ? 'stale' : ''}">«${esc(b.bank.quote)}»</div>
       <div class="src-line">${esc(b.bank.doc)} · ${fmtDateY(b.bank.date)}</div>` : `<div class="dq">${esc(b.bank.doc)}</div>`}
+      ${b.bank.plain ? `<div class="stmt ai plain" title="${P_FULL.ai}">Проще говоря: ${esc(b.bank.plain)}</div>` : ''}
       ${b.bank.stale ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}</div>
-    <div class="sec"><h3>На чём основан вывод</h3><div class="two">
+    <details class="sec-d"><summary>Что произошло</summary>${list(b.what, i)}</details>
+    <details class="sec-d"><summary>На чём основан вывод <span class="muted">· ${esc(srcNames)}</span></summary><div class="two">
       <div><h4>Источники</h4><ol class="srcs">${i.sources.map(s => `<li><span class="kind ${s.kind}">${s.kind === 'bank' ? 'банк' : s.kind === 'stat' ? 'статистика' : 'новость'}</span>${srcLink(s, esc(s.name))} <span class="muted">· ${fmtDateY(s.date)}</span></li>`).join('')}</ol></div>
-      <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(f)}</span>`).join('')}
-        ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></div>
+      <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(plainFeat(f))}</span>`).join('')}
+        ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></details>
     <div class="tools">
-      ${origin(i) === 'rules' && API && DATA.status && DATA.status.llm_online ? `<button class="btn pri" data-upgrade>Полный разбор ИИ</button>` : ''}
+      ${origin(i) === 'rules' && API && DATA.status && DATA.status.llm_online ? `<button class="btn pri" data-upgrade ${running ? 'disabled' : ''}>${running ? jobMark(job, 'Разбор идёт · ') : 'Полный разбор ИИ'}</button>` : ''}
       <button class="btn" data-trace="${i.id}">Как получен вывод</button>
       <button class="btn ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}">Задать вопрос</button>
       <span class="sp"></span>
@@ -422,20 +498,21 @@ function companySummary(c) {
 function viewFeed() {
   const c = company();
   const items = ranked();
-  const flash = state.flash; state.flash = '';
+  const groups = PRIORITY.map(([id, name]) => [id, name, items.filter(i => i.group === id)]).filter(g => g[2].length);
   return `<h1>Новости для бизнеса</h1>${forWho(c)}
-    ${flash ? `<div class="dq" role="status">${esc(flash)}</div>` : ''}
     ${c.data_quality.length ? `<div class="dq"><b>Данные о компании неполные — выводы ориентировочные.</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
     ${API ? quickForm() : ''}
-    ${items.length ? items.map(cardHtml).join('') : '<div class="card empty">Разобранных событий пока нет — выберите новость ниже или вставьте ссылку</div>'}
+    ${items.length ? groups.map(([id, name, its]) => `<section class="grp"><h2 class="grp-h">${name}<span class="n">${its.length}</span></h2>
+      ${its.map(i => id === 'info' && state.open !== i.id ? rowHtml(i) : cardHtml(i)).join('')}</section>`).join('')
+      : '<div class="card empty">Разобранных событий пока нет — выберите новость ниже или вставьте ссылку</div>'}
     ${API ? `<div class="sec"><h3>Ещё новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
 }
 function quickForm() {
   return `<form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость">
-      <button class="btn pri" ${state.busy ? 'disabled' : ''}>Оценить</button></form>
+      <button class="btn pri">Оценить</button></form>
     <details class="quick-more"><summary class="linkbtn">Нет ссылки — вставить текст новости</summary>
       <textarea id="quick-text" rows="5" maxlength="20000" placeholder="Текст новости"></textarea>
-      <button class="btn" id="quick-text-go" ${state.busy ? 'disabled' : ''}>Оценить текст</button> <span id="an-msg" class="muted" role="status"></span></details>`;
+      <button class="btn" id="quick-text-go">Оценить текст</button> <span id="an-msg" class="muted" role="status"></span></details>`;
 }
 
 const EVENTS_SHOWN = 5;
@@ -446,11 +523,13 @@ function eventsHtml() {
   ev = ev.filter(e => !e.analyzed);
   if (!ev.length) return '<div class="card empty">Все значимые новости по профилю уже разобраны</div>';
   const more = state.moreEvents ? ev : ev.slice(0, EVENTS_SHOWN);
+  const btn = e => { const j = state.jobs[state.company + ':' + e.id];
+    return j && j.status === 'running' ? `<button class="btn" disabled>${jobMark(j, 'Разбор идёт · ')}</button>` : `<button class="btn" data-ev="${e.id}">Получить разбор</button>`; };
   return more.map(e => `<div class="card" style="margin-bottom:8px">
     <div class="ic-meta"><span class="imp">${esc(e.source)}${e.also ? ` +${e.also}` : ''}</span><span class="ic-date">${fmtDate(e.published)}</span></div>
     <div class="ic-event">${srcLink(e, esc(e.title))}</div>
-    <div class="ev-why">Почему вам: ${esc(e.matched.join(' · '))}</div>
-    <div class="actions-row">${e.analyzed ? '<span class="muted">Разобрано — карточка в ленте</span>' : `<button class="btn" data-ev="${e.id}" ${state.busy ? 'disabled' : ''}>Получить разбор</button>`}</div></div>`).join('')
+    <div class="ev-why">Почему вам: ${esc(e.matched.map(plainFeat).join(' · '))}</div>
+    <div class="actions-row">${e.analyzed ? '<span class="muted">Разобрано — карточка в ленте</span>' : btn(e)}</div></div>`).join('')
     + (ev.length > more.length ? `<button class="btn" data-more-events>Показать ещё ${ev.length - more.length}</button>` : '');
 }
 async function loadEvents() {
@@ -461,8 +540,7 @@ async function loadEvents() {
   if (box && cid === state.company) { box.innerHTML = eventsHtml(); bindEvents(); }
 }
 
-
-async function streamAgent(path, body) {
+async function streamAgent(path, body, onStep) {
   const resp = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   if (!resp.ok) { const d = await resp.json().catch(() => ({})); throw new Error(typeof d.detail === 'string' ? d.detail : 'сервис недоступен'); }
   const reader = resp.body.getReader(), dec = new TextDecoder();
@@ -477,32 +555,135 @@ async function streamAgent(path, body) {
       buf = buf.slice(k + 2);
       if (!line) continue;
       const ev = JSON.parse(line.slice(6));
-      if (ev.type === 'step') liveTrace(ev.trace, ev.pending);
+      if (ev.type === 'step') onStep(ev);
       else if (ev.type === 'result') return ev;
       else if (ev.type === 'error') throw new Error(ev.detail);
     }
   }
   throw new Error('соединение с сервисом прервалось');
 }
-async function runAgent(path, body) {
-  state.busy = true;
-  liveTrace([], 'Агент запускается…');
-  $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
-  try {
-    const r = await streamAgent(path + '/stream', body);
-    if (!r.ok) { liveTrace(r.trace, ''); $('#drawer-totals').textContent = 'Карточка не прошла проверку: ' + r.errors.slice(0, 2).join('; '); return null; }
-    const cid = state.company;
-    DATA.insights[cid] = [r.card, ...(DATA.insights[cid] || []).filter(c => c.id !== r.card.id)];
-    ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.mode === 'rules' ? 'rules' : 'agent';
-    delete state.events[cid];
-    closeOverlays(); location.hash = '#feed/' + r.card.id;
-    state.flash = r.mode === 'rules' ? r.notice + ' Подробный разбор можно запустить позже.' : '';
-    return r.card;
-  } catch (e) { closeOverlays(); showModal('Агент не запустился', e.message); return null; }
-  finally { state.busy = false; }
+
+
+const expectedMs = () => (DATA.status && DATA.status.agent_avg_ms) || 80000;
+function stage(trace, pending) {
+  const has = t => trace.some(s => s.title === t), n = trace.filter(s => s.kind === 'tool' || s.kind === 'research').length;
+  if (trace.some(s => s.kind === 'done')) return [100, 100];
+  if (has('Правка черновика')) return trace.filter(s => s.title === 'Самопроверка (код)').length > 1 ? [93, 99] : [82, 95];
+  if (has('Самопроверка (модель)')) return [88, 97];
+  if (has('Самопроверка (код)')) return [64, 88];
+  if (/черновик/i.test(pending || '') || has('calculate_impact()')) return [42, 64];
+  if (trace.some(s => s.kind === 'plan')) return [12 + Math.min(n, 5) * 5, 42];
+  return [2, 12];
 }
+function etaText(j) {
+  const t = Date.now() - j.started, p = j.progress;
+  if (p >= 96) return 'почти готово';
+  const byRate = p > 8 ? t * (100 - p) / p : Infinity, byAvg = expectedMs() - t;
+  const ms = Math.max(5000, byAvg > 0 && byRate < Infinity ? (byRate + byAvg) / 2 : byAvg > 0 ? byAvg : byRate);
+  if (!isFinite(ms)) return 'около минуты';
+  const s = Math.round(ms / 5000) * 5;
+  return s < 60 ? `≈ ${s} с` : `≈ ${Math.floor(s / 60)} мин${s % 60 ? ' ' + s % 60 + ' с' : ''}`;
+}
+function tickJobs() {
+  const now = Date.now();
+  let running = false;
+  for (const j of Object.values(state.jobs)) {
+    if (j.status !== 'running') continue;
+    running = true;
+    const [lo, hi] = stage(j.trace, j.pending);
+    if (lo !== j.lo) { j.lo = lo; j.since = now; }
+    j.progress = Math.max(j.progress, lo + (hi - lo) * (1 - Math.exp(-(now - j.since) / (expectedMs() * 0.2))));
+  }
+  updateJobMarks();
+  if (!running && state.ticker) { clearInterval(state.ticker); state.ticker = null; }
+}
+const JOB_HEAD = {running: 'ИИ готовит разбор', done: 'Разбор готов', failed: 'Разбор не получился'};
+function jobStatus(j) {
+  if (j.status === 'running') return `${Math.round(j.progress)}% · осталось ${etaText(j)}`;
+  return j.status === 'done' ? (j.rules ? 'ИИ недоступен — краткий разбор без ИИ' : 'карточка в ленте') : j.error;
+}
+function renderJobs() {
+  $('#jobs').innerHTML = Object.values(state.jobs).map(j => `<div class="job ${j.status}">
+    <div class="job-h"><b>${JOB_HEAD[j.status]}</b><span class="job-t" title="${esc(j.label)}">${esc(j.label)}</span>${j.status !== 'running' ? `<button class="x" data-job-close="${esc(j.key)}" aria-label="Скрыть">×</button>` : ''}</div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(j.progress)}"><span data-jobbar="${esc(j.key)}" style="width:${j.progress.toFixed(1)}%"></span></div>
+    <div class="job-s"><span data-jobtxt="${esc(j.key)}">${esc(jobStatus(j))}</span>
+      <span>${j.status === 'done' ? `<button class="linkbtn" data-job-open="${esc(j.key)}">Открыть</button>` : `<button class="linkbtn" data-job-trace="${esc(j.key)}">Шаги</button>`}</span></div></div>`).join('');
+}
+function updateJobMarks() {
+  const find = (attr, k) => [...document.querySelectorAll(`[${attr}]`)].filter(el => el.getAttribute(attr) === k);
+  for (const j of Object.values(state.jobs)) {
+    if (j.status !== 'running') continue;
+    find('data-jobbar', j.key).forEach(el => { el.style.width = j.progress.toFixed(1) + '%'; el.parentElement.setAttribute('aria-valuenow', Math.round(j.progress)); });
+    find('data-jobtxt', j.key).forEach(el => { el.textContent = jobStatus(j); });
+    find('data-jobkey', j.key).forEach(el => { el.textContent = el.dataset.prefix + Math.round(j.progress) + '%'; });
+  }
+}
+function toast(text, ms = 6000) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = text;
+  $('#toasts').append(el); setTimeout(() => el.remove(), ms);
+}
+function refreshView() {
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || $('#modal').classList.contains('on')) return;
+  const y = window.scrollY; render(false, true); window.scrollTo(0, y);
+}
+function startJob(key, label, path, body) {
+  const old = state.jobs[key];
+  if (old && old.status === 'running') { toast('Этот разбор уже идёт — следите за ним в углу экрана'); return; }
+  const now = Date.now();
+  const j = state.jobs[key] = {key, label, company: state.company, started: now, since: now, lo: 2, progress: 2,
+    trace: [], pending: 'Агент запускается…', status: 'running'};
+  toast('ИИ готовит разбор — обычно 1–2 минуты. Можно продолжать работу: когда будет готово, появится уведомление.', 7000);
+  if (!state.ticker) state.ticker = setInterval(tickJobs, 1000);
+  renderJobs(); refreshView();
+  streamAgent(path + '/stream', body, st => {
+    j.trace = st.trace; j.pending = st.pending;
+    if (state.drawer === 'job:' + key) liveTrace(j.trace, j.pending);
+  }).then(r => finishJob(j, r), e => { j.status = 'failed'; j.error = e.message; j.progress = 100; renderJobs(); refreshView(); });
+}
+function finishJob(j, r) {
+  j.progress = 100;
+  if (!r.ok) {
+    j.status = 'failed'; j.trace = r.trace || j.trace;
+    j.error = 'карточка не прошла проверку' + (r.errors && r.errors.length ? ': ' + r.errors[0] : '');
+  } else {
+    const cid = j.company, list = DATA.insights[cid] || [];
+    DATA.insights[cid] = list.some(c => c.id === r.card.id) ? list.map(c => c.id === r.card.id ? r.card : c) : [r.card, ...list];
+    ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.mode === 'rules' ? 'rules' : 'agent';
+    state.read.delete(cid + ':' + r.card.id); saveRead();
+    delete state.events[cid];
+    j.status = 'done'; j.cardId = r.card.id; j.rules = r.mode === 'rules'; j.trace = r.card.trace || j.trace;
+    toast(j.rules ? 'ИИ сейчас недоступен — готов краткий разбор без выводов ИИ. Полный разбор можно запустить позже.'
+      : `Разбор готов: ${j.label}`, 8000);
+  }
+  if (state.drawer === 'job:' + j.key) liveTrace(j.trace, '');
+  renderJobs(); refreshView();
+}
+function openJobCard(j) {
+  delete state.jobs[j.key]; renderJobs();
+  if (state.company !== j.company) { state.company = j.company; $('#sel-company').value = j.company; }
+  if (location.hash === '#feed/' + j.cardId) { state.open = null; render(); } else location.hash = '#feed/' + j.cardId;
+}
+function openJobTrace(j) {
+  state.drawer = 'job:' + j.key;
+  liveTrace(j.trace, j.status === 'running' ? j.pending : '');
+  if (j.status === 'failed') $('#drawer-totals').textContent = 'Разбор не получился: ' + j.error;
+  $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
+}
+$('#jobs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const j = state.jobs[b.dataset.jobOpen || b.dataset.jobTrace || b.dataset.jobClose]; if (!j) return;
+  if (b.dataset.jobOpen) openJobCard(j);
+  else if (b.dataset.jobTrace) openJobTrace(j);
+  else { delete state.jobs[j.key]; renderJobs(); }
+};
+const hostOf = u => { try { return new URL(u).hostname; } catch (e) { return u; } };
 function bindEvents() {
-  document.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => runAgent(`/api/companies/${state.company}/events/${b.dataset.ev}/analyze`, {}));
+  document.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => {
+    const e = (state.events[state.company] || []).find(x => x.id === b.dataset.ev);
+    startJob(state.company + ':' + b.dataset.ev, e ? e.title : 'Новость', `/api/companies/${state.company}/events/${b.dataset.ev}/analyze`, {});
+  });
   const more = document.querySelector('[data-more-events]');
   if (more) more.onclick = () => { state.moreEvents = true; $('#events-box').innerHTML = eventsHtml(); bindEvents(); };
 }
@@ -563,6 +744,7 @@ function liveTrace(trace, pending) {
 }
 function openTrace(i) {
   traceTimers.forEach(clearTimeout); traceTimers = [];
+  state.drawer = 'card';
   const body = $('#drawer-body');
   body.innerHTML = i.trace.map(s => stepHtml(s, false)).join('');
   $('#drawer-totals').textContent = origin(i) === 'seed' ? 'Разбор подготовлен аналитиками по материалам банка' : totalsText(i.trace);
@@ -570,14 +752,14 @@ function openTrace(i) {
   let t = 150;
   [...body.querySelectorAll('.step')].forEach((el, k) => { traceTimers.push(setTimeout(() => el.classList.add('shown'), t)); t += Math.min(900, 250 + i.trace[k].ms / 6); });
 }
-function closeOverlays() { $('#drawer').classList.remove('open'); $('#overlay').classList.remove('on'); $('#modal').classList.remove('on'); }
+function closeOverlays() { state.drawer = null; $('#drawer').classList.remove('open'); $('#overlay').classList.remove('on'); $('#modal').classList.remove('on'); }
 
 
-function render(scrollToOpen = false) {
+function render(scrollToOpen = false, keep = false) {
   const [route, arg] = (location.hash || '#home').slice(1).split('/');
   const r = route === 'insight' ? 'feed' : route;
   if (r === 'feed' && arg && state.open !== arg) { state.open = arg; markRead(arg); scrollToOpen = true; }
-  if (!state.busy) closeOverlays();
+  if (!keep) closeOverlays();
   renderNav(r); renderStatus();
   if (r === 'analyze') { location.replace('#feed'); return; }
   const views = {feed: viewFeed, quality: viewQuality};
@@ -587,15 +769,17 @@ function render(scrollToOpen = false) {
   if (r === 'feed') { loadEvents(); bindEvents(); }
   if (r === 'quality' && API) loadQuality();
   if (r === 'feed' && API && $('#quick-an')) {
-    $('#quick-an').onsubmit = e => { e.preventDefault(); const url = e.target.url.value.trim(); if (url) runAgent('/api/analyze', {company_id: state.company, url}); };
+    $('#quick-an').onsubmit = e => { e.preventDefault(); const url = e.target.url.value.trim(); if (!url) return;
+      e.target.reset(); startJob(state.company + ':url:' + url, hostOf(url), '/api/analyze', {company_id: state.company, url}); };
     $('#quick-text-go').onclick = () => { const text = $('#quick-text').value.trim();
       if (text.length < 40) { $('#an-msg').textContent = 'Вставьте текст новости — хотя бы пару предложений'; return; }
-      runAgent('/api/analyze', {company_id: state.company, title: text.split(/[.!?\n]/)[0].slice(0, 200), text}); };
+      const title = text.split(/[.!?\n]/)[0].slice(0, 200);
+      $('#quick-text').value = ''; startJob(state.company + ':text:' + title, title, '/api/analyze', {company_id: state.company, title, text}); };
   }
   if (scrollToOpen && state.open) { const el = document.getElementById('card-' + state.open); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
   else if (!arg) window.scrollTo(0, 0);
 }
-function markRead(id) { state.read.add(state.company + ':' + id); }
+function markRead(id) { state.read.add(state.company + ':' + id); saveRead(); }
 function toggle(id) {
   if (state.open === id) { state.open = null; history.replaceState(null, '', '#feed'); render(); return; }
   state.open = id; markRead(id);
@@ -609,7 +793,7 @@ function bind() {
   const card = document.getElementById('card-' + i.id); if (!card) return;
   card.querySelector('[data-trace]').onclick = () => openTrace(i);
   const up = card.querySelector('[data-upgrade]');
-  if (up) up.onclick = () => runAgent(`/api/companies/${state.company}/events/${i.id.slice(0, -(state.company.length + 1))}/analyze`, {});
+  if (up) up.onclick = () => startJob(state.company + ':' + evId(i), i.title, `/api/companies/${state.company}/events/${evId(i)}/analyze`, {});
   card.querySelector('[data-chat]').onclick = () => { state.chatOpen[i.id] = !state.chatOpen[i.id]; render(); };
   card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render();
     if (API) api(`/api/cards/${i.id}/feedback`, {company_id: state.company, role: state.role, vote: b.dataset.fb}).catch(() => {}); });

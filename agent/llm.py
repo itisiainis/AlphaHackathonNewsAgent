@@ -25,6 +25,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import time
 from dataclasses import dataclass
 from datetime import date
@@ -89,6 +90,7 @@ class LLM:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.http = http or httpx.Client(timeout=180)
+        self._spend_lock = threading.Lock()  # несколько разборов идут параллельно — счётчик расхода общий
 
     @property
     def online(self) -> bool:
@@ -103,8 +105,9 @@ class LLM:
         return json.loads(p.read_text())["rub"] if p.exists() else 0.0
 
     def _add_spend(self, rub: float) -> None:
-        p = self._spend_path()
-        p.write_text(json.dumps({"rub": round(self.spent_today() + rub, 4)}))
+        with self._spend_lock:
+            p = self._spend_path()
+            p.write_text(json.dumps({"rub": round(self.spent_today() + rub, 4)}))
 
     @staticmethod
     def price(role: str) -> tuple[float, float]:
