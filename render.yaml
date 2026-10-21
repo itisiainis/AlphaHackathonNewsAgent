@@ -1,0 +1,21 @@
+# Render Blueprint: New → Blueprint → выбрать репозиторий. Ключ модели вводится в панели Render (sync: false),
+# в репозиторий он не попадает. Без ключа сервис работает в режиме краткого разбора.
+services:
+  - type: web
+    name: news-analytics
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_DAILY_BUDGET_RUB
+        value: "50"
+      - key: RATE_LIMIT_PER_MIN
+        value: "10"
+      - key: COLLECT_ON_START
+        value: "1"
+      - key: COLLECT_EVERY_MIN
+        value: "60"

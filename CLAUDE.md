@@ -6,7 +6,7 @@
 жюри считает провалом.
 
 Подробности — в `docs/`: `product.md` (UX, экраны, решения), `data.md` (выводы по данным),
-`criteria.md` (критерии оценки). Перед изменениями в интерфейсе или формате данных прочитай их.
+`criteria.md` (условия и 12 критериев из презентации кейса), `plan.md` (план и статус). Перед изменениями в интерфейсе или формате данных прочитай их.
 
 ## Жёсткие ограничения кейса
 - В рантайме — ТОЛЬКО разрешённые модели: Gemma 4, GLM-5.3-Flash, Qwen3.6, DeepSeek-V4.1-Flash,
@@ -17,12 +17,12 @@
 - Сдача: GitHub-репо, Docker (запуск одной командой), README, lock-файлы, THIRD_PARTY_NOTICES.
 
 ## Формат данных = контракт
-`data/mock_data.json` — общий формат: агент выдаёт такой JSON, бэк отдаёт, фронт рисует.
+`frontend/mock_data.json` — общий формат: агент выдаёт такой JSON, бэк отдаёт, фронт рисует.
 Поля НЕ переименовывать и не удалять без договорённости команды. Ключевое:
 - карточка: `id, type (risk|opportunity|info), impact (high|medium|low), topics[], is_new, title (событие),
   takeaway{cfo, ceo, treasurer} (главный вывод под роль — короткий слой), key_points[] (2–3 обоснования),
   why_short, matched[], sources[{name, kind (news|bank|stat), date, url}],
-  blocks{what, why, risks, opportunities, actions, bank, basis} (раскрываемый полный разбор), trace[], chat[]`
+  blocks{what, why, risks, opportunities, actions, bank, basis, calc?} (раскрываемый полный разбор; calc — необязательный расчёт эффекта кодом), trace[], chat[]`
 - утверждение: `{t: текст, p: fact|bank|ai, src?: индекс источника, strength?: high|medium|low}`
 - каждое утверждение обязано иметь происхождение `p` — это требование жюри (факт / позиция банка / вывод ИИ).
 
@@ -36,8 +36,10 @@
    Аналитику банка старше 12 месяцев помечаем устаревшей и не используем в выводе.
 
 ## Структура
-- `frontend/` — сайт; сейчас кликабельный прототип (`template.html` + `build.py` → `prototype.html`).
-- `backend/` — API. `agent/` — агент, промпты, инструменты. `data/` — профили и скрипты.
+- `frontend/` — сайт: `template.html` (отдаётся бэкендом и берёт данные из API; `build.py` → статический `prototype.html` на моках).
+- `backend/` — FastAPI + SQLite. `agent/` — сбор, отбор, агентный цикл, промпты, инструменты; контракт — `agent/contract/card.schema.json`.
+- `data/` — профили, источники новостей, аналитика банка после OCR (`data/bank/docs.json`).
+- Проверки перед PR: `pytest -q tests` и `ruff check .`. Запуск: `docker compose up --build`.
 - Исходные CSV лежат локально в `data/raw/`, в git не коммитятся.
 
 ## Правила работы

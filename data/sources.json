@@ -1,0 +1,35 @@
+{
+  "_comment": "Источники новостей. Добавить источник = добавить строку, код менять не нужно (критерий 07). Все адреса проверены 21.10.2026. official — регулятор или министерство: такие события важнее по умолчанию. topic — профиль источника (для отчёта о покрытии отраслей).",
+  "rss": [
+    {"name": "Банк России", "url": "https://www.cbr.ru/rss/eventrss", "kind": "news", "official": true, "topic": "регулятор"},
+    {"name": "Интерфакс", "url": "https://www.interfax.ru/rss.asp", "kind": "news", "topic": "общие"},
+    {"name": "Интерфакс: экономика", "url": "https://www.interfax.ru/rss.asp?r=economy", "kind": "news", "topic": "экономика"},
+    {"name": "РБК", "url": "https://rssexport.rbc.ru/rbcnews/news/30/full.rss", "kind": "news", "topic": "общие"},
+    {"name": "Ведомости", "url": "https://www.vedomosti.ru/rss/news.xml", "kind": "news", "topic": "общие"},
+    {"name": "Ведомости: бизнес", "url": "https://www.vedomosti.ru/rss/rubric/business", "kind": "news", "topic": "бизнес"},
+    {"name": "Ведомости: финансы", "url": "https://www.vedomosti.ru/rss/rubric/finance", "kind": "news", "topic": "финансы"},
+    {"name": "Ведомости: экономика", "url": "https://www.vedomosti.ru/rss/rubric/economics", "kind": "news", "topic": "экономика"},
+    {"name": "Коммерсантъ", "url": "https://www.kommersant.ru/RSS/news.xml", "kind": "news", "topic": "общие"},
+    {"name": "Коммерсантъ: бизнес", "url": "https://www.kommersant.ru/RSS/section-business.xml", "kind": "news", "topic": "бизнес"},
+    {"name": "Коммерсантъ: финансы", "url": "https://www.kommersant.ru/RSS/section-finance.xml", "kind": "news", "topic": "финансы"},
+    {"name": "ТАСС", "url": "https://tass.ru/rss/v2.xml", "kind": "news", "topic": "общие"},
+    {"name": "ПРАЙМ", "url": "https://1prime.ru/export/rss2/index.xml", "kind": "news", "topic": "экономика и рынки"},
+    {"name": "Frank Media", "url": "https://frankmedia.ru/feed", "kind": "news", "topic": "финансы"},
+    {"name": "CNews", "url": "https://www.cnews.ru/inc/rss/news.xml", "kind": "news", "topic": "ИТ и телеком"},
+    {"name": "РИА Недвижимость", "url": "https://realty.ria.ru/export/rss2/index.xml", "kind": "news", "topic": "недвижимость и стройка"},
+    {"name": "Клерк", "url": "https://www.klerk.ru/export/news.rss", "kind": "news", "topic": "налоги и учёт"},
+    {"name": "КонсультантПлюс: новые документы", "url": "https://www.consultant.ru/rss/hotdocs.xml", "kind": "news", "official": true, "topic": "законодательство"}
+  ],
+  "telegram": [
+    {"name": "Банк России", "channel": "centralbank_russia", "kind": "news", "official": true, "topic": "регулятор"},
+    {"name": "Минфин России", "channel": "minfin", "kind": "news", "official": true, "topic": "регулятор"},
+    {"name": "Интерфакс", "channel": "interfaxonline", "kind": "news", "topic": "общие"},
+    {"name": "MarketTwits", "channel": "markettwits", "kind": "news", "topic": "рынки"},
+    {"name": "Банкста", "channel": "banksta", "kind": "news", "topic": "финансы"},
+    {"name": "Bankrollo", "channel": "bankrollo", "kind": "news", "topic": "финансы"},
+    {"name": "Альфа-Инвестиции", "channel": "alfa_investments", "kind": "news", "topic": "рынки"},
+    {"name": "Недвижимость", "channel": "nedvizha", "kind": "news", "topic": "недвижимость и стройка"},
+    {"name": "Retail.ru", "channel": "retail_ru", "kind": "news", "topic": "ритейл"},
+    {"name": "ProEconomics", "channel": "proeconomics", "kind": "news", "topic": "экономика"}
+  ]
+}
