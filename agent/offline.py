@@ -25,12 +25,69 @@ from .okved import topics_in
 from .tools import ToolSession
 
 TOPICS = {"ставка", "долг", "курс", "ликвидность", "отрасль", "спрос", "контрагенты"}
-NOTICE = "ИИ-аналитик сейчас недоступен. Показан краткий разбор: факты новости, данные компании, позиция банка и расчёт — без выводов ИИ."
+NOTICE = "Краткий разбор: факты новости, данные компании, позиция банка и расчёт — без выводов ИИ."
+UNAVAILABLE = "ИИ-аналитик сейчас недоступен. " + NOTICE
 
 
 # частые слова, совпадение по которым ничего не говорит о теме
 GENERIC = {"росси", "банка", "банко", "сохра", "рынка", "рынке", "компа", "сообщ", "заяви", "новос",
            "эконо", "прогн", "ожида", "данны", "октяб", "сентя", "недел", "месяц", "будет", "также", "после"}
+
+
+def _cap(t: str) -> str:
+    return t[:1].upper() + t[1:]
+
+
+def _kind(r: dict) -> str:
+    """Вид признака, на который сработал отбор (по формулировкам agent/matching.py)."""
+    f = r["feature"]
+    if f in ("кредит", "лизинг"):
+        return "debt"
+    if f == "депозиты":
+        return "deposits"
+    if f.startswith(("ВЭД", "страна в новости")):
+        return "fx"
+    if "входящего потока" in f:
+        return "customers"
+    if "исходящего потока" in f:
+        return "suppliers"
+    if f.startswith("отрасль"):
+        return "own"
+    if "спрос" in f:
+        return "demand"
+    return "other"
+
+
+def headline(match: Match, order: tuple[str, ...]) -> str:
+    """Главный вывод без модели: что именно в бизнесе компании затрагивает событие — под роль, без домыслов."""
+    return re.sub(r" \(\d{2}\)", "", _headline(match, order))  # коды ОКВЭД руководителю не нужны
+
+
+def _headline(match: Match, order: tuple[str, ...]) -> str:
+    by = {}
+    for r in match.reasons:
+        by.setdefault(_kind(r), []).append(r["feature"])
+    for k in order:
+        if k not in by:
+            continue
+        f = by[k][0]
+        if k == "debt":
+            return f"Затрагивает стоимость вашего долга: {', '.join(by[k])}"
+        if k == "deposits":
+            return "Затрагивает доходность ваших депозитов"
+        if k == "fx":
+            return f"Затрагивает валютные расчёты — {f.replace('ВЭД: ', 'ВЭД: ')}"
+        if k == "customers":
+            share, sector = f.split(" входящего потока — ")
+            return f"Касается ваших покупателей: {sector} — {share} поступлений"
+        if k == "suppliers":
+            share, sector = f.split(" исходящего потока — ")
+            return f"Касается ваших поставщиков: {sector} — {share} платежей"
+        if k == "own":
+            return f"Событие в вашей отрасли: {f.removeprefix('отрасль: ')}"
+        if k == "demand":
+            return "Затрагивает спрос ваших покупателей"
+    return f"Касается вас: {match.reasons[0]['feature']}" if match.reasons else "Прямой связи с профилем компании не найдено"
 
 
 def _stems(text: str) -> set[str]:
@@ -75,7 +132,8 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
     t0 = time.monotonic()
     prof = ses.profile_source()
     p = profiles.get(company_id)
-    why = [{"t": f"{r['feature']} — {r['why']}", "p": "fact", "src": prof.label} for r in match.reasons[:3]]
+    why = [{"t": _cap(f"{r['feature']} — {r['why']}"), "p": "fact", "src": prof.label}
+           for r in match.reasons[:3] if r["weight"] > 1]  # понижающие пометки («подборка», «суд») — не причина
     step("tool", "get_company_profile()", f"признаков компании: {len(why)}", t0)
 
     t0 = time.monotonic()
@@ -122,11 +180,11 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
     sources = [{"name": by_label[lbl].name, "kind": by_label[lbl].kind, "date": by_label[lbl].date or today.isoformat(),
                 "url": by_label[lbl].url} for lbl in cited]
 
-    def pick(prefer: tuple[str, ...]) -> str:
+    def pick(prefer: tuple[str, ...], order: tuple[str, ...]) -> str:
         c = next((c for c in calcs if c["title"].startswith(prefer)), calcs[0] if calcs else None)
         if c:
             return f"{c['title']}: {c['value']}"
-        return f"Касается вас: {match.reasons[0]['feature']}" if match.reasons else "Прямой связи с профилем компании не найдено"
+        return headline(match, order)
 
     signs = {c["sign"] for c in calcs}
     card = {
@@ -136,9 +194,9 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
         "topics": [t for t in event.get("topics", []) if t in TOPICS] or ["отрасль"],
         "is_new": True, "published": event.get("published") or today.isoformat(),
         "title": event.get("title", "")[:200],
-        "takeaway": {"cfo": pick(("Стоимость долга", "Процентные", "Валютные", "Выручка")),
-                     "ceo": pick(("Выручка", "Закупки", "Стоимость долга")),
-                     "treasurer": pick(("Стоимость долга", "Процентные", "Валютные", "Доход по депозитам"))},
+        "takeaway": {"cfo": pick(("Стоимость долга", "Валютные", "Выручка"), ("debt", "fx", "customers", "suppliers", "own")),
+                     "ceo": pick(("Выручка", "Закупки", "Стоимость долга"), ("customers", "own", "suppliers", "demand", "debt", "fx")),
+                     "treasurer": pick(("Стоимость долга", "Валютные", "Доход по депозитам"), ("debt", "fx", "deposits", "customers"))},
         "key_points": ([what[0]] + why[:1] + ([bank_stmt] if bank_stmt else []) + what[1:2])[:3],
         "why_short": match.reasons[0]["why"] if match.reasons else "Событие из отобранных для компании новостей",
         "matched": match.matched, "sources": sources,
