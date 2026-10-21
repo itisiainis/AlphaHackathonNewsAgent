@@ -1,5 +1,5 @@
 {
-  "_comment": "Источники новостей. Добавить источник = добавить строку, код менять не нужно (критерий 07). Все адреса проверены 21.10.2026. official — регулятор или министерство: такие события важнее по умолчанию. topic — профиль источника (для отчёта о покрытии отраслей).",
+  "_comment": "Источники новостей. Добавить источник = добавить строку, код менять не нужно (критерий 07). Все адреса проверены 21.10.2026. official — регулятор или министерство: такие события важнее по умолчанию. bank_voice — канал самого банка: посты, где говорит его экономист, — тоже позиция банка (agent/kb.py, scripts/build_house_view.py). topic — профиль источника (для отчёта о покрытии отраслей).",
   "rss": [
     {"name": "Банк России", "url": "https://www.cbr.ru/rss/eventrss", "kind": "news", "official": true, "topic": "регулятор"},
     {"name": "Интерфакс", "url": "https://www.interfax.ru/rss.asp", "kind": "news", "topic": "общие"},
@@ -27,7 +27,7 @@
     {"name": "MarketTwits", "channel": "markettwits", "kind": "news", "topic": "рынки"},
     {"name": "Банкста", "channel": "banksta", "kind": "news", "topic": "финансы"},
     {"name": "Bankrollo", "channel": "bankrollo", "kind": "news", "topic": "финансы"},
-    {"name": "Альфа-Инвестиции", "channel": "alfa_investments", "kind": "news", "topic": "рынки"},
+    {"name": "Альфа-Инвестиции", "channel": "alfa_investments", "kind": "news", "topic": "рынки", "bank_voice": true},
     {"name": "Недвижимость", "channel": "nedvizha", "kind": "news", "topic": "недвижимость и стройка"},
     {"name": "Retail.ru", "channel": "retail_ru", "kind": "news", "topic": "ритейл"},
     {"name": "ProEconomics", "channel": "proeconomics", "kind": "news", "topic": "экономика"}
