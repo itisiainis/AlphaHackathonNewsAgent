@@ -165,3 +165,11 @@ def test_failed_revision_keeps_card_that_passed_code_check():
     res = run(FailingRedraft(check_ok=False))
     assert res.card is not None
     assert any(t["title"] == "Правка черновика" and "не выполнена" in t["detail"] for t in res.trace)
+
+
+def test_bank_quote_written_by_model_is_not_shown_as_quote():
+    d = json.loads(json.dumps(DRAFT))
+    d["blocks"]["bank"] = {"quote": "Отраслевой оценки влияния дефицита меди на металлотрейдеров в аналитике банка нет", "src": "S2"}
+    res = run(ScriptedLLM(draft=d))
+    assert res.card is not None and res.card["blocks"]["bank"]["quote"] == ""
+    assert any("позиция банка не совпала" in t["detail"] for t in res.trace if t["title"] == "Самопроверка (код)")
