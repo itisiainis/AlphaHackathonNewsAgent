@@ -363,6 +363,24 @@ def feedback(card_id: str, body: FeedbackIn):
     return {"ok": True}
 
 
+class RequestIn(BaseModel):
+    company_id: str
+    role: str = Field(pattern="^(cfo|ceo|treasurer)$")
+    kind: str = Field(pattern="^(manager|product)$")
+    label: str = Field(max_length=120)
+    comment: str = Field(default="", max_length=1000)
+
+
+@app.post("/api/cards/{card_id}/request")
+def manager_request(card_id: str, body: RequestIn):
+    """Запрос менеджеру из карточки. Карточка прикладывается к запросу, поэтому она должна существовать."""
+    _company(body.company_id)
+    if not store.card(body.company_id, card_id):
+        raise HTTPException(404, "карточка не найдена")
+    store.put_request(body.company_id, card_id, body.role, body.kind, body.label, body.comment.strip())
+    return {"ok": True}
+
+
 @app.post("/api/news/refresh")
 def refresh_news(hours: int = 48):
     """Сбор свежих новостей из data/sources.json (занимает до минуты)."""

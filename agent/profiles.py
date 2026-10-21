@@ -22,6 +22,7 @@ PROFILES_PATH = ROOT / "data" / "company_profiles.json"
 LOW_COVERAGE = 0.35       # доля потока с известной отраслью, ниже которой предупреждаем
 MEGA_GROUP = 50           # юрлиц в группе, начиная с которого показываем только агрегат
 TOP_SHARE_MIN = 0.01
+CONCENTRATION_MIN_N = 10  # меньше контрагентов — доля крупнейшего ничего не говорит о бизнесе
 TRADE = {"45", "46", "47"}
 TRADE_WEIGHT = 0.4        # вес «своего» класса торговли, когда известна отрасль товара      # отрасли контрагентов меньше 1% потока в признаки не берём
 
@@ -51,7 +52,12 @@ def _side_view(side: dict, with_intragroup: bool) -> dict:
     tops = [{"name": label(b["okved2"]), "share": round(b["share"], 2)}
             for b in side["by_industry"] if b["share"] >= TOP_SHARE_MIN][:3]
     v = {"n": side["n"], "known_share": None if not side["n"] else round(side["known_industry_share"], 2),
-         "top_industries": tops}
+         "top_industries": tops, "total_bn": round((side.get("total_rub") or 0) / 1e9, 2)}
+    total, top = side.get("total_rub") or 0, side.get("top") or []
+    if side["n"] >= CONCENTRATION_MIN_N and total and top:
+        # зависимость от крупнейших контрагентов — по платежам через банк; при малом числе контрагентов не считаем
+        v["top1_share"] = round(top[0]["amount_rub"] / total, 2)
+        v["top5_share"] = round(sum(t["amount_rub"] for t in top[:5]) / total, 2)
     if with_intragroup:
         v["intragroup_share"] = round(side.get("intragroup_share") or 0, 2)  # в данных бывает null
     return v

@@ -26,6 +26,7 @@ from .profiles import pct
 
 BN = 1e9
 FLOW_MIN = 0.02     # отрасль контрагентов меньше 2% потока не считаем
+EXPOSURE_MIN = 0.10  # «выручка под влиянием» — только для отраслей от 10% поступлений
 NUM = r"(\d+(?:[.,]\d+)?)"
 PCT = NUM + r"\s*%"
 
@@ -105,11 +106,12 @@ def rate_shock(text: str) -> dict | None:
             r.pop("level")
         if "delta" in r and abs(r["delta"]) > 10:
             r.pop("delta")
-        new = {k: v for k, v in r.items() if k not in found}
+        # явное изменение («с 16% до 14%», «на 200 б.п.») важнее общего «сохранил» из заголовка
+        new = {k: v for k, v in r.items() if k not in found or (k == "delta" and found[k] == 0 and v)}
         if new:
             found |= new
             quotes.append(s[:300])
-        if "level" in found and "delta" in found:
+        if "level" in found and found.get("delta"):
             break
     return found | {"quote": " ".join(quotes)} if found else None
 
@@ -166,7 +168,9 @@ def duty_shock(text: str) -> dict | None:
 FOREIGN = {"ОАЭ": r"оаэ|дуба|абу-даби|эмират", "КИТАЙ": r"кита|кнр|пекин|шанха", "США": r"\bсша\b|американ",
            "ТУРЦИЯ": r"турци|турецк|стамбул", "ИНДИЯ": r"инди[ия]|индийск", "ГЕРМАНИЯ": r"германи|немецк",
            "ЕВРОСОЮЗ": r"\bес\b|евросоюз|европ", "ЯПОНИЯ": r"япони|японск", "КАЗАХСТАН": r"казахстан",
-           "БЕЛАРУСЬ": r"беларус|белорус", "ВЕЛИКОБРИТАНИЯ": r"британи|великобритан|лондон", "УКРАИНА": r"украин"}
+           "БЕЛАРУСЬ": r"беларус|белорус", "ВЕЛИКОБРИТАНИЯ": r"британи|великобритан|лондон", "УКРАИНА": r"украин",
+           "ФРАНЦИЯ": r"франци|французск|париж", "ИТАЛИЯ": r"итали|итальянск", "ШВЕЙЦАРИЯ": r"швейцари",
+           "КАНАДА": r"канад", "ИРАН": r"\bиран", "ИЗРАИЛЬ": r"израил", "КОРЕЯ": r"коре[ия]|корейск"}
 
 # Показатели, которые не спрос и не цены отрасли: запасы, ВВП, долги, прибыль, капитализация
 NOT_MARKET = r"запас|резерв|ввп|задолженност|просроч|прибыл|капитализац|убыт|инфляц"
@@ -243,7 +247,8 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
     rs = rate_shock(text)
     if rs:
         news_in = fact(rs["quote"])
-        d, lvl = rs.get("delta"), rs.get("level")
+        # расчёт — только при изменении ставки: «расходы при текущей ставке» руководителю ничего нового не говорят
+        d = rs.get("delta")
         if has_debt:
             prods = ", ".join(x for x in ("кредит", "лизинг") if x in products)
             if d:
@@ -255,14 +260,6 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
                      "Для долга с фиксированной ставкой эффект появится при рефинансировании"],
                     "risk" if d > 0 else "opportunity",
                     {"label": "Ваш долг с плавающей ставкой, млрд ₽", "per_bn": eff, "period": "в год"}))
-            elif lvl:
-                calcs.append(_calc(
-                    "Процентные расходы", f"{rub(lvl / 100 * BN)} в год на каждый 1 млрд ₽ — только ключевая часть ставки",
-                    f"1 млрд ₽ × {num(lvl, 2)}%", [news_in, fact(f"Продукты банка: {prods}", profile_src)],
-                    ["Без спреда банка: полная ставка = ключевая + спред по договору",
-                     "Ставка не изменилась — процентные расходы остаются прежними, удешевления долга пока нет" if d == 0
-                     else "Размер изменения ставки в тексте новости не указан"], "neutral",
-                    {"label": "Ваш долг с плавающей ставкой, млрд ₽", "per_bn": lvl / 100 * BN, "period": "в год"}, "low"))
         if "депозиты" in products and d:
             eff = d / 100 * BN
             calcs.append(_calc(
@@ -353,6 +350,23 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
                     [f"{what.capitalize()} компании меняются так же, как в отрасли в целом",
                      "Компания может расти или падать быстрее рынка; это ориентир масштаба, а не прогноз"],
                     "risk" if eff < 0 else "opportunity", strength="low"))
+    # Без процента в новости: сколько выручки связано с отраслью события (масштаб того, что под влиянием)
+    head = event.get("title", "") + " " + event.get("text", "")[:600]
+    abroad = [c for c, rx in FOREIGN.items() if re.search(rx, _low(head))]
+    if not any(c["title"].startswith(("Выручка", "Закупки")) for c in calcs) and not (
+            abroad and not set(abroad) & set(p["foreign_trade"]["countries"])):
+        for s in sectors_in(head):
+            share = cust.get(s, 0)
+            if share >= EXPOSURE_MIN:
+                calcs.append(_calc(
+                    f"Выручка под влиянием: {label(s)}", f"≈ {rub(R * share)} в год",
+                    f"{num(R / BN)} млрд ₽ × {round(share * 100)}%",
+                    [fact(f"Выручка компании за год: {num(R / BN)} млрд ₽", profile_src),
+                     fact(f"{label(s)}: {round(share * 100)}% входящего потока", profile_src)],
+                    ["Это масштаб выручки, связанной с отраслью события, а не прогноз потерь: размер эффекта в новости не указан",
+                     f"Доля — по платежам через банк; отрасль известна для {pct(p['customers']['known_industry_share'])} входящего потока"],
+                    "neutral", strength="medium"))
+                break
     return calcs[:4]
 
 

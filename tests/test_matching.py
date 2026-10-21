@@ -63,7 +63,7 @@ def test_native_ad_and_crime_news_filtered():
     assert AD_RE.search("Продают блоками и этажами. Стоимость лота — от 310 тыс. руб./кв.м.")
     crime = score("U_3263", "Бывший управленец РЖД получил 11 лет колонии за взятку", "Суд вынес приговор по уголовному делу.")
     market = score("U_3263", "РЖД снизила погрузку на 8%", "Погрузка на сети РЖД в сентябре снизилась на 8%.")
-    assert crime.score < market.score and any(r["feature"] == "криминальная хроника" for r in crime.reasons)
+    assert crime.score < market.score and any(r["feature"] == "суд или уголовное дело" for r in crime.reasons)
 
 
 @pytest.mark.parametrize("text,sector", [
@@ -87,3 +87,16 @@ def test_labelled_relevance_set_quality():
     from scripts.eval_matching import evaluate
     r = evaluate()
     assert r["pairs"] >= 40 and r["f1"] >= 0.9, r["errors"]
+
+
+@pytest.mark.parametrize("text,is_fx", [
+    ("Рубль ослаб к юаню на 4,5% за неделю", True), ("Курс доллара превысил 95 рублей", True),
+    ("Плата составит 1 рубль в месяц", False), ("Латвия нарастила экспорт российского зерна", False),
+])
+def test_fx_topic_needs_currency_phrase(text, is_fx):
+    assert ("курс" in okved.topics_in(text)) is is_fx
+
+
+def test_daily_official_rate_is_routine():
+    m = score(AUTO, "ЦБ установил официальные курсы валют на 21 октября", "Курс юаня на 21 октября — 11,3 рубля.")
+    assert not m.selected
