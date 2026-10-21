@@ -51,7 +51,7 @@ def test_analyze_without_key_gives_labelled_rules_card(client):
     stmts = c["key_points"] + [s for b in ("what", "why", "risks", "opportunities", "actions") for s in c["blocks"][b]]
     assert stmts and all(s["p"] != "ai" for s in stmts), "без модели нет выводов ИИ"
     assert c["blocks"]["calc"][0]["value"].startswith("−20 млн ₽"), "расчёт работает без модели"
-    assert "разбор правилами" in c["blocks"]["basis"]["coverage"]
+    assert "краткий разбор" in c["blocks"]["basis"]["coverage"]
     assert client.get("/api/metrics").json()["agent_runs"]["total"] == 0, "разбор правилами не считается запуском агента"
     origins = client.get("/api/companies/U_25835").json()["origins"]
     assert origins[c["id"]] == "rules"

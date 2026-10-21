@@ -4,7 +4,8 @@
 - инструменты только читают данные; записи, сети по произвольным адресам и выполнения кода нет;
 - сессия инструментов привязана к одной компании: профиль и контрагенты другой компании агент
   получить не может, даже если модель попросит (id компании не передаётся аргументом);
-- вызов инструмента не из белого списка или с неизвестными аргументами отклоняется;
+- вызов инструмента не из белого списка отклоняется, попытка передать id другой компании — тоже;
+  лишние безвредные аргументы отбрасываются (и пишутся в журнал), чтобы модель не тратила шаги на ошибки;
 - каждый вызов пишется в журнал (имя, аргументы, размер результата, время) — журнал идёт в трассу.
 
 Реестр источников: каждый найденный фрагмент новости или аналитики получает метку S1, S2, …
@@ -145,13 +146,19 @@ class ToolSession:
     def call(self, name: str, args: dict | None) -> tuple[object, dict]:
         args = dict(args or {})
         t0 = time.monotonic()
-        entry = {"tool": name, "args": args}
+        entry = {"tool": name, "args": dict(args)}  # как попросила модель — для журнала
         try:
             if name not in self.TOOLS:
                 raise PermissionError(f"инструмент «{name}» не разрешён")
+            for key in ("company_id", "id", "company"):
+                if key in args and key not in self.TOOLS[name]["args"]:
+                    if str(args.pop(key)) != self.company_id:
+                        raise PermissionError("данные другой компании недоступны: сессия привязана к одной компании")
             extra = set(args) - set(self.TOOLS[name]["args"])
+            for k in extra:  # лишний безвредный аргумент (например, дата у get_event) не повод тратить шаг агента
+                args.pop(k)
             if extra:
-                raise ValueError(f"неизвестные аргументы: {sorted(extra)}")
+                entry["ignored_args"] = sorted(extra)
             result = getattr(self, name)(**args)
             entry["ok"] = True
         except Exception as e:  # ошибка инструмента — наблюдение для агента, а не падение цикла
