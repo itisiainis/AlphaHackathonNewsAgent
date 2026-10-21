@@ -64,6 +64,11 @@ class Store:
         self._exec("INSERT INTO runs VALUES(?,?,?,?,?,?,?,?,?)",
                    (time.time(), company_id, event_id, int(ok), json.dumps(errors, ensure_ascii=False), cost, ms, tools, revisions))
 
+    def recent_run_ms(self, n: int = 20) -> int | None:
+        """Среднее время последних разборов агентом — по нему интерфейс оценивает, сколько осталось ждать."""
+        row = self._exec("SELECT AVG(ms) FROM (SELECT ms FROM runs WHERE ms > 0 ORDER BY ts DESC LIMIT ?)", (n,)).fetchone()
+        return int(row[0]) if row and row[0] else None
+
     def put_request(self, company_id: str, card_id: str, role: str, kind: str, label: str, comment: str) -> None:
         """Запрос клиента менеджеру из карточки: в рабочей версии уходит в CRM банка, здесь — в журнал."""
         self._exec("INSERT INTO requests VALUES(?,?,?,?,?,?,?)", (time.time(), company_id, card_id, role, kind, label, comment))

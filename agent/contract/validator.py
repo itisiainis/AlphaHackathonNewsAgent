@@ -12,6 +12,8 @@
    - числа из fact/bank-утверждений должны встречаться в тексте цитируемого источника
      (если текст источника передан): так выдуманная цифра ловится кодом, а не обещанием модели;
    - входные данные расчётов (blocks.calc[].inputs) проверяются так же, как утверждения.
+3. Понятность выводов (style): коды отраслей, жаргон и повтор заголовка события в выводах ИИ.
+   Показывать карточку можно, но агент отправляет её на правку — руководитель должен понять вывод без словаря.
 """
 from __future__ import annotations
 
@@ -28,26 +30,34 @@ SCHEMA_PATH = Path(__file__).with_name("card.schema.json")
 STALE_DAYS = 365
 STMT_BLOCKS = ("what", "why", "risks", "opportunities", "actions")
 NUM_RE = re.compile(r"\d+(?:[.,]\d+)?")
+# то, что руководитель не обязан знать: коды отраслей и внутренние термины платёжной выборки
+JARGON = {r"\(\d{2}(?:\.\d+)*\)|оквэд": "код отрасли", r"\bдкп\b": "«ДКП» без расшифровки",
+          r"контрагент": "«контрагенты» вместо «покупатели / поставщики»",
+          r"(?:входящ|исходящ)\w* поток": "«входящий поток» вместо «поступления / платежи»"}
+JARGON_RE = {re.compile(k, re.I): v for k, v in JARGON.items()}
 
 
 @dataclass
 class Report:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    style: list[str] = field(default_factory=list)  # понятность выводов: не мешает показу, но повод для правки
 
     @property
     def ok(self) -> bool:
         return not self.errors
 
     def summary(self) -> str:
-        if self.ok and not self.warnings:
+        if self.ok and not self.warnings and not self.style:
             return "Все проверки пройдены"
         parts = []
         if self.errors:
             parts.append(f"ошибок: {len(self.errors)}")
         if self.warnings:
             parts.append(f"предупреждений: {len(self.warnings)}")
-        return ", ".join(parts) + ". " + "; ".join((self.errors + self.warnings)[:5])
+        if self.style:
+            parts.append(f"замечаний по понятности: {len(self.style)}")
+        return ", ".join(parts) + ". " + "; ".join((self.errors + self.warnings + self.style)[:5])
 
 
 @lru_cache(maxsize=1)
@@ -127,4 +137,34 @@ def validate_card(card: dict, today: date | None = None, source_texts: dict[int,
     for k, a in enumerate(card["blocks"]["actions"]):
         if a.get("cta") and a["p"] != "ai":
             rep.warnings.append(f"blocks.actions[{k}]: кнопка действия у утверждения «{a['p']}»")
+    rep.style = style_issues(card)
     return rep
+
+
+def _stems(text: str) -> set[str]:
+    return {w[:5] for w in re.findall(r"[а-яёa-z]{4,}", text.lower())}
+
+
+def repeats_title(text: str, title: str, share: float = 0.8) -> bool:
+    """Текст почти целиком из слов заголовка события — пересказ, а не вывод."""
+    st = _stems(text)
+    return len(st) >= 3 and len(st & _stems(title)) / len(st) >= share
+
+
+def style_issues(card: dict) -> list[str]:
+    """Понятность выводов ИИ: без кодов отраслей и жаргона, без повтора заголовка. Факты и цитаты банка не трогаем —
+    они переписываются из источника как есть."""
+    texts = [(f"takeaway.{r}", t) for r, t in card["takeaway"].items()] + [("why_short", card["why_short"])]
+    texts += [(w, s["t"]) for w, s, strict in _iter_stmts(card) if strict and s["p"] == "ai"]
+    if card["blocks"]["bank"].get("plain"):
+        texts.append(("blocks.bank.plain", card["blocks"]["bank"]["plain"]))
+    out = []
+    for where, t in texts:
+        for rx, what in JARGON_RE.items():
+            if rx.search(t):
+                out.append(f"{where}: {what} — «{t[:60]}»")
+                break
+    for k, s in enumerate(card["key_points"]):
+        if repeats_title(s["t"], card["title"]):
+            out.append(f"key_points[{k}]: повторяет заголовок события")
+    return out

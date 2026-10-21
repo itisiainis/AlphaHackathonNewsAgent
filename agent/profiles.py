@@ -124,8 +124,11 @@ def features(p: dict) -> dict:
         sectors[p["okved2"]] = min(sectors[p["okved2"]], TRADE_WEIGHT)
     for s in related:
         sectors.setdefault(s, 0.8)  # отрасль товара, которым компания торгует
+    # чем отрасль приходится компании — для объяснения «почему вам» простыми словами
+    role = {s: "own" if s == p["okved2"] else "goods" if s in related else "group" for s in sectors}
     return {
         "own_sectors": sectors,  # отрасль компании и её группы с долями
+        "sector_role": role,
         "customer_sectors": {b["okved2"]: b["share"] for b in p["customers"]["by_industry"]},
         "supplier_sectors": {b["okved2"]: b["share"] for b in p["suppliers"]["by_industry"]},
         "has_debt": bool({"кредит", "лизинг"} & set(p["bank_products"])),

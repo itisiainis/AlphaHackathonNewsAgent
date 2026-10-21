@@ -149,7 +149,8 @@ def _company(cid: str) -> dict:
 
 def _status() -> dict:
     return {"llm_online": llm.online, "spent_today_rub": round(llm.spent_today(), 2), "budget_rub": llm.budget,
-            "news_events": len(pipe.events), "bank_fragments": len(pipe.bank.items), "today": TODAY.isoformat()}
+            "news_events": len(pipe.events), "bank_fragments": len(pipe.bank.items), "today": TODAY.isoformat(),
+            "agent_avg_ms": store.recent_run_ms()}
 
 
 # ---------- чтение ----------

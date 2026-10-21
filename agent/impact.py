@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 
-from .okved import country_name, label, related_sectors, sectors_in
+from .okved import country_name, label, related_sectors, sectors_in, who
 from .profiles import pct
 
 BN = 1e9
@@ -318,13 +318,13 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
                 revenue_done = True
                 eff = R * share * ch / 100
                 calcs.append(_calc(
-                    f"Выручка от покупателей: {label(s)}", f"{'+' if eff > 0 else ''}{rub(eff)} в год",
+                    f"Выручка от покупателей — {who(s)}", f"{'+' if eff > 0 else ''}{rub(eff)} в год",
                     f"{num(R / BN)} млрд ₽ × {round(share * 100)}% × {'+' if ch > 0 else '−'}{num(abs(ch), 2)}%",
                     [fact(sh["quote"]), fact(f"Выручка компании за год: {num(R / BN)} млрд ₽", profile_src),
-                     fact(f"{label(s)}: {round(share * 100)}% входящего потока", profile_src)],
-                    [f"Выручка от покупателей отрасли меняется так же, как {what} в отрасли (эластичность 1)",
-                     f"Доля — по платёжной выборке банка; отрасль известна для {pct(p['customers']['known_industry_share'])} "
-                     "входящего потока, поэтому это оценка по известной части"],
+                     fact(f"{round(share * 100)}% поступлений через банк — {who(s)}", profile_src)],
+                    [f"Выручка от этих покупателей меняется так же, как {what} в их отрасли (эластичность 1)",
+                     f"Доля — по платежам через банк; отрасль плательщика известна для {pct(p['customers']['known_industry_share'])} "
+                     "поступлений, поэтому это оценка по известной части"],
                     "risk" if eff < 0 else "opportunity", strength="medium"))
                 continue
             share = supp.get(s, 0)
@@ -332,12 +332,12 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
                 seen.add(s)
                 eff = ch / 100 * BN
                 calcs.append(_calc(
-                    f"Закупки у поставщиков: {label(s)}", f"{'+' if eff > 0 else ''}{rub(eff)} на каждый 1 млрд ₽ закупок у отрасли",
+                    f"Закупки у поставщиков — {who(s)}", f"{'+' if eff > 0 else ''}{rub(eff)} на каждый 1 млрд ₽ закупок у отрасли",
                     f"1 млрд ₽ × {'+' if ch > 0 else '−'}{num(abs(ch), 2)}%",
-                    [fact(sh["quote"]), fact(f"{label(s)}: {round(share * 100)}% исходящего потока", profile_src)],
+                    [fact(sh["quote"]), fact(f"{round(share * 100)}% платежей через банк — {who(s)}", profile_src)],
                     ["Цены поставщиков меняются вслед за ценами отрасли", "Условия действующих контрактов не учтены"],
                     "risk" if eff > 0 else "opportunity",
-                    {"label": f"Ваши закупки у отрасли «{label(s)}» за год, млрд ₽", "per_bn": eff, "period": "за год"}))
+                    {"label": f"Ваши закупки за год ({who(s)}), млрд ₽", "per_bn": eff, "period": "за год"}))
                 continue
             if s in own and not revenue_done:
                 seen.add(s)
@@ -359,12 +359,12 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
             share = cust.get(s, 0)
             if share >= EXPOSURE_MIN:
                 calcs.append(_calc(
-                    f"Выручка под влиянием: {label(s)}", f"≈ {rub(R * share)} в год",
+                    f"Выручка под влиянием: покупатели — {who(s)}", f"≈ {rub(R * share)} в год",
                     f"{num(R / BN)} млрд ₽ × {round(share * 100)}%",
                     [fact(f"Выручка компании за год: {num(R / BN)} млрд ₽", profile_src),
-                     fact(f"{label(s)}: {round(share * 100)}% входящего потока", profile_src)],
+                     fact(f"{round(share * 100)}% поступлений через банк — {who(s)}", profile_src)],
                     ["Это масштаб выручки, связанной с отраслью события, а не прогноз потерь: размер эффекта в новости не указан",
-                     f"Доля — по платежам через банк; отрасль известна для {pct(p['customers']['known_industry_share'])} входящего потока"],
+                     f"Доля — по платежам через банк; отрасль плательщика известна для {pct(p['customers']['known_industry_share'])} поступлений"],
                     "neutral", strength="medium"))
                 break
     return calcs[:4]
