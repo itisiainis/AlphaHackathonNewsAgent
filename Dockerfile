@@ -23,4 +23,5 @@ USER app
 
 ENV COLLECT_ON_START=1
 EXPOSE 8000
-CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# PORT задают облачные платформы (Render, Railway); локально — 8000
+CMD ["sh", "-c", "exec uvicorn backend.app:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -14,6 +14,7 @@ JSON-объектом; код выполняет инструмент и воз�
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -32,6 +33,15 @@ PENDING = {"План": "Модель составляет план и выбир
            "Правка черновика": "Модель исправляет черновик по замечаниям проверки…",
            "Самопроверка (модель)": "Проверяющая модель (другая) читает черновик и источники…",
            "Шаг": "Модель выбирает следующий шаг…"}
+
+
+def quote_matches(quote: str, source: str, share: float = 0.6) -> bool:
+    """Цитата банка должна опираться на текст документа: не меньше 60% её слов (по основе из 5 букв) есть в источнике."""
+    words = {w[:5] for w in re.findall(r"[а-яёa-z]{5,}", quote.lower())}
+    if not words:
+        return True
+    src = {w[:5] for w in re.findall(r"[а-яёa-z]{5,}", source.lower())}
+    return len(words & src) / len(words) >= share
 
 
 def _count(result) -> int:
@@ -297,10 +307,21 @@ class Agent:
         blocks = {k: stmts(b.get(k)) for k in ("what", "why", "risks", "opportunities", "actions")}
         key_points = stmts(draft.get("key_points"))[:3]
         bank_src = by_label.get((b.get("bank") or {}).get("src") or "")
-        if bank_src and bank_src.kind == "bank":
+        quote = (b.get("bank") or {}).get("quote", "")
+        if bank_src and bank_src.kind == "bank" and quote and not quote_matches(quote, bank_src.text):
+            # «цитата» не похожа на текст документа (модель написала своими словами) — цитатой её не показываем
+            repairs.append("позиция банка не совпала с текстом документа → убрана")
+            if not bank_src.stale:
+                bank_src = None
+            quote = ""
+        if bank_src and bank_src.kind == "bank" and bank_src.stale and not quote:
             idx(bank_src.label)
-            bank = {"quote": (b.get("bank") or {}).get("quote", ""), "doc": bank_src.doc or bank_src.name,
-                    "date": bank_src.date, "stale": bank_src.stale}
+            bank = {"quote": "", "doc": f"Свежей оценки банка нет. Последняя — «{bank_src.doc or bank_src.name}» "
+                                       f"от {bank_src.date}: старше 12 месяцев, в выводе не используется",
+                    "date": bank_src.date, "stale": True}
+        elif bank_src and bank_src.kind == "bank":
+            idx(bank_src.label)
+            bank = {"quote": quote, "doc": bank_src.doc or bank_src.name, "date": bank_src.date, "stale": bank_src.stale}
         else:
             bank = {"quote": "", "doc": "Отраслевой оценки банка по этому событию нет — вывод на основе данных компании и новости",
                     "date": self.today.isoformat(), "stale": False}

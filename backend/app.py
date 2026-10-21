@@ -157,6 +157,12 @@ def health():
     return {"ok": True} | _status()
 
 
+@app.get("/healthz", include_in_schema=False)
+def healthz():
+    """Проверка живости для Docker и облачных платформ."""
+    return {"ok": True}
+
+
 @app.get("/api/bootstrap")
 def bootstrap():
     ids = list(dict.fromkeys(DEMO_IDS + store.companies_with_cards()))

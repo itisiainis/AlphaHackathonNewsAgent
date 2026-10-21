@@ -85,7 +85,7 @@ class LLM:
                  daily_budget_rub: float | None = None, http: httpx.Client | None = None):
         self.base_url = (base_url or os.environ.get("LLM_BASE_URL", "")).rstrip("/")
         self.api_key = api_key if api_key is not None else os.environ.get("LLM_API_KEY", "")
-        self.budget = daily_budget_rub if daily_budget_rub is not None else _env_float("LLM_DAILY_BUDGET_RUB", 450)
+        self.budget = daily_budget_rub if daily_budget_rub is not None else _env_float("LLM_DAILY_BUDGET_RUB", 50)
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.http = http or httpx.Client(timeout=180)
