@@ -41,8 +41,10 @@ def all_ids() -> list[str]:
     return list(_all())
 
 
-def _pct(x: float | None) -> str:
-    return "н/д" if x is None else f"{round(x * 100)}%"
+def pct(x: float | None) -> str:
+    if x is None:
+        return "н/д"
+    return "менее 1%" if 0 < x < 0.005 else f"{round(x * 100)}%"
 
 
 def _side_view(side: dict, with_intragroup: bool) -> dict:
@@ -71,7 +73,7 @@ def data_quality(p: dict) -> list[str]:
             notes.append(f"Нет данных о {name} в платёжной выборке")
     cust = p["customers"]
     if cust["n"] and cust["known_industry_share"] < LOW_COVERAGE:
-        notes.append(f"Отрасль известна лишь для {_pct(cust['known_industry_share'])} входящего потока")
+        notes.append(f"Отрасль известна лишь для {pct(cust['known_industry_share'])} входящего потока")
     if p["group"]["size"] >= MEGA_GROUP:
         notes.append(f"Группа из {p['group']['size']} юрлиц: анализ по агрегату долей отраслей, не по каждому юрлицу")
     if p["client_type"] == "PROSPECT":

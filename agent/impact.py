@@ -22,6 +22,7 @@ from __future__ import annotations
 import re
 
 from .okved import country_name, label, related_sectors, sectors_in
+from .profiles import pct
 
 BN = 1e9
 FLOW_MIN = 0.02     # отрасль контрагентов меньше 2% потока не считаем
@@ -213,7 +214,7 @@ def profile_text(p: dict) -> str:
     for side, name in (("customers", "входящего"), ("suppliers", "исходящего")):
         s = p[side]
         if s["n"]:
-            lines.append(f"Отрасль известна для {round(s['known_industry_share'] * 100)}% {name} потока")
+            lines.append(f"Отрасль известна для {pct(s['known_industry_share'])} {name} потока")
             for b in s["by_industry"]:
                 if b["share"] >= FLOW_MIN:
                     lines.append(f"{label(b['okved2'])}: {round(b['share'] * 100)}% {name} потока")
@@ -325,7 +326,7 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
                     [fact(sh["quote"]), fact(f"Выручка компании за год: {num(R / BN)} млрд ₽", profile_src),
                      fact(f"{label(s)}: {round(share * 100)}% входящего потока", profile_src)],
                     [f"Выручка от покупателей отрасли меняется так же, как {what} в отрасли (эластичность 1)",
-                     f"Доля — по платёжной выборке банка; отрасль известна для {round(p['customers']['known_industry_share'] * 100)}% "
+                     f"Доля — по платёжной выборке банка; отрасль известна для {pct(p['customers']['known_industry_share'])} "
                      "входящего потока, поэтому это оценка по известной части"],
                     "risk" if eff < 0 else "opportunity", strength="medium"))
                 continue

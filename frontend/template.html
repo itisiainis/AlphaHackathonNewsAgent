@@ -255,8 +255,12 @@ function companyOptions() {
   const seen = {}; all.forEach(c => { seen[label(c)] = (seen[label(c)] || 0) + 1; });
   const opt = c => `<option value="${c.id}">${esc(label(c))}${seen[label(c)] > 1 ? ' · ' + c.id : ''}</option>`;
   const shown = new Set(DATA.companies.map(c => c.id));
-  const rest = all.filter(c => !shown.has(c.id)).map(opt).join('');
-  return rest ? `<optgroup label="Подробные разборы">${DATA.companies.map(opt).join('')}</optgroup><optgroup label="Все компании">${rest}</optgroup>` : DATA.companies.map(opt).join('');
+  // остальные компании — по отраслям, крупные отрасли выше
+  const groups = {};
+  all.filter(c => !shown.has(c.id)).forEach(c => (groups[c.sector || 'Прочие'] = groups[c.sector || 'Прочие'] || []).push(c));
+  const rest = Object.entries(groups).sort((a, b) => b[1].length - a[1].length)
+    .map(([g, cs]) => `<optgroup label="${esc(g)} (${cs.length})">${cs.map(opt).join('')}</optgroup>`).join('');
+  return rest ? `<optgroup label="Подробные разборы">${DATA.companies.map(opt).join('')}</optgroup>${rest}` : DATA.companies.map(opt).join('');
 }
 async function loadCompany(id) {
   if (!API || DATA.companies.some(c => c.id === id)) return;
@@ -480,7 +484,9 @@ async function loadQuality() {
       <div><div class="muted">Полезно / не про нас</div><h2>${f.useful} / ${f.not_relevant}</h2><div class="muted">доля полезных ${pct(f.useful_share)}</div></div>
       <div><div class="muted">Запусков агента</div><h2>${r.total}</h2><div class="muted">прошли проверку ${pct(r.pass_rate)}</div></div>
       <div><div class="muted">Расход модели</div><h2>${r.cost_rub.toLocaleString('ru-RU')} ₽</h2><div class="muted">среднее время ${(r.avg_ms / 1000).toFixed(1).replace('.', ',')} с</div></div></div>
-      <div class="src-line">Разборов в базе: ${Object.entries(m.cards).map(([k, v]) => `${ORIGIN_RU[k] || k} — ${v}`).join(', ')}</div>`;
+      <div class="src-line">Разборов в базе: ${Object.entries(m.cards).map(([k, v]) => `${ORIGIN_RU[k] || k} — ${v}`).join(', ')}</div>
+      ${m.matching_eval ? `<div class="src-line">Отбор новостей на размеченном наборе (${m.matching_eval.pairs} пар «новость × компания»): точность ${pct(m.matching_eval.precision)}, полнота ${pct(m.matching_eval.recall)}</div>` : ''}
+      ${m.status ? `<div class="src-line">Модель: ${m.status.llm_online ? 'подключена' : 'не подключена — работает краткий разбор'} · расход сегодня ${m.status.spent_today_rub.toLocaleString('ru-RU')} из ${m.status.budget_rub} ₽</div>` : ''}`;
   } catch (e) { $('#q-box').textContent = e.message; }
 }
 

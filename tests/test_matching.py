@@ -81,3 +81,9 @@ def test_sector_false_friends(text, sector):
 ])
 def test_sector_dictionary_covers_more_industries(text, sector):
     assert sector in okved.sectors_in(text)
+
+
+def test_labelled_relevance_set_quality():
+    from scripts.eval_matching import evaluate
+    r = evaluate()
+    assert r["pairs"] >= 40 and r["f1"] >= 0.9, r["errors"]

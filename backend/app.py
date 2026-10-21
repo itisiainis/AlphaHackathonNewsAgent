@@ -26,6 +26,7 @@ from agent.chat import answer
 from agent.contract import validate_card
 from agent.llm import LLM, LLMUnavailable
 from agent.offline import NOTICE as OFFLINE_NOTICE
+from agent.okved import short_name
 from agent.pipeline import Pipeline, event_from_text
 from agent.slices import SUGGESTED, data_answer
 
@@ -172,6 +173,7 @@ def bootstrap():
         insights[cid] = [c for c, _ in rows]
         origins[cid] = {c["id"]: o for c, o in rows}
     all_c = sorted(({"id": i, "display": profiles.short_industry(profiles.get(i)), "region": profiles.get(i)["region"],
+                     "sector": short_name(profiles.get(i)["okved2"]),
                      "revenue_bn": round(profiles.get(i)["revenue_rub"] / 1e9, 1)} for i in profiles.all_ids()),
                    key=lambda x: -x["revenue_bn"])
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
@@ -199,7 +201,11 @@ def company_events(cid: str, limit: int = 10):
 @app.get("/api/metrics")
 def metrics():
     """Метрики качества (критерий 12): обратная связь, доля карточек, прошедших проверку, расход."""
-    return store.metrics() | {"status": _status()}
+    from scripts.eval_matching import evaluate
+
+    ev = evaluate()  # размеченный набор: правила отбора без модели, считается за миллисекунды
+    return store.metrics() | {"status": _status(),
+                              "matching_eval": {k: ev[k] for k in ("pairs", "precision", "recall", "f1")}}
 
 
 # ---------- действия ----------

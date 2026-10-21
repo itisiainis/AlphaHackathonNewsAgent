@@ -35,6 +35,9 @@ PENDING = {"План": "Модель составляет план и выбир
            "Шаг": "Модель выбирает следующий шаг…"}
 
 
+BANK_VIEW = re.compile(r"прогноз|ожида|считае|полагае|оценивае|рекоменд|альфа-банк|по мнению банка|по оценке банка", re.I)
+
+
 def quote_matches(quote: str, source: str, share: float = 0.6) -> bool:
     """Цитата банка должна опираться на текст документа: не меньше 60% её слов (по основе из 5 букв) есть в источнике."""
     words = {w[:5] for w in re.findall(r"[а-яёa-z]{5,}", quote.lower())}
@@ -265,6 +268,10 @@ class Agent:
             перенаправляем ссылку. Не нашли — утверждение убирается: неподтверждённая цифра хуже,
             чем отсутствие утверждения. Факт без чисел и без источника становится выводом ИИ."""
             p, lbl = s.get("p"), s.get("src")
+            if p == "fact" and lbl in by_label and by_label[lbl].kind == "bank" and BANK_VIEW.search(s.get("t", "")):
+                # прогноз или ожидание из документа банка — это позиция банка, а не факт
+                repairs.append("прогноз банка: факт → позиция банка")
+                s, p = {**s, "p": "bank"}, "bank"
             if p not in ("fact", "bank"):
                 return s
             nums = numbers_in(s.get("t", ""))
@@ -295,8 +302,8 @@ class Agent:
                 if st.get("strength") not in (None, "high", "medium", "low"):
                     st.pop("strength")
                 cta = st.get("cta")
-                if cta and not (isinstance(cta, dict) and cta.get("label") and cta.get("kind") in ("manager", "product")):
-                    st.pop("cta")
+                if cta and (st["p"] != "ai" or not (isinstance(cta, dict) and cta.get("label") and cta.get("kind") in ("manager", "product"))):
+                    st.pop("cta")  # кнопка действия — только у вывода ИИ: действие предлагает аналитик, а не источник
                 i = idx(s.get("src"))
                 if i is not None:
                     st["src"] = i
@@ -331,7 +338,7 @@ class Agent:
         p = profiles.get(company_id)
         dq = profiles.data_quality(p)
         cust = p["customers"]
-        flow = (f"Отрасль известна для {round(cust['known_industry_share'] * 100)}% входящего потока."
+        flow = (f"Отрасль известна для {profiles.pct(cust['known_industry_share'])} входящего потока."
                 if cust["n"] and not dq else "")
         # отраслевая оценка банка: есть / устарела / нет — решает код, текст попадает в карточку дословно
         text_note = "Текст новости — только анонс источника, полный текст недоступен." if event.get("text_kind") == "summary" else ""
