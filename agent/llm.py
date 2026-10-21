@@ -51,6 +51,11 @@ ROUTING = {
     "chat": "qwen",         # универсальная
     "vision": "qwen_vl",    # сканы и графики
 }
+# Задачи, где скрытые рассуждения модели выключены (параметр прокси reasoning.enabled=false).
+# Замер 21.10: DeepSeek на проверке тратил >6000 токенов на рассуждения (~1 ₽) и не успевал ответить;
+# без рассуждений — тот же ответ на сверке, в 4 раза дешевле. Числа и ссылки всё равно сверяет код.
+# Черновик (GLM) рассуждает: там рассуждение улучшает выводы.
+NO_REASONING = {"check", "chat", "agent", "triage"}
 
 
 class LLMUnavailable(RuntimeError):
@@ -113,13 +118,15 @@ class LLM:
 
     # ---------- вызов ----------
     def complete(self, role: str, messages: list[dict], max_tokens: int = 6000,
-                 temperature: float = 0.2, json_mode: bool = False) -> Completion:
+                 temperature: float = 0.2, json_mode: bool = False, reasoning: bool = True) -> Completion:
         if role not in ALLOWED:
             raise ValueError(f"модель «{role}» не входит в список разрешённых кейсом")
         model_id = os.environ.get(ALLOWED[role][1], "") or ALLOWED[role][0]
         body = {"model": model_id, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}
         if json_mode:
             body["response_format"] = {"type": "json_object"}
+        if not reasoning:
+            body["reasoning"] = {"enabled": False}
         key = hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
         cache_file = self.cache_dir / f"{key}.json"
         if cache_file.exists():

@@ -38,7 +38,9 @@ VOCAB = set(okved.TOPIC_STEMS)
 # Признаки рекламы и промо без LLM: маркировка рекламы (erid), призывы зарегистрироваться,
 # инвестидеи для частных инвесторов. Точнее рекламу отсеивает Gemma, если ключ задан.
 AD_RE = re.compile(r"erid|реклама|промокод|розыгрыш|зарегистрир|займите место|подписывайтесь|"
-                   r"идея может не сработать|скидк[аиу]", re.I)
+                   r"идея может не сработать|скидк[аиу]|"
+                   # нативная реклама без пометки: цена лота, «оставьте заявку», «узнать подробнее»
+                   r"стоимость лота|руб\.?\s?/\s?кв\.?\s?м|оставьте заявку|узнать подробнее|переходите по ссылке|кешбэк|кэшбэк", re.I)
 
 TRIAGE_SYSTEM = """Ты — редактор деловых новостей для руководителей крупных компаний. Для КАЖДОЙ новости верни объект:
 {"id": номер, "importance": 0-10, "is_ad": true|false, "topics": [...], "sectors": [...], "gist": "суть одним предложением"}
@@ -122,7 +124,7 @@ def triage(llm, events: list[dict]) -> int:
         user = "\n\n".join(f"[{j}] {e['source']}: {e['title']}\n{e['text'][:500]}" for j, e in enumerate(batch))
         try:
             c = llm.complete(ROUTING["triage"], [{"role": "system", "content": TRIAGE_SYSTEM},
-                                                 {"role": "user", "content": user}], max_tokens=6000, json_mode=True)
+                                                 {"role": "user", "content": user}], max_tokens=6000, json_mode=True, reasoning=False)
             data = extract_json(c.text)
             items = data.get("items", []) if isinstance(data, dict) else data
         except LLMUnavailable:

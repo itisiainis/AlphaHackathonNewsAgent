@@ -16,6 +16,7 @@ COPY frontend ./frontend
 COPY data/company_profiles.json data/sources.json ./data/
 COPY data/bank ./data/bank
 COPY data/news/events.sample.json ./data/news/
+COPY data/cards ./data/cards
 
 RUN useradd --create-home app && mkdir -p /app/data/cache && chown -R app /app/data
 USER app

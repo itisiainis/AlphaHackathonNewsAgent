@@ -152,3 +152,16 @@ def test_card_basis_states_missing_industry_assessment():
     m = match(EVENT, profiles.features(p), p["bank_products"])
     res = Agent(ScriptedLLM(), BANK, NEWS, today=TODAY, bank_meta=meta).run(EVENT, "U_25835", m)
     assert res.card and res.card["blocks"]["basis"]["coverage"].startswith("Отраслевой оценки банка по ОКВЭД 45.31.1 нет")
+
+
+def test_failed_revision_keeps_card_that_passed_code_check():
+    """Проверяющая модель нашла замечание, а правка упала на лимите токенов — карточка не теряется."""
+    class FailingRedraft(ScriptedLLM):
+        def complete(self, role, messages, **kw):
+            if "составь карточку" in messages[0]["content"] and "Замечания проверки" in messages[-1]["content"]:
+                raise LLMUnavailable("модель glm: лимит токенов израсходован на рассуждения")
+            return super().complete(role, messages, **kw)
+
+    res = run(FailingRedraft(check_ok=False))
+    assert res.card is not None
+    assert any(t["title"] == "Правка черновика" and "не выполнена" in t["detail"] for t in res.trace)

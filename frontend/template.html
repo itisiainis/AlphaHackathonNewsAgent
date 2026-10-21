@@ -510,7 +510,8 @@ const TOOL_RU = {get_event: 'Чтение новости', get_company_profile: 
 function stepTitle(t) {
   const m = /^(\w+)\((.*)\)$/s.exec(t); if (!m || !TOOL_RU[m[1]]) return t;
   const q = /(?:query=)?"([^"]+)"/.exec(m[2]);
-  return TOOL_RU[m[1]] + (q && m[1].startsWith('search') ? `: «${q[1]}»` : '');
+  const qs = q ? (q[1].length > 70 ? q[1].slice(0, 70).replace(/\s+\S*$/, '') + '…' : q[1]) : '';
+  return TOOL_RU[m[1]] + (qs && m[1].startsWith('search') ? `: «${qs}»` : '');
 }
 const stepHtml = (s, shown) => `<div class="step k-${s.kind}${shown ? ' shown' : ''}"><span class="dot"></span><div class="st">${esc(stepTitle(s.title))}</div><div class="sd">${esc(s.detail)}</div>
     <div class="sm">${s.ms ? (s.ms / 1000).toFixed(1).replace('.', ',') + ' с' : ''}${s.cost ? ' · ' + rub(s.cost) + ' ₽' : ''}</div></div>`;

@@ -56,3 +56,11 @@ def test_generic_trade_class_weighs_less_than_product_industry():
     assert feats["own_sectors"]["46"] < feats["own_sectors"]["24"]
     clothes = profiles.features(profiles.get(CLOTHES))  # розница одеждой 47.71
     assert clothes["own_sectors"]["47"] < clothes["own_sectors"]["14"]
+
+
+def test_native_ad_and_crime_news_filtered():
+    from agent.ingest.collect import AD_RE
+    assert AD_RE.search("Продают блоками и этажами. Стоимость лота — от 310 тыс. руб./кв.м.")
+    crime = score("U_3263", "Бывший управленец РЖД получил 11 лет колонии за взятку", "Суд вынес приговор по уголовному делу.")
+    market = score("U_3263", "РЖД снизила погрузку на 8%", "Погрузка на сети РЖД в сентябре снизилась на 8%.")
+    assert crime.score < market.score and any(r["feature"] == "криминальная хроника" for r in crime.reasons)

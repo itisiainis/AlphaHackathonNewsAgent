@@ -24,8 +24,11 @@ def load_events(path: Path | None = None) -> list[dict]:
     path = path or ROOT / "data" / "news" / "events.json"
     if not path.exists():
         path = ROOT / "data" / "news" / "events.sample.json"
+    from .ingest.collect import AD_RE
+
     events = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
-    return [retag(e) for e in events]
+    # фильтр рекламы применяется и к уже сохранённым событиям: правка правил действует сразу
+    return [retag(e) for e in events if not AD_RE.search(e.get("text", ""))]
 
 
 def retag(e: dict) -> dict:

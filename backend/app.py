@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from agent import impact, profiles
 from agent.chat import answer
+from agent.contract import validate_card
 from agent.llm import LLM, LLMUnavailable
 from agent.offline import NOTICE as OFFLINE_NOTICE
 from agent.pipeline import Pipeline, event_from_text
@@ -81,6 +82,25 @@ def _seed() -> None:
 
 
 _seed()
+
+
+def _load_precomputed() -> None:
+    """Разборы агента, посчитанные заранее (scripts/run_agent.py --save → data/cards/<компания>/<id>.json).
+    Экономит бюджет: готовую карточку не нужно пересчитывать при каждом запуске."""
+    for f in sorted((ROOT / "data" / "cards").glob("*/*.json")):
+        cid = f.parent.name
+        if profiles.get(cid) is None or store.card(cid, f.stem):
+            continue
+        try:
+            card = json.loads(f.read_text(encoding="utf-8"))
+        except ValueError:
+            log.warning("не читается %s", f)
+            continue
+        if validate_card(card, today=TODAY).ok:
+            store.put_card(cid, card, "agent")
+
+
+_load_precomputed()
 
 
 COLLECT_EVERY_MIN = int(os.environ.get("COLLECT_EVERY_MIN", "60"))
