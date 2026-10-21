@@ -40,10 +40,21 @@ def test_events_are_ranked_with_reasons(client):
     assert all(e["matched"] and e["score"] >= 2.5 and e["reasons"] for e in ev)
 
 
-def test_analyze_without_key_is_honest_503(client):
-    r = client.post("/api/analyze", json={"company_id": "U_25835", "title": "ЦБ сохранил ключевую ставку", "text": "т"})
-    assert r.status_code == 503 and "ключ" in r.json()["detail"]
-    assert client.get("/api/metrics").json()["agent_runs"]["total"] == 0, "отказ без ключа не считается запуском"
+def test_analyze_without_key_gives_labelled_rules_card(client):
+    r = client.post("/api/analyze", json={"company_id": "U_25835", "title": "ЦБ снизил ключевую ставку",
+                                          "text": "Совет директоров Банка России снизил ключевую ставку с 16% до 14% годовых. "
+                                                  "Регулятор допустил дальнейшее снижение в следующем году."})
+    assert r.status_code == 200
+    d = r.json()
+    assert d["mode"] == "rules" and "ключ" in d["reason"] and "без выводов ИИ" in d["notice"]
+    c = d["card"]
+    stmts = c["key_points"] + [s for b in ("what", "why", "risks", "opportunities", "actions") for s in c["blocks"][b]]
+    assert stmts and all(s["p"] != "ai" for s in stmts), "без модели нет выводов ИИ"
+    assert c["blocks"]["calc"][0]["value"].startswith("−20 млн ₽"), "расчёт работает без модели"
+    assert "разбор правилами" in c["blocks"]["basis"]["coverage"]
+    assert client.get("/api/metrics").json()["agent_runs"]["total"] == 0, "разбор правилами не считается запуском агента"
+    origins = client.get("/api/companies/U_25835").json()["origins"]
+    assert origins[c["id"]] == "rules"
 
 
 def test_input_validation(client):

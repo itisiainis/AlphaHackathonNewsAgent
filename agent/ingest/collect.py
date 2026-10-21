@@ -138,8 +138,11 @@ def triage(llm, events: list[dict]) -> int:
                 e["importance"] = 0 if it.get("is_ad") else max(0, min(10, int(it.get("importance", e["importance"]))))
             except (TypeError, ValueError):
                 pass
-            e["topics"] = sorted(set(e["topics"]) | {t for t in it.get("topics", []) if t in VOCAB})
-            e["sectors"] = sorted(set(e["sectors"]) | {s for s in it.get("sectors", []) if s in okved.SHORT_NAMES})
+            # разметка модели хранится отдельно: при загрузке темы пересчитываются словарями и объединяются с ней
+            e["llm_topics"] = sorted({t for t in it.get("topics", []) if t in VOCAB})
+            e["llm_sectors"] = sorted({s for s in it.get("sectors", []) if s in okved.SHORT_NAMES})
+            e["topics"] = sorted(set(e["topics"]) | set(e["llm_topics"]))
+            e["sectors"] = sorted(set(e["sectors"]) | set(e["llm_sectors"]))
             e["gist"] = str(it.get("gist", ""))[:300]
             done += 1
     return done

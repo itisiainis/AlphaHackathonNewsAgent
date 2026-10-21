@@ -1,4 +1,4 @@
-"""Поток шагов агента (SSE): шаги приходят по мере работы, итог — в конце, отказ без ключа — честный."""
+"""Поток шагов агента (SSE): шаги приходят по мере работы, итог — в конце; без ключа — помеченный разбор правилами."""
 import importlib
 import json
 import os
@@ -26,11 +26,12 @@ def events(resp) -> list[dict]:
 BODY = {"company_id": "U_25835", "title": EVENT["title"], "text": EVENT["text"]}
 
 
-def test_stream_without_key_reports_error(app_module):
+def test_stream_without_key_falls_back_to_rules(app_module):
     r = TestClient(app_module.app).post("/api/analyze/stream", json=BODY)
     assert r.headers["content-type"].startswith("text/event-stream")
     ev = events(r)
-    assert ev[-1]["type"] == "error" and "ключ" in ev[-1]["detail"]
+    assert ev[-1]["type"] == "result" and ev[-1]["mode"] == "rules" and "ключ" in ev[-1]["reason"]
+    assert ev[-1]["card"]["trace"][-1]["kind"] == "done"
 
 
 def test_stream_shows_steps_then_card(app_module):

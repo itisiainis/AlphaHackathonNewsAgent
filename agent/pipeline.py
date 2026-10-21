@@ -24,7 +24,16 @@ def load_events(path: Path | None = None) -> list[dict]:
     path = path or ROOT / "data" / "news" / "events.json"
     if not path.exists():
         path = ROOT / "data" / "news" / "events.sample.json"
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    events = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    return [retag(e) for e in events]
+
+
+def retag(e: dict) -> dict:
+    """Темы и отрасли пересчитываются словарями при загрузке: правка словаря сразу действует на всю базу.
+    Разметка модели (llm_topics, llm_sectors), если была при сборе, добавляется к словарной."""
+    title, text = e.get("title", ""), e.get("text", "")
+    return e | {"topics": sorted(set(okved.topics_in(text, title=title)) | set(e.get("llm_topics", []))),
+                "sectors": sorted(set(okved.sectors_in(title + " " + text[:600])) | set(e.get("llm_sectors", [])))}
 
 
 def news_index(events: list[dict]) -> BM25Index:
@@ -90,3 +99,13 @@ class Pipeline:
         agent = Agent(self.llm, self.bank, self.news, today=self.today, bank_meta=self.bank_meta)
         agent.on_step = on_step
         return agent.run(event, company_id, m), m
+
+    def rules(self, event: dict, company_id: str) -> tuple[dict | None, list[dict], Match]:
+        """Черновой разбор без модели (agent/offline.py) — когда модель недоступна."""
+        from .offline import rules_card
+
+        event = self.full_text(event)
+        p = profiles.get(company_id)
+        m = match(event, profiles.features(p), p["bank_products"])
+        card, trace = rules_card(event, company_id, m, self.bank, self.news, self.today, self.bank_meta)
+        return card, trace, m

@@ -205,7 +205,9 @@ def sector_shocks(text: str) -> list[dict]:
 # ---------- расчёты ----------
 def profile_text(p: dict) -> str:
     """Текст «источника» с данными профиля: по нему валидатор сверяет числа входных данных."""
-    lines = [f"Выручка компании за год: {num(p['revenue_rub'] / BN)} млрд ₽",
+    own = [p["okved2"], *related_sectors(p["okved"]), *(g["okved2"] for g in p["group"]["industries"] if g["share"] >= 0.1)]
+    lines = [f"ОКВЭД компании: {p['okved']}; отрасли компании, её товара и группы: " + ", ".join(label(s) for s in dict.fromkeys(own)),
+             f"Выручка компании за год: {num(p['revenue_rub'] / BN)} млрд ₽",
              f"Продукты банка: {', '.join(p['bank_products']) or 'нет'}",
              "ВЭД: " + (", ".join(country_name(c) for c in p["foreign_trade"]["countries"]) or "нет")]
     for side, name in (("customers", "входящего"), ("suppliers", "исходящего")):
