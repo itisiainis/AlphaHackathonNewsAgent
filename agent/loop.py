@@ -47,6 +47,14 @@ def quote_matches(quote: str, source: str, share: float = 0.6) -> bool:
     return len(words & src) / len(words) >= share
 
 
+CODE_RE = re.compile(r"\s*\((?:ОКВЭД\s*)?\d{2}(?:\.\d+)*\)")
+
+
+def no_codes(text: str) -> str:
+    """«Автодилеры (45)» → «Автодилеры»: коды отраслей в выводе руководителю не нужны — убирает код, а не модель."""
+    return CODE_RE.sub("", text)
+
+
 def _count(result) -> int:
     """Сколько объектов вернул инструмент: список, фрагменты поиска по аналитике или один объект."""
     if isinstance(result, dict) and "fragments" in result:
@@ -116,8 +124,9 @@ class Agent:
             card, rep = self._assemble(draft, ses, event, company_id, match, trace)
             for _ in range(MAX_REVISIONS):
                 verdict = self._check(card, ses, trace) if rep.ok else {"ok": False, "issues": [], "research_query": ""}
-                issues = rep.errors + list(verdict.get("issues") or [])
-                if rep.ok and verdict.get("ok", True):
+                # замечания по понятности (жаргон, коды отраслей, повтор заголовка) — тоже повод для правки
+                issues = rep.errors + rep.style + list(verdict.get("issues") or [])
+                if rep.ok and verdict.get("ok", True) and not rep.style:
                     break
                 q = (verdict.get("research_query") or "").strip()
                 if q:
@@ -298,6 +307,8 @@ class Agent:
                 s = ground(s)
                 if s is None:
                     continue
+                if s["p"] == "ai":
+                    s = {**s, "t": no_codes(s["t"])}
                 st = {k: s[k] for k in allow if k in s and s[k] not in (None, "")}
                 if st.get("strength") not in (None, "high", "medium", "low"):
                     st.pop("strength")
@@ -329,6 +340,9 @@ class Agent:
         elif bank_src and bank_src.kind == "bank":
             idx(bank_src.label)
             bank = {"quote": quote, "doc": bank_src.doc or bank_src.name, "date": bank_src.date, "stale": bank_src.stale}
+            plain = no_codes(str((b.get("bank") or {}).get("plain") or "").strip())
+            if quote and plain and not bank_src.stale:
+                bank["plain"] = plain  # «проще говоря» — вывод ИИ рядом с дословной цитатой
         else:
             bank = {"quote": "", "doc": "Отраслевой оценки банка по этому событию нет — вывод на основе данных компании и новости",
                     "date": self.today.isoformat(), "stale": False}
@@ -351,8 +365,8 @@ class Agent:
             "topics": [t for t in draft.get("topics", []) if t] or event.get("topics", []) or ["отрасль"],
             "is_new": True, "published": event.get("published") or self.today.isoformat(),
             "title": draft.get("title") or event.get("title", ""),
-            "takeaway": draft.get("takeaway", {}), "key_points": key_points,
-            "why_short": draft.get("why_short", ""), "matched": match.matched,
+            "takeaway": {r: no_codes(str(t)) for r, t in (draft.get("takeaway") or {}).items()}, "key_points": key_points,
+            "why_short": no_codes(str(draft.get("why_short", ""))), "matched": match.matched,
             "sources": sources,
             "blocks": blocks | ({"calc": calc} if calc else {}) | {
                 "bank": bank, "basis": {"features": match.matched + [f"Продукты банка: {', '.join(p['bank_products']) or 'нет'}"],

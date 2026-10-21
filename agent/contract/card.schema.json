@@ -46,6 +46,7 @@
           "additionalProperties": false,
           "properties": {
             "quote": {"type": "string"},
+            "plain": {"type": "string", "description": "Необязательно: позиция банка простыми словами для руководителя — вывод ИИ, цитата остаётся дословной"},
             "doc": {"type": "string"},
             "date": {"$ref": "#/$defs/date"},
             "stale": {"type": "boolean"}
