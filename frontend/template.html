@@ -362,10 +362,10 @@ function bodyHtml(i) {
   return `<div class="ic-body">
     <div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span><span class="l-ai">вывод ИИ</span></div>
     <div class="sec"><h3>Что произошло</h3>${list(b.what, i)}</div>
-    <div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>
+    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
     ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${b.calc.map(c => calcHtml(c, i)).join('')}</div>` : ''}
-    <div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>
-    <div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>
+    ${b.risks.length || b.opportunities.length ? `<div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>` : ''}
+    ${b.actions.length ? `<div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>` : ''}
     <div class="sec"><h3>Как оценивает банк</h3>${b.bank.quote ? `<div class="quote ${b.bank.stale ? 'stale' : ''}">«${esc(b.bank.quote)}»</div>
       <div class="src-line">${esc(b.bank.doc)} · ${fmtDateY(b.bank.date)}</div>` : `<div class="dq">${esc(b.bank.doc)}</div>`}
       ${b.bank.stale ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}</div>
@@ -374,6 +374,7 @@ function bodyHtml(i) {
       <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(f)}</span>`).join('')}
         ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></div>
     <div class="tools">
+      ${origin(i) === 'rules' && API && DATA.status && DATA.status.llm_online ? `<button class="btn pri" data-upgrade>Полный разбор ИИ</button>` : ''}
       <button class="btn" data-trace="${i.id}">Как получен вывод</button>
       <button class="btn ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}">Задать вопрос</button>
       <span class="sp"></span>
@@ -618,6 +619,8 @@ function bind() {
   const i = ranked().find(x => x.id === state.open); if (!i) return;
   const card = document.getElementById('card-' + i.id); if (!card) return;
   card.querySelector('[data-trace]').onclick = () => openTrace(i);
+  const up = card.querySelector('[data-upgrade]');  // краткий разбор → полный разбор агентом по тому же событию
+  if (up) up.onclick = () => runAgent(`/api/companies/${state.company}/events/${i.id.slice(0, -(state.company.length + 1))}/analyze`, {});
   card.querySelector('[data-chat]').onclick = () => { state.chatOpen[i.id] = !state.chatOpen[i.id]; render(); };
   card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render();
     if (API) api(`/api/cards/${i.id}/feedback`, {company_id: state.company, role: state.role, vote: b.dataset.fb}).catch(() => {}); });

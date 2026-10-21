@@ -25,7 +25,7 @@ from agent import impact, profiles
 from agent.chat import answer
 from agent.contract import validate_card
 from agent.llm import LLM, LLMUnavailable
-from agent.offline import NOTICE as OFFLINE_NOTICE
+from agent.offline import UNAVAILABLE as OFFLINE_NOTICE
 from agent.okved import short_name
 from agent.pipeline import Pipeline, event_from_text
 from agent.slices import SUGGESTED, data_answer
@@ -169,6 +169,7 @@ def bootstrap():
     ids = list(dict.fromkeys(DEMO_IDS + store.companies_with_cards()))
     insights, origins = {}, {}
     for cid in ids:
+        _ensure_briefs(cid)
         rows = store.cards(cid)
         insights[cid] = [c for c, _ in rows]
         origins[cid] = {c["id"]: o for c, o in rows}
@@ -181,8 +182,29 @@ def bootstrap():
             "insights": insights, "origins": origins, "status": _status(), "chat_suggestions": SUGGESTED}
 
 
+BRIEFS = int(os.environ.get("BRIEFS_PER_COMPANY", "3"))
+
+
+def _ensure_briefs(cid: str) -> None:
+    """У каждой компании в ленте сразу есть разборы: для лучших по отбору событий — краткий разбор без модели
+    (бесплатно, миллисекунды). Полный разбор ИИ — по кнопке. Свежие события важнее примеров команды."""
+    have = {c["id"] for c, o in store.cards(cid) if o != "seed"}
+    for ev, _ in pipe.ranked(cid, BRIEFS):
+        if f"{ev['id']}-{cid}" in have:
+            continue
+        try:
+            card, _, _ = pipe.rules(ev, cid, fetch=False)
+        except Exception:  # разбор одного события не должен ломать открытие компании
+            log.exception("краткий разбор %s для %s", ev.get("id"), cid)
+            continue
+        if card:
+            store.put_card(cid, card, "rules")
+
+
 @app.get("/api/companies/{cid}")
 def company(cid: str):
+    _company(cid)
+    _ensure_briefs(cid)
     rows = store.cards(cid)
     return {"company": _company(cid), "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows}}
 

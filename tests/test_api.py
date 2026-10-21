@@ -51,7 +51,7 @@ def test_analyze_without_key_gives_labelled_rules_card(client):
     stmts = c["key_points"] + [s for b in ("what", "why", "risks", "opportunities", "actions") for s in c["blocks"][b]]
     assert stmts and all(s["p"] != "ai" for s in stmts), "без модели нет выводов ИИ"
     assert c["blocks"]["calc"][0]["value"].startswith("−20 млн ₽"), "расчёт работает без модели"
-    assert "краткий разбор" in c["blocks"]["basis"]["coverage"]
+    assert "Краткий разбор" in c["blocks"]["basis"]["coverage"]
     assert client.get("/api/metrics").json()["agent_runs"]["total"] == 0, "разбор правилами не считается запуском агента"
     origins = client.get("/api/companies/U_25835").json()["origins"]
     assert origins[c["id"]] == "rules"
@@ -73,3 +73,12 @@ def test_rate_limit_on_costly_endpoints(client):
     body = {"company_id": "U_25835", "title": "Новость для проверки лимита", "text": ""}
     codes = [client.post("/api/analyze", json=body).status_code for _ in range(5)]
     assert 429 in codes
+
+
+def test_any_company_gets_briefs_without_model(client):
+    """Открыл компанию — в ленте сразу разборы лучших событий (без модели, с пометкой), а не пустой экран."""
+    d = client.get("/api/companies/U_200890").json()
+    rules = [c for c in d["insights"] if d["origins"][c["id"]] == "rules"]
+    assert rules, "для компании с отобранными событиями должен быть краткий разбор"
+    c = rules[0]
+    assert all(s["p"] != "ai" for s in c["key_points"]) and c["takeaway"]["cfo"]

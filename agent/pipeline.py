@@ -103,11 +103,12 @@ class Pipeline:
         agent.on_step = on_step
         return agent.run(event, company_id, m), m
 
-    def rules(self, event: dict, company_id: str) -> tuple[dict | None, list[dict], Match]:
-        """Черновой разбор без модели (agent/offline.py) — когда модель недоступна."""
+    def rules(self, event: dict, company_id: str, fetch: bool = True) -> tuple[dict | None, list[dict], Match]:
+        """Краткий разбор без модели (agent/offline.py). fetch=False — без загрузки полного текста (быстро, для ленты)."""
         from .offline import rules_card
 
-        event = self.full_text(event)
+        if fetch:
+            event = self.full_text(event)
         p = profiles.get(company_id)
         m = match(event, profiles.features(p), p["bank_products"])
         card, trace = rules_card(event, company_id, m, self.bank, self.news, self.today, self.bank_meta)
