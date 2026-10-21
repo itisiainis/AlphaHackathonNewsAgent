@@ -22,7 +22,7 @@
 - карточка: `id, type (risk|opportunity|info), impact (high|medium|low), topics[], is_new, title (событие),
   takeaway{cfo, ceo, treasurer} (главный вывод под роль — короткий слой), key_points[] (2–3 обоснования),
   why_short, matched[], sources[{name, kind (news|bank|stat), date, url}],
-  blocks{what, why, risks, opportunities, actions, bank, basis} (раскрываемый полный разбор), trace[], chat[]`
+  blocks{what, why, risks, opportunities, actions, bank, basis, calc?} (раскрываемый полный разбор; calc — необязательный расчёт эффекта кодом), trace[], chat[]`
 - утверждение: `{t: текст, p: fact|bank|ai, src?: индекс источника, strength?: high|medium|low}`
 - каждое утверждение обязано иметь происхождение `p` — это требование жюри (факт / позиция банка / вывод ИИ).
 

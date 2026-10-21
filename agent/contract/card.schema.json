@@ -51,6 +51,8 @@
             "stale": {"type": "boolean"}
           }
         },
+        "calc": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/calc"},
+                 "description": "Расчёт эффекта кодом по формуле (agent/impact.py). Необязательный блок: нет числового шока в новости — нет расчёта"},
         "basis": {
           "type": "object",
           "required": ["features", "coverage"],
@@ -83,6 +85,27 @@
           "required": ["label", "kind"],
           "additionalProperties": false,
           "properties": {"label": {"type": "string"}, "kind": {"enum": ["manager", "product"]}}
+        }
+      }
+    },
+    "calc": {
+      "type": "object",
+      "description": "Расчёт: результат, формула, входные данные с происхождением, допущения. scale — пересчёт под сумму пользователя",
+      "required": ["title", "value", "formula", "inputs", "assumptions", "sign"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string", "minLength": 1},
+        "value": {"type": "string", "minLength": 1},
+        "formula": {"type": "string", "minLength": 1},
+        "inputs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/stmt"}},
+        "assumptions": {"type": "array", "items": {"type": "string"}},
+        "sign": {"enum": ["risk", "opportunity", "neutral"]},
+        "strength": {"enum": ["high", "medium", "low"]},
+        "scale": {
+          "type": "object",
+          "required": ["label", "per_bn", "period"],
+          "additionalProperties": false,
+          "properties": {"label": {"type": "string"}, "per_bn": {"type": "number"}, "period": {"type": "string"}}
         }
       }
     },

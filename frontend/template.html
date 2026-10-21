@@ -101,6 +101,19 @@ h2{font-size:16px;margin:0}
 .stmt.fact .p{color:var(--fact)}.stmt.bank .p{color:var(--bank)}.stmt.ai .p{color:var(--ai)}
 .stmt sup a,.kp sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .str{font-size:11px;color:var(--ink-3);margin-left:6px}
+/* расчёт эффекта кодом: формула видна, сумма пересчитывается под пользователя */
+.calc{border:1px solid var(--line);border-left:3px solid var(--info);border-radius:0 10px 10px 0;padding:10px 12px;margin:8px 0;background:#fff}
+.calc.risk{border-left-color:var(--risk)}.calc.opportunity{border-left-color:var(--opp)}
+.calc-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.calc-v{font-size:16px;font-weight:700}
+.calc.risk .calc-v{color:var(--risk)}.calc.opportunity .calc-v{color:var(--opp)}
+.calc-f{font-size:12px;color:var(--ink-3);margin-top:2px}
+.calc-f code{font:12px ui-monospace,Menlo,Consolas,monospace;color:var(--ink-2);background:var(--bg);border-radius:4px;padding:0 4px}
+.calc-s{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:8px;font-size:13px}
+.calc-s input{width:110px;min-width:0;font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:8px}
+.calc-s output{font-weight:700}
+.calc details{margin-top:6px;font-size:13px}.calc summary{cursor:pointer;color:var(--ink-2)}
+.calc ul{margin:4px 0 0;padding-left:18px;color:var(--ink-2)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .two h4{margin:0 0 2px;font-size:13px}
 .h-risk{color:var(--risk)}.h-opp{color:var(--opp)}
@@ -286,6 +299,19 @@ function stmtHtml(s, i) {
   const str = s.strength ? `<span class="str">${STR_RU[s.strength]}</span>` : '';
   return `<div class="stmt ${s.p}"><span class="p">${P_FULL[s.p]}</span>${esc(s.t)}${ref(s, i)}${str}</div>`;
 }
+const SIGN_RU = {risk: 'риск', opportunity: 'возможность', neutral: 'ориентир'};
+// сумма по-русски, как в agent/impact.py: «1,3 млрд ₽», «20 млн ₽»
+function rubFmt(x, signed = true) {
+  const a = Math.abs(x), sg = x < 0 ? '−' : x > 0 && signed ? '+' : '';
+  const f = (v, d) => v.toLocaleString('ru-RU', {maximumFractionDigits: d});
+  return sg + (a >= 1e9 ? f(a / 1e9, 1) + ' млрд ₽' : a >= 1e6 ? f(a / 1e6, a >= 1e7 ? 0 : 1) + ' млн ₽' : f(a / 1e3, 0) + ' тыс. ₽');
+}
+function calcHtml(c, i) {
+  const sc = c.scale ? `<label class="calc-s">${esc(c.scale.label)} <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="напр. 5" data-per="${c.scale.per_bn}" data-signed="${c.sign !== 'neutral'}" data-period="${esc(c.scale.period)}"> <output>→ введите сумму, чтобы пересчитать</output></label>` : '';
+  return `<div class="calc ${c.sign}"><div class="calc-h"><span>${esc(c.title)}</span><span class="calc-v">${esc(c.value)}</span></div>
+    <div class="calc-f">Формула: <code>${esc(c.formula)}</code> · расчёт кодом, не моделью · ${SIGN_RU[c.sign]}${c.strength ? ', надёжность: ' + STR_RU[c.strength] : ''}</div>${sc}
+    <details><summary>Данные и допущения</summary>${c.inputs.map(s => stmtHtml(s, i)).join('')}<ul>${c.assumptions.map(a => `<li>${esc(a)}</li>`).join('')}</ul></details></div>`;
+}
 const list = (arr, i) => arr && arr.length ? arr.map(s => stmtHtml(s, i)).join('') : '<div class="muted">—</div>';
 function forWho(c) {
   const chips = [c.okved + ' ' + c.industry, c.revenue_bn.toLocaleString('ru-RU') + ' млрд ₽', c.region, ...c.products,
@@ -317,6 +343,7 @@ function bodyHtml(i) {
     <div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span><span class="l-ai">вывод ИИ</span></div>
     <div class="sec"><h3>Что произошло</h3>${list(b.what, i)}</div>
     <div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>
+    ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${b.calc.map(c => calcHtml(c, i)).join('')}</div>` : ''}
     <div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>
     <div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>
     <div class="sec"><h3>Как оценивает банк</h3>${b.bank.quote ? `<div class="quote ${b.bank.stale ? 'stale' : ''}">«${esc(b.bank.quote)}»</div>
@@ -530,6 +557,10 @@ function bind() {
   card.querySelector('[data-chat]').onclick = () => { state.chatOpen[i.id] = !state.chatOpen[i.id]; render(); };
   card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render();
     if (API) api(`/api/cards/${i.id}/feedback`, {company_id: state.company, role: state.role, vote: b.dataset.fb}).catch(() => {}); });
+  card.querySelectorAll('[data-per]').forEach(inp => inp.oninput = () => {
+    const v = parseFloat(inp.value.replace(',', '.')), out = inp.parentElement.querySelector('output');
+    out.textContent = v > 0 ? '→ ' + rubFmt(v * +inp.dataset.per, inp.dataset.signed === 'true') + ' ' + inp.dataset.period : '→ введите сумму, чтобы пересчитать';
+  });
   card.querySelectorAll('[data-cta]').forEach(b => b.onclick = () => {
     const mgr = b.dataset.cta === 'manager';
     $('#modal-title').textContent = mgr ? 'Заявка отправлена' : b.dataset.label;

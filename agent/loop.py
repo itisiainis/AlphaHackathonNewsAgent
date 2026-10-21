@@ -95,6 +95,7 @@ class Agent:
         ses = ToolSession(company_id, event, self.bank, self.news, self.today, self.bank_meta)
         try:
             observations = self._explore(ses, match, trace)
+            self._calculate(ses, observations, trace)
             draft = self._draft(ses, match, observations, trace, issues=[])
             card, rep = self._assemble(draft, ses, event, company_id, match, trace)
             for _ in range(MAX_REVISIONS):
@@ -157,11 +158,27 @@ class Agent:
                          {"role": "user", "content": f"Результат {name}: " + json.dumps(result, ensure_ascii=False)[:6000]}]
         return observations
 
+    def _calculate(self, ses: ToolSession, observations: list[dict], trace: list) -> None:
+        """Расчёт эффекта кодом — всегда, даже если модель не вызвала калькулятор: цифры не зависят от модели."""
+        done = next((o for o in observations if o["tool"] == "calculate_impact" and isinstance(o["result"], list)), None)
+        if done:
+            ses.calcs = done["result"]
+            return
+        res, entry = ses.call("calculate_impact", {})
+        ses.calcs = res if isinstance(res, list) else []
+        summary = "; ".join(f"{c['title']}: {c['value']}" for c in ses.calcs)
+        trace.append({"kind": "tool", "title": "calculate_impact()", "ms": entry["ms"], "cost": 0,
+                      "detail": "расчёт по формулам кода: " + summary[:200] if ses.calcs else "числового шока в новости нет — расчёта нет"})
+        self._emit(trace)
+
     def _draft(self, ses, match, observations, trace, issues: list[str]) -> dict:
         profile = ses.get_company_profile()
         user = (f"Профиль компании: {json.dumps(profile, ensure_ascii=False)}\n\n"
                 f"Признаки, на которые сработал отбор: {json.dumps(match.matched, ensure_ascii=False)}\n\n"
                 f"Источники (ссылайся на метки):\n{self._sources_block(ses)}")
+        if ses.calcs:
+            user += "\n\nРасчёты эффекта (код):\n" + "\n".join(
+                f"- {c['title']}: {c['value']} ({c['formula']}); допущения: {'; '.join(c['assumptions'])}" for c in ses.calcs)
         if issues:
             user += "\n\nЗамечания проверки, которые нужно исправить:\n- " + "\n- ".join(issues[:10])
         system = DRAFT_SYSTEM.format(roles=", ".join(f"{k} — {v}" for k, v in ROLES_RU.items()))
@@ -252,6 +269,8 @@ class Agent:
             bank = {"quote": "", "doc": "Отраслевой оценки банка по этому событию нет — вывод на основе данных компании и новости",
                     "date": self.today.isoformat(), "stale": False}
 
+        # расчёты — после текста и позиции банка, чтобы источники карточки шли в порядке чтения
+        calc = [c | {"inputs": [{**i, "src": idx(i["src"])} for i in c["inputs"]]} for c in ses.calcs]
         p = profiles.get(company_id)
         dq = profiles.data_quality(p)
         cust = p["customers"]
@@ -271,8 +290,9 @@ class Agent:
             "takeaway": draft.get("takeaway", {}), "key_points": key_points,
             "why_short": draft.get("why_short", ""), "matched": match.matched,
             "sources": sources,
-            "blocks": blocks | {"bank": bank, "basis": {"features": match.matched + [f"Продукты банка: {', '.join(p['bank_products']) or 'нет'}"],
-                                                       "coverage": coverage}},
+            "blocks": blocks | ({"calc": calc} if calc else {}) | {
+                "bank": bank, "basis": {"features": match.matched + [f"Продукты банка: {', '.join(p['bank_products']) or 'нет'}"],
+                                        "coverage": coverage}},
             "trace": [], "chat": [],
         }
         texts = {i: by_label[lbl].text for i, lbl in enumerate(cited)}

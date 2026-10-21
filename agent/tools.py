@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import date
 
-from . import profiles
+from . import impact, profiles
 from .kb import BM25Index, Hit, industry_assessment
 
 
@@ -44,6 +44,7 @@ class ToolSession:
     bank_meta: list[dict] = field(default_factory=list)
     sources: list[Source] = field(default_factory=list)
     log: list[dict] = field(default_factory=list)
+    calcs: list[dict] = field(default_factory=list)  # расчёты эффекта кодом (impact.compute)
 
     def __post_init__(self):
         p = profiles.get(self.company_id)
@@ -86,6 +87,22 @@ class ToolSession:
                 "top": [{"amount_rub": t["amount_rub"], "industry": t["industry"], "intragroup": t["intragroup"]}
                         for t in s["top"][:10]]}
 
+    def profile_source(self) -> Source:
+        """Данные профиля как источник вида stat: на него ссылаются входные данные расчётов."""
+        return self._register(Source("", "Профиль компании: данные банка (выручка, продукты, платёжный поток)", "stat",
+                                     self.today.isoformat(), "", impact.profile_text(profiles.get(self.company_id))))
+
+    def calculate_impact(self) -> list[dict]:
+        """Расчёт эффекта по формулам кода. Метки источников: S1 — новость, профиль — отдельная метка."""
+        calcs = impact.compute(self.event, profiles.get(self.company_id), "S1", "PROFILE")
+        if any(i["src"] == "PROFILE" for c in calcs for i in c["inputs"]):
+            lbl = self.profile_source().label
+            for c in calcs:
+                for i in c["inputs"]:
+                    if i["src"] == "PROFILE":
+                        i["src"] = lbl
+        return calcs
+
     def search_bank_analytics(self, query: str, industry: str = "auto", max_age_days: int = 365) -> dict:
         """industry: "auto" — поднимать фрагменты про отрасли компании; код ОКВЭД2 — про эту отрасль; "none" — без фильтра."""
         boost = self.sectors if industry == "auto" else (set() if industry == "none" else {industry[:2]})
@@ -121,6 +138,8 @@ class ToolSession:
                                   "about": "поиск по аналитике Альфа-Банка: фрагменты с меткой источника, датой и типом документа "
                                            "+ есть ли у банка отраслевая оценка по отрасли компании"},
         "search_news": {"args": {"query": "str", "days": "int, по умолчанию 30"}, "about": "поиск связанных новостей за период"},
+        "calculate_impact": {"args": {}, "about": "расчёт эффекта в рублях по формулам (ставка → стоимость долга, курс → валютные закупки, "
+                                                  "спрос/цены отрасли → выручка и закупки); пустой список — в новости нет числового шока"},
     }
 
     def call(self, name: str, args: dict | None) -> tuple[object, dict]:
