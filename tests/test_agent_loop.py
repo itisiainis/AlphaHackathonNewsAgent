@@ -174,3 +174,50 @@ def test_bank_quote_written_by_model_is_not_shown_as_quote():
     res = run(ScriptedLLM(draft=d))
     assert res.card is not None and res.card["blocks"]["bank"]["quote"] == ""
     assert any("позиция банка не совпала" in t["detail"] for t in res.trace if t["title"] == "Самопроверка (код)")
+
+
+# ---------- замкнутая самопроверка (по аудиту: правка не перепроверялась, метки источников расходились) ----------
+class CheckerSpy(ScriptedLLM):
+    """Запоминает, что видит проверяющая модель; первая проверка — замечание, вторая — по сценарию."""
+
+    def __init__(self, second_ok=True, fail_check=False):
+        super().__init__()
+        self.seen, self.second_ok, self.fail_check = [], second_ok, fail_check
+
+    def complete(self, role, messages, **kw):
+        if "проверяющий" in messages[0]["content"]:
+            self.calls.append(role)
+            if self.fail_check:
+                raise LLMUnavailable("проверяющая модель недоступна")
+            self.seen.append(messages[1]["content"])
+            ok = len(self.seen) > 1 and self.second_ok
+            out = {"ok": ok, "issues": [] if ok else ["уточни горизонт прогноза"], "research_query": ""}
+            return Completion(json.dumps(out, ensure_ascii=False), role, 100, 50, 0.01, 5, False)
+        return super().complete(role, messages, **kw)
+
+
+def test_checker_sees_source_labels_not_indices():
+    llm = CheckerSpy()
+    run(llm)
+    draft_part = llm.seen[0].split("Источники:")[0]
+    assert '"src": "S2"' in draft_part and '"src": 1' not in draft_part
+
+
+def test_revised_draft_is_checked_again_and_trace_tells_the_truth():
+    llm = CheckerSpy(second_ok=False)
+    res = run(llm)
+    assert len(llm.seen) == 2                                  # правка прошла повторную проверку моделью
+    titles = [t["title"] for t in res.card["trace"]]
+    assert "Повторная самопроверка (модель)" in titles
+    assert "оставила замечания" in res.card["trace"][-1]["detail"]   # итог не пишет «все проверки пройдены»
+
+
+def test_checker_failure_is_reported_not_hidden():
+    res = run(CheckerSpy(fail_check=True))
+    assert res.card is not None
+    assert "второй моделью не выполнена" in res.card["trace"][-1]["detail"]
+
+
+def test_trace_records_model_per_step():
+    res = run(ScriptedLLM())
+    assert any(t.get("model") for t in res.card["trace"] if t["kind"] in ("plan", "draft", "check"))

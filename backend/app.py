@@ -187,19 +187,20 @@ def _visible(cid: str) -> list[tuple[dict, str]]:
 @app.get("/api/bootstrap")
 def bootstrap():
     ids = list(dict.fromkeys(DEMO_IDS + store.companies_with_cards()))
-    insights, origins = {}, {}
+    insights, origins, user_cards = {}, {}, {}
     for cid in ids:
         _ensure_briefs(cid)
         rows = _visible(cid)
         insights[cid] = [c for c, _ in rows]
         origins[cid] = {c["id"]: o for c, o in rows}
+        user_cards[cid] = store.user_card_ids(cid)  # прислал сам клиент: не в «Важном» на главной, отдельной группой
     all_c = sorted(({"id": i, "display": profiles.short_industry(profiles.get(i)), "region": profiles.get(i)["region"],
                      "sector": short_name(profiles.get(i)["okved2"]),
                      "revenue_bn": round(profiles.get(i)["revenue_rub"] / 1e9, 1)} for i in profiles.all_ids()),
                    key=lambda x: -x["revenue_bn"])
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
             "companies": [_company(i) for i in ids], "all_companies": all_c,
-            "insights": insights, "origins": origins, "status": _status(), "chat_suggestions": SUGGESTED,
+            "insights": insights, "origins": origins, "user_cards": user_cards, "status": _status(), "chat_suggestions": SUGGESTED,
             "follow_ups": FOLLOW_UPS, "learned": learner.topic_weights()}
 
 
@@ -227,7 +228,8 @@ def company(cid: str):
     _company(cid)
     _ensure_briefs(cid)
     rows = _visible(cid)
-    return {"company": _company(cid), "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows}}
+    return {"company": _company(cid), "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows},
+            "user_cards": store.user_card_ids(cid)}
 
 
 def _role_weights(role: str) -> dict:
@@ -334,9 +336,10 @@ def _stream(event: dict, cid: str) -> StreamingResponse:
 
 def _event(cid: str, eid: str) -> dict:
     _company(cid)
-    ev = next((e for e in pipe.events if e["id"] == eid), None)
+    # событие из потока или новость, которую клиент прислал сам (её полный разбор запускают позже)
+    ev = next((e for e in pipe.events if e["id"] == eid), None) or store.user_event(cid, eid)
     if not ev:
-        raise HTTPException(404, "событие не найдено")
+        raise HTTPException(404, "событие не найдено: возможно, оно выпало из потока новостей — пришлите ссылку ещё раз")
     return ev
 
 
@@ -400,11 +403,20 @@ def _brief(ev: dict, cid: str) -> dict:
     return {"card": card, "origin": "rules", "llm_online": llm.online}
 
 
+def _user_event(body: NewsIn) -> dict:
+    """Новость клиента запоминается: полный разбор ИИ по ней можно запустить и после перезагрузки страницы."""
+    _company(body.company_id)
+    ev = _news_event(body)
+    store.put_user_event(body.company_id, ev)
+    return ev
+
+
 @app.post("/api/brief")
 def brief_news(body: NewsIn):
-    """Своя новость: краткий разбор сразу; полный разбор ИИ клиент запускает следом (/api/analyze/stream)."""
-    _company(body.company_id)
-    return _brief(_news_event(body), body.company_id)
+    """Своя новость: краткий разбор сразу; полный разбор ИИ клиент запускает следом
+    (/api/companies/{cid}/events/{event_id}/analyze/stream — event_id приходит в ответе)."""
+    ev = _user_event(body)
+    return _brief(ev, body.company_id) | {"event_id": ev["id"], "user": True}
 
 
 @app.post("/api/companies/{cid}/events/{eid}/brief")
@@ -415,15 +427,13 @@ def brief_event(cid: str, eid: str):
 @app.post("/api/analyze")
 def analyze_news(body: NewsIn):
     """Разбор новости, которой нет в базе (критерий 04: ранее не показанные новости)."""
-    _company(body.company_id)
-    return _run(_news_event(body), body.company_id)
+    return _run(_user_event(body), body.company_id)
 
 
 @app.post("/api/analyze/stream")
 def analyze_news_stream(body: NewsIn):
     """То же, что /api/analyze, но шаги агента приходят потоком SSE."""
-    _company(body.company_id)
-    return _stream(_news_event(body), body.company_id)
+    return _stream(_user_event(body), body.company_id)
 
 
 class ChatIn(BaseModel):

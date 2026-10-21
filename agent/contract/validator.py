@@ -99,6 +99,20 @@ def _iter_stmts(card: dict):
             yield f"chat[{qi}].a[{k}]", s, False
 
 
+_SCHEMA_RU = {"maxItems": "слишком много элементов (не больше {v})", "minItems": "слишком мало элементов (нужно не меньше {v})",
+              "required": "нет обязательного поля", "enum": "недопустимое значение (можно: {v})", "type": "неверный тип (нужен {v})",
+              "maxLength": "слишком длинно (не больше {v} знаков)", "additionalProperties": "лишнее поле"}
+
+
+def _human(err) -> str:
+    """Понятное замечание вместо дампа всего значения: «key_points: слишком много элементов (не больше 3)»."""
+    tpl = _SCHEMA_RU.get(err.validator)
+    if not tpl:
+        return err.message[:200]
+    v = err.validator_value
+    return tpl.format(v=", ".join(map(str, v)) if isinstance(v, list) else v)
+
+
 def validate_card(card: dict, today: date | None = None, source_texts: dict[int, str] | None = None) -> Report:
     """Проверяет карточку. source_texts — {индекс источника: текст}, если агент их видел."""
     today = today or date.today()
@@ -106,7 +120,7 @@ def validate_card(card: dict, today: date | None = None, source_texts: dict[int,
 
     for err in sorted(_schema_validator().iter_errors(card), key=lambda e: list(e.path)):
         where = ".".join(str(p) for p in err.path) or "карточка"
-        rep.errors.append(f"{where}: {err.message}")
+        rep.errors.append(f"{where}: {_human(err)}")
     if rep.errors:
         return rep  # правила ниже опираются на корректную структуру
 

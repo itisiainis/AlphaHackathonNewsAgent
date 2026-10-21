@@ -124,19 +124,21 @@ class Agent:
             self._calculate(ses, observations, trace)
             draft = self._draft(ses, match, observations, trace, issues=[])
             card, rep = self._assemble(draft, ses, event, company_id, match, trace)
+            verdict = self._check(card, ses, trace) if rep.ok else {"ok": False, "issues": [], "research_query": ""}
             for _ in range(MAX_REVISIONS):
-                verdict = self._check(card, ses, trace) if rep.ok else {"ok": False, "issues": [], "research_query": ""}
                 # замечания по понятности (жаргон, коды отраслей, повтор заголовка) — тоже повод для правки
                 issues = rep.errors + rep.style + list(verdict.get("issues") or [])
-                if rep.ok and verdict.get("ok", True) and not rep.style:
+                if rep.ok and verdict.get("ok") is not False and not rep.style:
                     break
                 q = (verdict.get("research_query") or "").strip()
                 if q:
-                    res, entry = ses.call("search_bank_analytics", {"query": q})
-                    trace.append({"kind": "research", "title": f"search_bank_analytics(\"{q}\")",
-                                  "detail": f"повторный поиск по замечанию проверки: {_count(res)} фрагм.",
+                    # где искать — решает проверка: позиция банка — в аналитике банка, факт события — в новостях
+                    tool = "search_news" if verdict.get("research_in") == "news" else "search_bank_analytics"
+                    res, entry = ses.call(tool, {"query": q})
+                    trace.append({"kind": "research", "title": f"{tool}(\"{q}\")",
+                                  "detail": f"повторный поиск по замечанию проверки: {_count(res)} объект(ов)",
                                   "ms": entry["ms"], "cost": 0})
-                    observations.append({"tool": "search_bank_analytics", "args": {"query": q}, "result": res})
+                    observations.append({"tool": tool, "args": {"query": q}, "result": res})
                 good = (card, rep) if rep.ok else None
                 try:
                     draft = self._draft(ses, match, observations, trace, issues=issues)
@@ -152,15 +154,17 @@ class Agent:
                     card, rep = good
                     trace.append({"kind": "check", "title": "Правка черновика", "ms": 0, "cost": 0,
                                   "detail": "правка не прошла проверку кодом — оставлен прежний черновик, прошедший проверку"})
+                elif rep.ok:
+                    verdict = self._check(card, ses, trace, again=True)  # правку проверяет та же модель ещё раз
         except LLMUnavailable as e:
             return Result(None, Report(errors=[str(e)]), trace, ses.log, error=str(e), unavailable=True)
         except (ValueError, KeyError, TypeError) as e:
             return Result(None, Report(errors=[f"ответ модели не разобран: {e}"]), trace, ses.log, error=str(e))
 
         trace.append({"kind": "done", "title": "Карточка готова" if rep.ok else "Карточка не прошла проверку",
-                      "detail": rep.summary(), "ms": 0, "cost": 0})
+                      "detail": self._final_note(rep, verdict if rep.ok else None), "ms": 0, "cost": 0})
         self._emit(trace)
-        card["trace"] = [{k: v for k, v in t.items() if not k.startswith("_")} for t in trace]
+        card["trace"] = [self._public_step(t) for t in trace]
         return Result(card if rep.ok else None, rep, trace, ses.log)
 
     def _explore(self, ses: ToolSession, match: Match, trace: list) -> list[dict]:
@@ -175,7 +179,13 @@ class Agent:
                      "В первом ответе добавь поле \"plan\" — список шагов анализа."}]
         observations = []
         for step in range(MAX_TOOL_STEPS + 1):
-            act = self._ask("agent", messages, trace, "plan", "План" if step == 0 else "Шаг")
+            try:
+                act = self._ask("agent", messages, trace, "plan", "План" if step == 0 else "Шаг")
+            except ValueError as e:
+                # модель дважды ответила не JSON — идём дальше с тем, что уже найдено (банк и расчёт код добавит сам)
+                trace.append({"kind": "plan", "title": "План" if step == 0 else "Шаг", "ms": 0, "cost": 0,
+                              "detail": f"ответ модели не разобран ({e}) — исследование завершено досрочно"})
+                break
             if step == 0:
                 trace[-1]["detail"] = "; ".join(map(str, act.get("plan") or [])) or str(act.get("thought", ""))
                 think = {"ms": 0, "cost": 0}
@@ -249,24 +259,63 @@ class Agent:
         self._emit(trace, "Код проверяет происхождение, ссылки и цифры…")
         return draft
 
-    def _check(self, card: dict, ses: ToolSession, trace: list) -> dict:
-        user = f"Черновик:\n{json.dumps(card, ensure_ascii=False)}\n\nИсточники:\n{self._sources_block(ses)}"
+    def _labelled(self, card: dict) -> dict:
+        """Карточка для проверяющей модели: src — метки S…, как в списке источников, а не индексы sources[].
+        Раньше проверка видела «src=1» рядом с «[S2]» и половину замечаний писала о несуществующей путанице."""
+        labels = getattr(self, "_cited", [])
+
+        def walk(x):
+            if isinstance(x, dict):
+                return {k: (labels[v] if k == "src" and isinstance(v, int) and 0 <= v < len(labels) else walk(v))
+                        for k, v in x.items() if k not in ("trace", "sources")}
+            return [walk(i) for i in x] if isinstance(x, list) else x
+        return walk(card)
+
+    def _check(self, card: dict, ses: ToolSession, trace: list, again: bool = False) -> dict:
+        user = f"Черновик:\n{json.dumps(self._labelled(card), ensure_ascii=False)}\n\nИсточники:\n{self._sources_block(ses)}"
+        title = "Повторная самопроверка (модель)" if again else "Самопроверка (модель)"
         try:
             verdict = self._ask("check", [{"role": "system", "content": CHECK_SYSTEM}, {"role": "user", "content": user}],
-                                trace, "check", "Самопроверка (модель)", max_tokens=6000)
+                                trace, "check", title, max_tokens=6000)
         except (LLMUnavailable, ValueError) as e:
-            # проверяющая модель не ответила — карточка, прошедшая проверку кодом, не теряется; в трассе это видно
-            trace.append({"kind": "check", "title": "Самопроверка (модель)", "detail": f"не выполнена: {e}", "ms": 0, "cost": 0})
+            # проверяющая модель не ответила — карточка, прошедшая проверку кодом, не теряется; в трассе и в итоге видно,
+            # что второй проверки не было (а не «все проверки пройдены»)
+            trace.append({"kind": "check", "title": title, "detail": f"не выполнена: {e}", "ms": 0, "cost": 0})
             self._emit(trace)
-            return {"ok": True, "issues": []}
-        trace[-1]["detail"] = "замечаний нет" if verdict.get("ok") else "; ".join(verdict.get("issues", [])[:3])
+            return {"ok": None, "issues": []}
+        trace[-1]["detail"] = "замечаний нет" if verdict.get("ok") else "; ".join(map(str, verdict.get("issues", [])))[:1500]
         self._emit(trace)
         return verdict
+
+    @staticmethod
+    def _final_note(rep: Report, verdict: dict | None) -> str:
+        """Итог трассы — как было на самом деле: код, проверяющая модель, правка."""
+        code = rep.summary()
+        parts = ["Проверка кодом пройдена" if code == "Все проверки пройдены" else f"Проверка кодом: {code}"]
+        if verdict is not None:
+            if verdict.get("ok") is None:
+                parts.append("проверка второй моделью не выполнена")
+            elif verdict.get("ok") is False:
+                parts.append("проверяющая модель оставила замечания: " + "; ".join(map(str, verdict.get("issues", [])))[:400])
+            else:
+                parts.append("вторая модель замечаний не нашла")
+        return " · ".join(p for p in parts if p)
+
+    @staticmethod
+    def _public_step(t: dict) -> dict:
+        """Шаг трассы для карточки: служебные поля → модель и признак кеша (критерий 11)."""
+        step = {k: v for k, v in t.items() if not k.startswith("_")}
+        if t.get("_model"):
+            step["model"] = str(t["_model"])
+        if t.get("_cached"):
+            step["cached"] = True
+        return step
 
     def _assemble(self, draft: dict, ses: ToolSession, event: dict, company_id: str, match: Match, trace):
         """Черновик модели → карточка контракта. Метки S… → индексы sources[], детерминированные поля — кодом."""
         by_label = {s.label: s for s in ses.sources}
         cited: list[str] = ["S1"]
+        self._cited = cited  # порядок sources[] карточки — для перевода индексов обратно в метки при проверке
 
         def idx(label):
             if not label or label not in by_label:

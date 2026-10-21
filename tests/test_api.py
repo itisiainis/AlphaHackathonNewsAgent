@@ -100,3 +100,17 @@ def test_events_order_depends_on_role(client):
     cfo = [e["id"] for e in client.get("/api/companies/U_25835/events?role=cfo").json()]
     ceo = [e["id"] for e in client.get("/api/companies/U_25835/events?role=ceo").json()]
     assert sorted(cfo) == sorted(ceo), "тот же отбор, другой порядок под роль"
+
+
+def test_pasted_news_can_be_upgraded_and_is_marked_as_users(client):
+    """Аудит: «Полный разбор ИИ» по вставленной новости падал с «событие не найдено» (404)."""
+    import backend.app as app_module
+    app_module._hits.clear()  # лимит платных запросов в фикстуре — 3 в минуту, его тратят соседние тесты
+    body = {"company_id": "U_177581", "title": "Минстрой продлил льготную ипотеку",
+            "text": "Минстрой продлил программу льготной ипотеки на новостройки до конца 2027 года, ставка 8% сохранится."}
+    b = client.post("/api/brief", json=body).json()
+    assert b["user"] is True and b["event_id"]
+    r = client.post(f"/api/companies/U_177581/events/{b['event_id']}/analyze")
+    assert r.status_code == 200 and r.json()["card"]["id"] == b["card"]["id"]   # без ключа — краткий разбор, но не 404
+    assert b["card"]["id"] in client.get("/api/companies/U_177581").json()["user_cards"]
+    assert b["card"]["id"] in client.get("/api/bootstrap").json()["user_cards"]["U_177581"]
