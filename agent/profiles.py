@@ -14,7 +14,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from .okved import country_name, label, related_sectors, short_name
+from .okved import country_name, label, related_sectors, short_name, who
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES_PATH = ROOT / "data" / "company_profiles.json"
@@ -49,7 +49,7 @@ def pct(x: float | None) -> str:
 
 
 def _side_view(side: dict, with_intragroup: bool) -> dict:
-    tops = [{"name": label(b["okved2"]), "share": round(b["share"], 2)}
+    tops = [{"name": label(b["okved2"]), "who": who(b["okved2"]), "share": round(b["share"], 2)}
             for b in side["by_industry"] if b["share"] >= TOP_SHARE_MIN][:3]
     v = {"n": side["n"], "known_share": None if not side["n"] else round(side["known_industry_share"], 2),
          "top_industries": tops, "total_bn": round((side.get("total_rub") or 0) / 1e9, 2)}

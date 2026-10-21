@@ -298,22 +298,31 @@ function scored() {
     .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + (w[t] || 0), 0) - Math.max(0, ageDays(i) - 7) * 0.35}));
 }
 // Группы ленты: на что тратить время в первую очередь
-const PRIORITY = [['act', 'Требует решения'], ['watch', 'Следить'], ['info', 'К сведению']];
-const PR_IDX = {act: 0, watch: 1, info: 2};
-const priority = i => i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
+const PRIORITY = [['act', 'Требует решения'], ['watch', 'Следить'], ['info', 'К сведению'], ['old', 'Ранее']];
+const PR_IDX = {act: 0, watch: 1, info: 2, old: 3};
+const OLD_DAYS = 30;  // событие старше месяца решения уже не требует — оно уходит в «Ранее»
+// Более свежая карточка на ту же тему (та же главная тема, на 3+ дня новее) заменяет старую: две карточки про одну ставку не нужны
+function supersededIds(items) {
+  const out = new Set();
+  for (const a of items) for (const b of items)
+    if (a !== b && (a.topics || [])[0] && (a.topics || [])[0] === (b.topics || [])[0] && ageDays(a) - ageDays(b) >= 3) out.add(a.id);
+  return out;
+}
+const priority = (i, old) => old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old' : i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
 /* Порядок фиксируется при открытии ленты (компания × роль) и не меняется до перезагрузки: готовый разбор
    обновляет карточку на её месте, новая карточка встаёт первой в своей группе.
    При расчёте: группа → новые выше прочитанных → score. */
 function ranked() {
   const key = state.company + '|' + state.role, items = scored(), by = Object.fromEntries(items.map(i => [i.id, i]));
+  const old = supersededIds(items), pr = i => priority(i, old);
   let o = state.order[key];
   if (!o) {
-    const ids = [...items].sort((a, b) => PR_IDX[priority(a)] - PR_IDX[priority(b)] || isNew(b) - isNew(a) || b.score - a.score).map(i => i.id);
-    o = state.order[key] = {ids, group: Object.fromEntries(items.map(i => [i.id, priority(i)]))};
+    const ids = [...items].sort((a, b) => PR_IDX[pr(a)] - PR_IDX[pr(b)] || isNew(b) - isNew(a) || b.score - a.score).map(i => i.id);
+    o = state.order[key] = {ids, group: Object.fromEntries(items.map(i => [i.id, pr(i)]))};
   }
   for (const i of items) {
     if (o.group[i.id]) continue;
-    const g = o.group[i.id] = priority(i), at = o.ids.findIndex(id => PR_IDX[o.group[id]] >= PR_IDX[g]);
+    const g = o.group[i.id] = pr(i), at = o.ids.findIndex(id => PR_IDX[o.group[id]] >= PR_IDX[g]);
     o.ids.splice(at < 0 ? o.ids.length : at, 0, i.id);
   }
   return o.ids.filter(id => by[id]).map(id => ({...by[id], group: o.group[id]}));
@@ -385,13 +394,14 @@ function calcHtml(c, i) {
     <details><summary>Данные и допущения</summary>${c.inputs.map(s => stmtHtml(s, i)).join('')}<ul>${c.assumptions.map(a => `<li>${esc(a)}</li>`).join('')}</ul></details></div>`;
 }
 const list = (arr, i) => arr && arr.length ? arr.map(s => stmtHtml(s, i)).join('') : '<div class="muted">—</div>';
+const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
 const pctRu = x => x > 0 && x < 0.005 ? 'менее 1%' : Math.round(x * 100) + '%';
 // что влияет на отбор новостей: долг, валютные расчёты, главные отрасли покупателей и поставщиков
 function forWho(c) {
   const debt = c.products.filter(x => ['кредит', 'лизинг', 'депозиты', 'гарантии'].includes(x));
-  const side = s => s && s.top_industries && s.top_industries[0] ? `${s.top_industries[0].name.replace(/ \(\d+\)$/, '')} — ${pctRu(s.top_industries[0].share)}` : '';
+  const side = s => s && s.top_industries && s.top_industries[0] ? `${s.top_industries[0].who || s.top_industries[0].name.replace(/ \(\d+\)$/, '')} — ${pctRu(s.top_industries[0].share)}` : '';
   const parts = [debt.length ? `<b>${esc(debt.join(', '))}</b>` : '<b>без кредитов в банке</b>',
-    c.ved.length ? `ВЭД: <b>${esc(c.ved.slice(0, 3).join(', '))}</b>` : 'без ВЭД',
+    c.ved.length ? `внешняя торговля: <b>${esc(c.ved.slice(0, 3).join(', '))}</b>` : 'без внешней торговли',
     side(c.counterparties.customers) ? `покупатели: <b>${esc(side(c.counterparties.customers))}</b>` : '',
     side(c.counterparties.suppliers) ? `поставщики: <b>${esc(side(c.counterparties.suppliers))}</b>` : ''].filter(Boolean);
   return `<div class="ctx">Учитываем: ${parts.join(' · ')}</div>`;
@@ -403,7 +413,7 @@ const numsOf = s => s.match(/\d+(?:[.,]\d+)?/g) || [];
 /* Главные числа карточки — чипами, их проще пробежать глазами, чем предложения: расчёт в рублях и доли
    платежей, на которые сработал отбор. Число, которое уже есть в главном выводе, не повторяем. */
 function numChips(i, take) {
-  const calc = (i.blocks.calc || []).slice(0, 1).map(c => `${c.title.split(/: | — /)[0]}: ${c.value
+  const calc = (i.blocks.calc || []).slice(0, 1).map(c => `${c.title.split(/: | — /)[0]}: ${/верхняя оценка/.test(c.value) ? 'до ' : ''}${c.value
     .replace(' на каждый ', ' на ').replace(/ с плавающей ставкой| — верхняя оценка| \((?:дороже|дешевле) в рублях\)/g, '')}`);
   const flows = (i.matched || []).filter(m => /\d+%/.test(m)).map(plainFeat);
   return [...calc, ...flows].filter(c => !numsOf(c).every(n => take.includes(n))).slice(0, 3);
@@ -481,7 +491,8 @@ function topDistinct(items, k) {
   return out.concat(items.filter(i => !out.includes(i))).slice(0, k);
 }
 function viewHome() {
-  const c = company(), top = topDistinct(ranked(), 3), n = newCount();
+  const all = ranked(), fresh = all.filter(i => i.group !== 'old');
+  const c = company(), top = topDistinct(fresh.length >= 3 ? fresh : [...fresh, ...all.filter(i => i.group === 'old')], 3), n = newCount();
   return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
     <div class="card widget">
       <div class="widget-head"><h2>Важное для вашего бизнеса ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
@@ -494,19 +505,19 @@ function viewHome() {
 // Сводка «ваш бизнес в данных банка»: то, от чего зависит влияние новостей на компанию
 function flowCard(title, s, who) {
   if (!s || !s.n) return `<div class="card"><h3 class="card-h">${title}</h3><div class="muted">В платежах через банк данных нет</div></div>`;
-  const rows = (s.top_industries || []).map(t => `<div class="kv"><span>${esc(t.name.replace(/ \(\d+\)$/, ''))}</span><b>${pctRu(t.share)}</b></div>`).join('');
+  const rows = (s.top_industries || []).map(t => `<div class="kv"><span>${esc(cap(t.who || t.name.replace(/ \(\d+\)$/, '')))}</span><b>${pctRu(t.share)}</b></div>`).join('');
   const conc = s.top1_share !== undefined ? `<div class="kv"><span>Крупнейший ${who}</span><b>${pctRu(s.top1_share)}</b></div><div class="kv"><span>Пять крупнейших</span><b>${pctRu(s.top5_share)}</b></div>` : '';
   return `<div class="card"><h3 class="card-h">${title}</h3>${rows}${conc}
     <div class="foot-note">${s.n} контрагентов в платежах через банк; отрасль известна для ${pctRu(s.known_share || 0)} суммы</div></div>`;
 }
 function companySummary(c) {
-  const prods = c.products.length ? c.products.join(', ') : 'нет';
+  const prods = c.products.length ? c.products.map(x => x === 'РКО' ? 'расчётный счёт' : x).join(', ') : 'нет';
   return `<div class="grid3" style="margin-top:16px">
     <div class="card"><h3 class="card-h">Компания</h3>
       <div class="kv"><span>Выручка за год</span><b>${c.revenue_bn.toLocaleString('ru-RU')} млрд ₽</b></div>
       <div class="kv"><span>Регион</span><b>${esc(c.region)}</b></div>
       <div class="kv"><span>Продукты банка</span><b>${esc(prods)}</b></div>
-      <div class="kv"><span>ВЭД</span><b>${c.ved.length ? esc(c.ved.join(', ')) : 'нет'}</b></div>
+      <div class="kv"><span>Внешняя торговля</span><b>${c.ved.length ? esc(c.ved.join(', ')) : 'нет'}</b></div>
       ${c.group_size > 1 ? `<div class="kv"><span>Группа</span><b>${c.group_size} юрлиц</b></div>` : ''}</div>
     ${flowCard('Откуда приходят деньги', c.counterparties.customers, 'плательщик')}
     ${flowCard('Кому платит компания', c.counterparties.suppliers, 'получатель')}
@@ -520,7 +531,7 @@ function viewFeed() {
     ${c.data_quality.length ? `<div class="dq"><b>Данные о компании неполные — выводы ориентировочные.</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
     ${API ? quickForm() : ''}
     ${items.length ? groups.map(([id, name, its]) => `<section class="grp"><h2 class="grp-h">${name}<span class="n">${its.length}</span></h2>
-      ${its.map(i => id === 'info' && state.open !== i.id ? rowHtml(i) : cardHtml(i)).join('')}</section>`).join('')
+      ${its.map(i => (id === 'info' || id === 'old') && state.open !== i.id ? rowHtml(i) : cardHtml(i)).join('')}</section>`).join('')
       : '<div class="card empty">Разобранных событий пока нет — выберите новость ниже или вставьте ссылку</div>'}
     ${API ? `<div class="sec"><h3>Ещё новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
 }
