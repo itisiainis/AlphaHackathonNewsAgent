@@ -49,6 +49,7 @@ class Result:
     trace: list[dict] = field(default_factory=list)
     tool_log: list[dict] = field(default_factory=list)
     error: str = ""
+    unavailable: bool = False  # модель недоступна (нет ключа, бюджет, сбой) — можно показать разбор правилами
 
 
 class Agent:
@@ -113,7 +114,7 @@ class Agent:
                 draft = self._draft(ses, match, observations, trace, issues=issues)
                 card, rep = self._assemble(draft, ses, event, company_id, match, trace)
         except LLMUnavailable as e:
-            return Result(None, Report(errors=[str(e)]), trace, ses.log, error=str(e))
+            return Result(None, Report(errors=[str(e)]), trace, ses.log, error=str(e), unavailable=True)
         except (ValueError, KeyError, TypeError) as e:
             return Result(None, Report(errors=[f"ответ модели не разобран: {e}"]), trace, ses.log, error=str(e))
 

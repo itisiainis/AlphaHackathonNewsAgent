@@ -86,7 +86,8 @@ def test_analyze_by_link_only(tmp_path, monkeypatch):
                         lambda url, client=None: article.Article(url, "ЦБ сохранил ставку", PARA * 3, "2026-09-11"))
     c = TestClient(m.app)
     r = c.post("/api/analyze", json={"company_id": "U_25835", "url": "https://news.example/a"})
-    assert r.status_code == 503, "ссылка прочитана, дальше — честный отказ без ключа модели"
+    assert r.status_code == 200 and r.json()["mode"] == "rules", "ссылка прочитана; без ключа — черновой разбор правилами"
+    assert r.json()["card"]["sources"][0]["url"] == "https://news.example/a"
     monkeypatch.setattr(article, "fetch_article", lambda url, client=None: (_ for _ in ()).throw(UnsafeURL("внутренняя сеть")))
     r = c.post("/api/analyze", json={"company_id": "U_25835", "url": "http://127.0.0.1/"})
     assert r.status_code == 422 and "внутренняя" in r.json()["detail"]

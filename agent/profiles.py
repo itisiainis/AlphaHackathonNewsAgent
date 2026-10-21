@@ -20,7 +20,9 @@ PROFILES_PATH = ROOT / "data" / "company_profiles.json"
 
 LOW_COVERAGE = 0.35       # доля потока с известной отраслью, ниже которой предупреждаем
 MEGA_GROUP = 50           # юрлиц в группе, начиная с которого показываем только агрегат
-TOP_SHARE_MIN = 0.01      # отрасли контрагентов меньше 1% потока в признаки не берём
+TOP_SHARE_MIN = 0.01
+TRADE = {"45", "46", "47"}
+TRADE_WEIGHT = 0.4        # вес «своего» класса торговли, когда известна отрасль товара      # отрасли контрагентов меньше 1% потока в признаки не берём
 
 EMPLOYEES_RU = {"Более 251": "более 250", "101-250": "101–250", "16-100": "16–100", "Менее 15": "менее 15"}
 
@@ -97,10 +99,15 @@ def view(p: dict) -> dict:
 
 def features(p: dict) -> dict:
     """Признаки для отбора событий: что у компании есть и от чего она зависит."""
+    # торговля «наследует» отрасль товара (46.72 → металлургия); сам класс 46/47 у 62 из 115 компаний,
+    # поэтому любая новость про опт или розницу не должна весить как новость про отрасль компании
+    related = related_sectors(p["okved"])
     sectors = {p["okved2"]: 1.0}
     for g in p["group"]["industries"]:
         sectors[g["okved2"]] = max(sectors.get(g["okved2"], 0), g["share"])
-    for s in related_sectors(p["okved"]):
+    if related and p["okved2"] in TRADE:
+        sectors[p["okved2"]] = min(sectors[p["okved2"]], TRADE_WEIGHT)
+    for s in related:
         sectors.setdefault(s, 0.8)  # отрасль товара, которым компания торгует
     return {
         "own_sectors": sectors,  # отрасль компании и её группы с долями

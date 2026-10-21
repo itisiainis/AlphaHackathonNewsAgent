@@ -326,7 +326,7 @@ function cardHtml(i) {
   const kp = (i.key_points || []).map(s => `<li><span class="pdot ${s.p}">${P_RU[s.p]}</span><span>${esc(s.t)}${ref(s, i)}</span></li>`).join('');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'seed' ? '<span class="chip" title="Карточка подготовлена командой по материалам кейса, не агентом">пример</span>' : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'seed' ? '<span class="chip" title="Карточка подготовлена командой по материалам кейса, не агентом">пример</span>' : origin(i) === 'rules' ? '<span class="chip" title="Модель была недоступна: факты, данные компании, позиция банка и расчёт собраны правилами, без выводов ИИ">без ИИ</span>' : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
       <div class="ic-event">${esc(i.title)}</div>
       <div class="ic-take">${esc(takeaway(i))}</div>
       <ul class="kp">${kp}</ul>
@@ -387,7 +387,9 @@ function viewFeed() {
   let items = ranked();
   if (state.filter !== 'all') items = items.filter(i => i.type === state.filter);
   const f = (id, label) => `<button data-f="${id}" class="${state.filter === id ? 'on' : ''}">${label}</button>`;
+  const flash = state.flash; state.flash = '';  // уведомление о последнем запуске показываем один раз
   return `<h1>Новости для бизнеса</h1>${forWho(c)}
+    ${flash ? `<div class="dq" role="status">${esc(flash)}</div>` : ''}
     ${c.data_quality.length ? `<div class="dq"><b>Качество данных:</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
     <div class="filters">${f('all', 'Все')}${f('risk', 'Риски')}${f('opportunity', 'Возможности')}${f('info', 'К сведению')}</div>
     ${items.length ? items.map(cardHtml).join('') : '<div class="card empty">В этой категории событий нет</div>'}
@@ -445,9 +447,10 @@ async function runAgent(path, body) {
     if (!r.ok) { liveTrace(r.trace, ''); $('#drawer-totals').textContent = 'Карточка не прошла проверку: ' + r.errors.slice(0, 2).join('; '); return null; }
     const cid = state.company;
     DATA.insights[cid] = [r.card, ...(DATA.insights[cid] || []).filter(c => c.id !== r.card.id)];
-    ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = 'agent';
+    ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.mode === 'rules' ? 'rules' : 'agent';
     delete state.events[cid];
     closeOverlays(); location.hash = '#feed/' + r.card.id;
+    state.flash = r.mode === 'rules' ? r.notice + ' Полный разбор агентом можно запустить снова, когда модель станет доступна.' : '';
     return r.card;
   } catch (e) { closeOverlays(); showModal('Агент не запустился', e.message); return null; }
   finally { state.busy = false; }

@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 from agent import impact, profiles
 from agent.chat import answer
 from agent.llm import LLM, LLMUnavailable
+from agent.offline import NOTICE as OFFLINE_NOTICE
 from agent.pipeline import Pipeline, event_from_text
 from agent.slices import SUGGESTED, data_answer
 
@@ -176,10 +177,20 @@ def metrics():
 
 
 # ---------- действия ----------
+def _rules(event: dict, cid: str, reason: str) -> dict:
+    """Модель недоступна — черновой разбор правилами (agent/offline.py), явно помеченный в ответе и в карточке."""
+    card, trace, m = pipe.rules(event, cid)
+    if card is None:
+        raise HTTPException(503, reason)
+    if not store.card(cid, card["id"]):  # готовый разбор агентом не затираем черновиком
+        store.put_card(cid, card, "rules")
+    return {"ok": True, "card": card, "mode": "rules", "notice": OFFLINE_NOTICE, "reason": reason, "warnings": [], "tool_log": []}
+
+
 def _run(event: dict, cid: str, on_step=None) -> dict:
     res, m = pipe.analyze(event, cid, on_step)
-    if res.error and not res.trace:  # модель недоступна до первого шага — это не запуск агента
-        raise HTTPException(503, res.error)
+    if res.unavailable:  # нет ключа, бюджет исчерпан, сбой провайдера
+        return _rules(event, cid, res.error)
     cost = sum(t.get("cost", 0) for t in res.trace)
     ms = sum(t.get("ms", 0) for t in res.trace)
     store.log_run(cid, event["id"], res.card is not None, res.report.errors, cost, ms, len(res.tool_log),

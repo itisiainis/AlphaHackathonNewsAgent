@@ -12,19 +12,27 @@
   • отрасль события = отрасль компании или группы    → 4 × доля отрасли в группе
   • отрасль события = отрасль покупателей/поставщиков → 6 × доля в денежном потоке (от 3% потока)
   • спрос × компания работает на конечного потребителя → 1.5
+Понижающие множители: рынок другой страны без ВЭД с ней (×0.35), подборка из нескольких сюжетов (×0.5).
 Сумма весов — релевантность. Порог SELECT_MIN отсекает события «не про нас»: на такие пары
 агент не запускается, и бюджет LLM не тратится. Порядок в ленте дальше уточняется весами ролей
 (score = сила влияния × 10 + сумма весов тем роли — как во фронте).
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
+from .impact import FOREIGN
 from .okved import RATE_SENSITIVE, country_name, label
 
 SELECT_MIN = 2.5
 FLOW_MIN = 0.03
 CONSUMER_SECTORS = {"10", "11", "29", "41", "45", "47", "55", "56", "68", "79"}
+DOMESTIC = r"росси|\bрф\b|рубл|\bцб\b|москв|отечествен|минфин росс|минэк|минпромторг"
+FOREIGN_FACTOR = 0.35
+# пункты подборки: «1️⃣», «1.», «1)» или строка, начинающаяся со значка-маркера («🔴 », «• », «▪️ »)
+DIGEST_RE = re.compile(r"\d\ufe0f?\u20e3|^\s*\d{1,2}[.)]\s|^\s*[^\w\s«\"(\[-]{1,3}\s", re.M)
+DIGEST_FACTOR = 0.5
 
 
 @dataclass
@@ -81,6 +89,16 @@ def match(event: dict, feats: dict, products: list[str]) -> Match:
 
     if "спрос" in topics and set(feats["own_sectors"]) & CONSUMER_SECTORS:
         _add(m, "зависимость от потребительского спроса", "компания работает на конечного потребителя", 1.5)
+
+    # Рынок другой страны, с которой компания не работает: «ипотека в Европе», «Минфин США»
+    abroad = [c for c, rx in FOREIGN.items() if re.search(rx, text)]
+    if abroad and not re.search(DOMESTIC, text) and not set(abroad) & set(feats["countries"]):
+        m.score *= FOREIGN_FACTOR
+        m.reasons.append({"feature": "зарубежный рынок", "why": "событие о рынке другой страны: вес снижен", "weight": FOREIGN_FACTOR})
+    # Подборка из нескольких новостей («1️⃣ … 2️⃣ … 3️⃣ …») совпадает со всем понемногу — это не одно событие
+    if len(DIGEST_RE.findall(event.get("text", ""))) >= 3:
+        m.score *= DIGEST_FACTOR
+        m.reasons.append({"feature": "подборка новостей", "why": "пост из нескольких сюжетов: вес снижен", "weight": DIGEST_FACTOR})
 
     m.score = round(m.score, 2)
     return m
