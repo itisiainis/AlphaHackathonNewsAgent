@@ -321,7 +321,7 @@ const isNew = i => i.is_new && ageDays(i) <= NEW_DAYS && !state.read.has(state.c
 const takeaway = i => (i.takeaway && (i.takeaway[state.role] || Object.values(i.takeaway)[0])) || i.why_short;
 function topicWeight(t) {
   const L = DATA.learned || {}, r = (L.roles || {})[state.role] || {}, c = ((L.companies || {})[state.company] || {})[state.role] || {};
-  return (role().weights[t] || 0) + (r[t] || 0) + (c[t] || 0);
+  return (role().weights[t] || 0) + (t in c ? c[t] : (r[t] || 0));
 }
 function scored() {
   return (DATA.insights[state.company] || [])
@@ -866,22 +866,22 @@ async function admLearning() {
     <td>${pct(t.pass_rate)}</td><td>${sec(t.avg_ms)}</td><td>${num(t.revisions)}</td><td>${num(t.cost)} ₽</td></tr>`);
   const w = s.weights_readable.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).map(x => `<tr><td>${esc(x.scope)}</td><td>${esc(x.topic)}</td>
     <td class="${x.delta > 0 ? 'up' : 'down'}">${x.delta > 0 ? 'выше' : 'ниже'} на ${num(Math.abs(x.delta))}</td></tr>`);
-  const rt = s.routine.map(x => `<tr><td>${esc(x.example)}</td><td>${x.days} дн.</td></tr>`);
+  const rt = s.routine.map(x => `<tr><td>${esc(x.example)}</td><td>${esc(x.source)}</td><td>${x.days} дн.</td></tr>`);
   const ls = s.lessons.map(x => `<tr><td>${esc(x.lesson)}</td><td>${x.seen}</td><td>${x.active ? '<span class="up">в задании агенту</span>' : `<span class="muted">с ${c.min_lesson} повторов</span>`}</td></tr>`);
   return `<div class="card learn-intro"><b>Сервис учится на своём опыте.</b> Модели по условиям кейса только разрешённые, дообучать их нельзя — поэтому учится всё вокруг них, и каждый шаг виден здесь.
       <label class="sw"><input type="checkbox" data-learning ${s.enabled ? 'checked' : ''}> Применять накопленный опыт</label>
       <div class="foot-note">Если выключить — сервис работает как в первый день, но опыт продолжает копиться.</div></div>
-    <div class="kpis">${kpi('Разборов ИИ в памяти', s.memory, `ответов из памяти: ${s.reused}`)}${kpi('Сюжетов в потоке', s.stories, `наблюдаем ${s.days_observed} дн.`)}
-      ${kpi('Узнано рутины', s.routine.length, `сюжет встречался ≥ ${c.routine_days} разных дней`)}${kpi('Уроков в задании агенту', s.lessons.filter(x => x.active).length, `всего замечаний: ${s.lessons.reduce((a, x) => a + x.seen, 0)}`)}</div>
+    <div class="kpis">${kpi('Разборов ИИ в памяти', s.memory, `ответов из памяти: ${s.reused}`)}${kpi('Заголовков в истории', s.stories, `за ${s.days_observed} дн. — для распознавания шаблонов`)}
+      ${kpi('Узнано шаблонов', s.routine.length, `выходят ≥ ${c.routine_days} дней с новыми датами и числами`)}${kpi('Уроков в задании агенту', s.lessons.filter(x => x.active).length, `всего замечаний: ${s.lessons.reduce((a, x) => a + x.seen, 0)}`)}</div>
     <h2 class="adm-h">1. Становится ли лучше и быстрее</h2><div class="foot-note">По дням: доля разборов, прошедших проверку с первого раза, время и число правок. Уроки и память должны снижать время и правки.</div>
     ${table(['День', 'Разборов ИИ', 'Прошли проверку', 'Среднее время', 'Правок в среднем', 'Расход'], trend, 'Разборов ИИ ещё не было — динамика появится после первых запусков.')}
-    <h2 class="adm-h">2. Чему научили оценки клиентов</h2><div class="foot-note">«Полезно / не про нас» сдвигает вес темы для роли (сглажено: пока оценок мало, сдвиг небольшой; предел — ±3).</div>
+    <h2 class="adm-h">2. Чему научили оценки клиентов</h2><div class="foot-note">Тема поднимается, если её отмечают «полезно» чаще, чем клиент отмечает в среднем (доля «полезно» сейчас — ${pct(s.useful_share)} из ${s.votes} оценок). Пока оценок мало, сдвиг небольшой. Своя история компании важнее общей для роли.</div>
     ${table(['Роль', 'Тема', 'В ленте'], w, 'Оценок пока нет — порядок новостей задают правила под роль.')}
-    <h2 class="adm-h">3. Что сервис узнал как рутину</h2><div class="foot-note">Сюжет, выходящий одинаковым ${c.routine_days} и больше дней, опускается в отборе (вес ×${String(c.routine_factor).replace('.', ',')}). Ручных списков нет — только история потока.</div>
-    ${table(['Сюжет', 'Встречался'], rt, `Повторяющихся сюжетов пока нет: история потока — ${s.days_observed} дн.`)}
+    <h2 class="adm-h">3. Что сервис узнал как рутину</h2><div class="foot-note">Шаблон одного источника, выходящий ${c.routine_days} и больше дней с другими датами и числами («Что произошло за день: среда…»), опускается в отборе (вес ×${String(c.routine_factor).replace('.', ',')}). Повтор важного события с теми же цифрами шаблоном не считается. Ручных списков нет.</div>
+    ${table(['Пример заголовка', 'Источник', 'Выходил'], rt, `Шаблонов пока нет: история потока — ${s.days_observed} дн.`)}
     <h2 class="adm-h">4. Уроки проверки</h2><div class="foot-note">Частые замечания проверки становятся правилами в задании агенту — меньше правок, быстрее ответ.</div>
     ${table(['Урок', 'Замечаний', 'Статус'], ls, 'Замечаний проверки пока нет.')}
-    <div class="foot-note">Память: тот же сюжет для той же компании за ${c.dup_days} дн. (сходство заголовков ≥ ${pct(c.dup_jaccard)}) отдаётся готовым разбором. Прошлые разборы других клиентов агенту не показываются.</div>`;
+    <div class="foot-note">Память: тот же сюжет для той же компании за ${c.dup_days} дн. отдаётся готовым разбором — если заголовки похожи (≥ ${pct(c.dup_jaccard)}) и не расходятся числа, даты, названия, отрицание и направление. Прошлые разборы других клиентов агенту не показываются. Методика и замеры — docs/experiments/learning.md.</div>`;
 }
 async function admSettings() {
   const s = await aapi('/settings'), v = s.values; ADM.data.settings = s;

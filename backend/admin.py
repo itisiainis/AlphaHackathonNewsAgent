@@ -23,7 +23,7 @@ from urllib.parse import unquote
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from agent import learning, matching
+from agent import learning, matching, stories
 from agent.llm import ALLOWED, ROUTING
 
 log = logging.getLogger("newsagent")
@@ -340,16 +340,11 @@ def collect_now(who: str = Depends(admin)):
 def learning_summary():
     a = _app()
     s = a.learner.summary()
-    by_sig: dict = {}
-    for e in a.pipe.events:  # читаемое название сюжета вместо подписи из основ слов
-        by_sig.setdefault(learning.signature(e.get("title", "")), e.get("title", ""))
-    for r in s["routine"]:
-        r["example"] = by_sig.get(r["story"], r["story"])
     roles = {r["id"]: r["name"] for r in a.MOCK["roles"]}
     s["weights_readable"] = [{"scope": roles.get(role, role), "topic": t, "delta": d}
                              for role, ts in s["weights"]["roles"].items() for t, d in ts.items() if d]
-    s["constants"] = {"routine_days": learning.ROUTINE_DAYS, "routine_factor": learning.ROUTINE_FACTOR,
-                      "dup_jaccard": learning.DUP_JACCARD, "dup_days": learning.DUP_DAYS, "min_lesson": learning.MIN_LESSON}
+    s["constants"] = {"routine_days": stories.TEMPLATE_DAYS, "routine_factor": learning.ROUTINE_FACTOR,
+                      "dup_jaccard": stories.SAME_STORY, "dup_days": learning.DUP_DAYS, "min_lesson": learning.MIN_LESSON}
     s["today"] = a.TODAY.isoformat()
     return s
 

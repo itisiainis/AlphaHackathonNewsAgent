@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT, ts REAL);
 CREATE TABLE IF NOT EXISTS moderation(company_id TEXT, card_id TEXT, status TEXT, note TEXT, ts REAL,
                                       PRIMARY KEY(company_id, card_id));
 CREATE TABLE IF NOT EXISTS audit(ts REAL, actor TEXT, action TEXT, detail TEXT);
--- обучение на опыте: в какие дни встречался сюжет (рутина) и сколько раз разбор взят из памяти
-CREATE TABLE IF NOT EXISTS story_days(sig TEXT, day TEXT, PRIMARY KEY(sig, day));
+-- обучение на опыте: заголовки по источникам и дням (распознавание шаблонов) и ответы из памяти разборов
+CREATE TABLE IF NOT EXISTS story_titles(source TEXT, day TEXT, title TEXT, PRIMARY KEY(source, day, title));
 CREATE TABLE IF NOT EXISTS reuse(ts REAL, company_id TEXT, card_id TEXT);
 """
 
@@ -120,14 +120,16 @@ class Store:
         return [(c, json.loads(j), o, t) for c, j, o, t in rows]
 
     # ---------- обучение ----------
-    def observe_story(self, pairs: list[tuple[str, str]]) -> None:
+    def observe_titles(self, rows: list[tuple[str, str, str]], keep_days: int = 30) -> None:
+        """(источник, день, заголовок); старше keep_days дней от самого свежего — удаляются."""
         with self.lock:
-            self.db.executemany("INSERT OR IGNORE INTO story_days VALUES(?,?)", pairs)
+            self.db.executemany("INSERT OR IGNORE INTO story_titles VALUES(?,?,?)", rows)
+            self.db.execute("DELETE FROM story_titles WHERE day < date((SELECT MAX(day) FROM story_titles), ?)",
+                            (f"-{keep_days} days",))
             self.db.commit()
 
-    def story_counts(self, min_days: int) -> dict[str, int]:
-        rows = self._exec("SELECT sig, COUNT(*) FROM story_days GROUP BY sig HAVING COUNT(*) >= ?", (min_days,)).fetchall()
-        return dict(rows)
+    def titles(self) -> list[tuple[str, str, str]]:
+        return self._exec("SELECT source, day, title FROM story_titles").fetchall()
 
     def log_reuse(self, company_id: str, card_id: str) -> None:
         self._exec("INSERT INTO reuse VALUES(?,?,?)", (time.time(), company_id, card_id))

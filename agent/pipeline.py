@@ -75,15 +75,15 @@ class Pipeline:
     def ranked(self, company_id: str, limit: int = 20) -> list[tuple[dict, Match]]:
         p = profiles.get(company_id)
         pairs = rank(self.events, profiles.features(p), p["bank_products"])
-        if self.learner:  # сюжеты, которые сервис распознал как ежедневную рутину, опускаются
-            from .learning import ROUTINE_FACTOR, signature
+        if self.learner:  # шаблоны, которые сервис узнал по истории потока, опускаются (agent/stories.py)
+            from .learning import ROUTINE_FACTOR
 
-            routine = self.learner.routine()
             for e, m in pairs:
-                if signature(e["title"]) in routine:
+                days = self.learner.routine_days(e)
+                if days:
                     m.score = round(m.score * ROUTINE_FACTOR, 2)
-                    m.reasons.append({"feature": "повторяющийся сюжет", "weight": ROUTINE_FACTOR,
-                                      "why": f"выходит одинаково {routine[signature(e['title'])]} дн. — сервис узнал рутину"})
+                    m.reasons.append({"feature": "повторяющийся шаблон", "weight": ROUTINE_FACTOR,
+                                      "why": f"источник публикует такой заголовок ежедневно ({days} дн.), меняются только даты и числа"})
             pairs = sorted([x for x in pairs if x[1].selected], key=lambda x: -x[1].score)
         return pairs[:limit]
 
