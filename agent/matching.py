@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass, field
 
 from .impact import FOREIGN
-from .okved import RATE_SENSITIVE, country_name, label
+from .okved import RATE_SENSITIVE, country_name, plain, who
 
 SELECT_MIN = 2.5
 FLOW_MIN = 0.03
@@ -54,11 +54,18 @@ class Match:
         return self.score >= SELECT_MIN
 
 
-def _add(m: Match, chip: str, why: str, w: float) -> None:
+def _add(m: Match, chip: str, why: str, w: float, **meta) -> None:
+    """meta — вид признака (kind), отрасль и доля: по ним разбор без модели пишет вывод, не разбирая текст чипа."""
     m.score += w
     if chip not in m.matched:
         m.matched.append(chip)
-    m.reasons.append({"feature": chip, "why": why, "weight": round(w, 2)})
+    m.reasons.append({"feature": chip, "why": why, "weight": round(w, 2), **meta})
+
+
+# чем отрасль события приходится компании → подпись чипа и объяснение простыми словами
+OWN_ROLE = {"own": ("ваша отрасль", "событие в вашей отрасли"),
+            "goods": ("отрасль вашего товара", "событие в отрасли, чей товар вы продаёте"),
+            "group": ("отрасль вашей группы", "событие в отрасли компаний вашей группы")}
 
 
 def match(event: dict, feats: dict, products: list[str]) -> Match:
@@ -73,32 +80,38 @@ def match(event: dict, feats: dict, products: list[str]) -> Match:
             w = 1.5 if "ставка" in topics else 0.75
             for prod in ("кредит", "лизинг"):
                 if prod in products:
-                    _add(m, prod, "стоимость обслуживания долга зависит от ставки", w)
+                    _add(m, prod, "платежи по долгу зависят от ставки", w, kind="debt")
         elif feats["has_deposits"] and "ставка" in topics:
-            _add(m, "депозиты", "доходность размещения остатков зависит от ставки", 1.5)
+            _add(m, "депозиты", "доход по депозитам зависит от ставки", 1.5, kind="deposits")
         if "ставка" in topics and set(feats["own_sectors"]) & RATE_SENSITIVE:
-            _add(m, "спрос клиентов в кредит", "покупатели компании финансируются кредитами или ипотекой", 2)
+            _add(m, "спрос клиентов в кредит", "ваши покупатели берут кредиты и ипотеку — ставка меняет их спрос", 2,
+                 kind="demand")
 
     if "курс" in topics and feats["ved"]:
         countries = feats["countries"]
         _add(m, "ВЭД: " + ", ".join(country_name(c) for c in countries[:3]),
-             "внешнеторговые расчёты зависят от курса", 3)
+             "расчёты с зарубежными партнёрами зависят от курса", 3, kind="fx")
         hit = [c for c in countries if c.lower()[:5] in text]
         if hit:
-            _add(m, "страна в новости: " + country_name(hit[0]), "новость прямо касается страны ВЭД", 2)
+            _add(m, "страна в новости: " + country_name(hit[0]), "новость прямо про страну, с которой вы торгуете", 2,
+                 kind="fx")
 
+    roles = feats.get("sector_role", {})
     for s in sectors:
         own = feats["own_sectors"].get(s)
         if own:
-            _add(m, "отрасль: " + label(s), "событие в отрасли компании, её группы или её товара", 4 * own)
-        for side, name in (("customer_sectors", "входящего"), ("supplier_sectors", "исходящего")):
+            role = roles.get(s, "own")
+            chip, why = OWN_ROLE[role]
+            _add(m, f"{chip}: {plain(s)}", why, 4 * own, kind="own", sector=s, role=role)
+        for side, name, kind, why in (
+                ("customer_sectors", "поступлений", "customers", "ваши покупатели: что меняется у них, отразится на ваших продажах"),
+                ("supplier_sectors", "платежей", "suppliers", "ваши поставщики: что меняется у них, отразится на ваших закупках")):
             share = feats[side].get(s, 0)
             if share >= FLOW_MIN:
-                _add(m, f"{round(share * 100)}% {name} потока — {label(s)}",
-                     "событие в отрасли контрагентов", 6 * share)
+                _add(m, f"{round(share * 100)}% {name} — {who(s)}", why, 6 * share, kind=kind, sector=s, share=round(share, 2))
 
     if "спрос" in topics and set(feats["own_sectors"]) & CONSUMER_SECTORS:
-        _add(m, "зависимость от потребительского спроса", "компания работает на конечного потребителя", 1.5)
+        _add(m, "зависимость от потребительского спроса", "вы продаёте конечным потребителям", 1.5, kind="demand")
 
     # Рынок другой страны, с которой компания не работает: «ипотека в Европе», «Минфин США»
     abroad = [c for c, rx in FOREIGN.items() if re.search(rx, text)]

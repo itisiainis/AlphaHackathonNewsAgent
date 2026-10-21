@@ -21,7 +21,7 @@ from .contract import validate_card
 from .impact import _sentences
 from .kb import BM25Index
 from .matching import Match
-from .okved import topics_in
+from .okved import plain, topics_in, who
 from .tools import ToolSession
 
 TOPICS = {"ставка", "долг", "курс", "ликвидность", "отрасль", "спрос", "контрагенты"}
@@ -38,60 +38,90 @@ def _cap(t: str) -> str:
     return t[:1].upper() + t[1:]
 
 
-def _kind(r: dict) -> str:
-    """Вид признака, на который сработал отбор (по формулировкам agent/matching.py)."""
-    f = r["feature"]
-    if f in ("кредит", "лизинг"):
-        return "debt"
-    if f == "депозиты":
-        return "deposits"
-    if f.startswith(("ВЭД", "страна в новости")):
-        return "fx"
-    if "входящего потока" in f:
-        return "customers"
-    if "исходящего потока" in f:
-        return "suppliers"
-    if f.startswith("отрасль"):
-        return "own"
-    if "спрос" in f:
-        return "demand"
-    return "other"
+def _by_kind(match: Match) -> dict[str, list[dict]]:
+    """Причины отбора по видам признака (kind из agent/matching.py); понижающие пометки — не причина."""
+    by: dict[str, list[dict]] = {}
+    for r in match.reasons:
+        if r["weight"] > 1 and r.get("kind"):
+            by.setdefault(r["kind"], []).append(r)
+    return by
+
+
+# отрасль события — своя, отрасль товара или отрасль группы (role из agent/matching.py)
+OWN_HEAD = {"own": "Событие в вашей отрасли ({}) — касается вас напрямую",
+            "goods": "Событие в отрасли вашего товара ({}) — может изменить ваши продажи и цены",
+            "group": "Событие в отрасли вашей группы ({}) — касается компаний группы"}
+OWN_WHY = {"own": "Это ваша отрасль — {}", "goods": "Вы продаёте товар этой отрасли — {}",
+           "group": "В этой отрасли работают компании вашей группы — {}"}
+
+
+def _pct(r: dict) -> str:
+    return f"{round(r['share'] * 100)}%"
 
 
 def headline(match: Match, order: tuple[str, ...]) -> str:
-    """Главный вывод без модели: что именно в бизнесе компании затрагивает событие — под роль, без домыслов."""
-    return re.sub(r" \(\d{2}\)", "", _headline(match, order))  # коды ОКВЭД руководителю не нужны
-
-
-def _headline(match: Match, order: tuple[str, ...]) -> str:
-    by = {}
-    for r in match.reasons:
-        by.setdefault(_kind(r), []).append(r["feature"])
+    """Главный вывод без модели простой причинной фразой: что в бизнесе компании затрагивает событие и почему."""
+    by = _by_kind(match)
     for k in order:
         if k not in by:
             continue
-        f = by[k][0]
+        r = by[k][0]
         if k == "debt":
-            return f"Затрагивает стоимость вашего долга: {', '.join(by[k])}"
+            return f"Это меняет стоимость вашего долга: {' и '.join(x['feature'] for x in by[k])} зависят от ставки"
         if k == "deposits":
-            return "Затрагивает доходность ваших депозитов"
+            return "Это меняет доход по вашим депозитам: он следует за ставкой"
         if k == "fx":
-            return f"Затрагивает валютные расчёты — {f.replace('ВЭД: ', 'ВЭД: ')}"
+            return f"Это меняет стоимость ваших расчётов с зарубежными партнёрами — {r['feature']}"
         if k == "customers":
-            share, sector = f.split(" входящего потока — ")
-            return f"Касается ваших покупателей: {sector} — {share} поступлений"
+            return f"{_cap(who(r['sector']))} — ваши покупатели ({_pct(r)} поступлений): что меняется у них, скажется на ваших продажах"
         if k == "suppliers":
-            share, sector = f.split(" исходящего потока — ")
-            return f"Касается ваших поставщиков: {sector} — {share} платежей"
+            return f"{_cap(who(r['sector']))} — ваши поставщики ({_pct(r)} платежей): что меняется у них, скажется на ваших закупках"
         if k == "own":
-            return f"Событие в вашей отрасли: {f.removeprefix('отрасль: ')}"
+            return OWN_HEAD[r.get("role", "own")].format(plain(r["sector"]))
         if k == "demand":
-            return "Затрагивает спрос ваших покупателей"
+            return "Это меняет спрос ваших покупателей"
     return f"Касается вас: {match.reasons[0]['feature']}" if match.reasons else "Прямой связи с профилем компании не найдено"
+
+
+def _why(by: dict[str, list[dict]]) -> list[str]:
+    """«Почему это важно вам» без модели: признаки компании из профиля, по одной фразе на вид признака."""
+    out = []
+    for k, rs in by.items():
+        if k == "debt":
+            out.append(f"У вас в банке {' и '.join(x['feature'] for x in rs)}: платежи по ним зависят от ставки")
+        elif k == "customers":
+            out.extend(f"{_pct(x)} ваших поступлений через банк — от покупателей: {who(x['sector'])}. "
+                       "Что меняется у них, скажется на ваших продажах" for x in rs)
+        elif k == "suppliers":
+            out.extend(f"{_pct(x)} ваших платежей через банк — поставщикам: {who(x['sector'])}. "
+                       "Что меняется у них, скажется на ваших закупках" for x in rs)
+        elif k == "own":
+            out.extend(OWN_WHY[x.get("role", "own")].format(plain(x["sector"])) for x in rs)
+        else:
+            out.extend(f"{_cap(x['feature'])}: {x['why']}" for x in rs)
+    return out
+
+
+def _take(c: dict) -> str:
+    """Главный вывод из расчёта кодом: сначала деньги, потом почему."""
+    title, value = c["title"], c["value"]
+    if title.startswith("Выручка под влиянием") and " — " in title:
+        return f"{_cap(title.split(' — ', 1)[1])} — ваши покупатели: от них {value.replace(' в год', '')} выручки в год"
+    if title.startswith("Выручка от покупателей") and " — " in title:
+        return f"{_cap(title.split(' — ', 1)[1])} — ваши покупатели: выручка от них изменится на {value}"
+    if title.startswith("Выручка:"):
+        return f"Ваша выручка может измениться на {value}"
+    return f"{title}: {value}"
 
 
 def _stems(text: str) -> set[str]:
     return {w[:5] for w in re.findall(r"[а-яё]{5,}", text.lower())}  # 5 букв: «ставку» и «ставки» — одна основа
+
+
+def _repeats(s: str, title: str) -> bool:
+    """Предложение пересказывает заголовок: почти все его основы слов уже есть в заголовке."""
+    st = _stems(s)
+    return bool(st) and len(st & _stems(title)) / len(st) >= 0.7
 
 
 def _facts(event: dict) -> list[str]:
@@ -99,7 +129,7 @@ def _facts(event: dict) -> list[str]:
     title = event.get("title", "").strip()
     out = []
     for s in _sentences(event.get("text", "")):
-        if len(s) < 40 or s.strip(" .") == title.strip(" .") or len(s) > 400:
+        if len(s) < 40 or s.strip(" .") == title.strip(" .") or _repeats(s, title) or len(s) > 400:
             continue
         if re.search(r"\d", s) or len(out) < 1:
             out.append(s)
@@ -132,8 +162,7 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
     t0 = time.monotonic()
     prof = ses.profile_source()
     p = profiles.get(company_id)
-    why = [{"t": _cap(f"{r['feature']} — {r['why']}"), "p": "fact", "src": prof.label}
-           for r in match.reasons[:3] if r["weight"] > 1]  # понижающие пометки («подборка», «суд») — не причина
+    why = [{"t": t, "p": "fact", "src": prof.label} for t in _why(_by_kind(match))[:3]]
     step("tool", "get_company_profile()", f"признаков компании: {len(why)}", t0)
 
     t0 = time.monotonic()
@@ -182,9 +211,7 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
 
     def pick(prefer: tuple[str, ...], order: tuple[str, ...]) -> str:
         c = next((c for c in calcs if c["title"].startswith(prefer)), calcs[0] if calcs else None)
-        if c:
-            return f"{c['title']}: {c['value']}"
-        return headline(match, order)
+        return _take(c) if c else headline(match, order)
 
     signs = {c["sign"] for c in calcs}
     card = {
@@ -197,7 +224,8 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
         "takeaway": {"cfo": pick(("Стоимость долга", "Валютные", "Выручка"), ("debt", "fx", "customers", "suppliers", "own")),
                      "ceo": pick(("Выручка", "Закупки", "Стоимость долга"), ("customers", "own", "suppliers", "demand", "debt", "fx")),
                      "treasurer": pick(("Стоимость долга", "Валютные", "Доход по депозитам"), ("debt", "fx", "deposits", "customers"))},
-        "key_points": ([what[0]] + why[:1] + ([bank_stmt] if bank_stmt else []) + what[1:2])[:3],
+        # короткий слой: почему вам, позиция банка, факт новости — заголовок события уже виден в карточке
+        "key_points": (why[:1] + ([bank_stmt] if bank_stmt else []) + what[:1])[:3],
         "why_short": match.reasons[0]["why"] if match.reasons else "Событие из отобранных для компании новостей",
         "matched": match.matched, "sources": sources,
         "blocks": {"what": what, "why": why, "risks": [], "opportunities": [], "actions": [],
