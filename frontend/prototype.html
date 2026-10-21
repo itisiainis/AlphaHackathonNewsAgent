@@ -220,6 +220,8 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
   nav.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 10px}
   nav.side a{white-space:nowrap}
   nav.side .nav-foot{display:none}
+  .top{position:static}
+  .ic{scroll-margin-top:8px}
   .grid3,.two{grid-template-columns:1fr}
   main{padding:16px}
   .ic-take{font-size:16px}
@@ -327,8 +329,9 @@ function scored() {
   return (DATA.insights[state.company] || [])
     .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + topicWeight(t), 0) - Math.max(0, ageDays(i) - 7) * 0.35}));
 }
-const PRIORITY = [['act', 'Требует решения'], ['watch', 'Следить'], ['info', 'К сведению'], ['old', 'Ранее']];
-const PR_IDX = {act: 0, watch: 1, info: 2, old: 3};
+const PRIORITY = [['mine', 'Вы прислали'], ['act', 'Требует решения'], ['watch', 'Следить'], ['info', 'К сведению'], ['old', 'Ранее']];
+const PR_IDX = {mine: 0, act: 1, watch: 2, info: 3, old: 4};
+const isMine = i => ((DATA.user_cards || {})[state.company] || []).includes(i.id);
 const OLD_DAYS = 30;
 function supersededIds(items) {
   const out = new Set();
@@ -336,7 +339,7 @@ function supersededIds(items) {
     if (a !== b && (a.topics || [])[0] && (a.topics || [])[0] === (b.topics || [])[0] && ageDays(a) - ageDays(b) >= 3) out.add(a.id);
   return out;
 }
-const priority = (i, old) => old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old' : i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
+const priority = (i, old) => isMine(i) ? 'mine' : old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old' : i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
 
 function ranked() {
   const key = state.company + '|' + state.role, items = scored(), by = Object.fromEntries(items.map(i => [i.id, i]));
@@ -370,14 +373,17 @@ function companyOptions() {
 async function loadCompany(id) {
   if (!API || DATA.companies.some(c => c.id === id)) return;
   const r = await api('/api/companies/' + id);
+  if (DATA.companies.some(c => c.id === id)) return;
   DATA.companies.push(r.company); DATA.insights[id] = r.insights; (DATA.origins = DATA.origins || {})[id] = r.origins;
+  (DATA.user_cards = DATA.user_cards || {})[id] = r.user_cards || [];
 }
 function initSwitchers() {
   $('#sel-company').innerHTML = companyOptions();
   $('#sel-role').innerHTML = DATA.roles.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
   $('#sel-company').value = state.company;
-  $('#sel-company').onchange = async e => { const id = e.target.value;
+  $('#sel-company').onchange = async e => { const id = e.target.value, ticket = state.switchTo = id;
     try { await loadCompany(id); } catch (err) { showModal('Не удалось загрузить компанию', err.message); return; }
+    if (state.switchTo !== ticket) return;
     state.company = id; state.open = null; state.firstPaint = true;
     if (location.hash.startsWith('#feed/')) location.hash = '#feed'; else render(); };
   $('#sel-role').onchange = e => { state.role = e.target.value; state.events = {}; render(); };
@@ -510,7 +516,7 @@ function topDistinct(items, k) {
   return out.concat(items.filter(i => !out.includes(i))).slice(0, k);
 }
 function viewHome() {
-  const all = ranked(), fresh = all.filter(i => i.group !== 'old');
+  const all = ranked().filter(i => i.group !== 'mine'), fresh = all.filter(i => i.group !== 'old');
   const c = company(), top = topDistinct(fresh.length >= 3 ? fresh : [...fresh, ...all.filter(i => i.group === 'old')], 3), n = newCount();
   return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
     <div class="card widget">
@@ -664,10 +670,11 @@ function updateJobMarks() {
     find('data-jobkey', j.key).forEach(el => { el.textContent = el.dataset.prefix + Math.round(j.progress) + '%'; });
   }
 }
+const cardLink = i => `${location.origin}${location.pathname}?c=${encodeURIComponent(state.company)}&r=${encodeURIComponent(state.role)}#feed/${i.id}`;
 async function shareCard(i) {
   const src = st => st.src !== undefined && i.sources[st.src] ? ` (${i.sources[st.src].name})` : '';
   const text = [i.title, '', takeaway(i), ...(i.key_points || []).map(st => `— ${st.t}${src(st)}`), '',
-    `Разбор: ${location.origin}${location.pathname}#feed/${i.id}`].join('\n');
+    `Разбор: ${cardLink(i)}`].join('\n');
   try {
     if (navigator.share) { await navigator.share({title: i.title, text}); return; }
     await navigator.clipboard.writeText(text); toast('Выжимка скопирована — вставьте в мессенджер или письмо', 3500);
@@ -691,6 +698,9 @@ async function analyzeNow(key, label, briefPath, path, body) {
   const cid = state.company, list = DATA.insights[cid] || [];
   DATA.insights[cid] = list.some(c => c.id === r.card.id) ? list.map(c => c.id === r.card.id ? r.card : c) : [r.card, ...list];
   ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.origin;
+  if (r.user) { const mine = (DATA.user_cards = DATA.user_cards || {})[cid] = DATA.user_cards[cid] || [];
+    if (!mine.includes(r.card.id)) mine.unshift(r.card.id);
+    key = cid + ':' + r.event_id; path = `/api/companies/${cid}/events/${r.event_id}/analyze`; body = {}; }
   delete state.events[cid];
   if (location.hash === '#feed/' + r.card.id) { state.open = null; render(true); } else location.hash = '#feed/' + r.card.id;
   if (r.reused) { toast('Этот сюжет уже разбирали для вашей компании — полный разбор открыт сразу', 5000); return; }
@@ -1068,7 +1078,14 @@ window.addEventListener('hashchange', () => render());
     catch (e) { $('#app').innerHTML = `<div class="card empty">Сервис недоступен: ${esc(e.message)}</div>`; return; }
   }
   state.company = DATA.companies[0].id; state.role = DATA.roles[0].id;
-  initSwitchers();
+  const q = new URLSearchParams(location.search), card = (location.hash.match(/^#feed\/(.+)$/) || [])[1];
+  const owner = q.get('c') || (card && (Object.keys(DATA.insights).find(c => DATA.insights[c].some(i => i.id === card))
+    || (card.match(/-(U_\d+)$/) || [])[1]));
+  if (owner && owner !== state.company && (DATA.all_companies || []).some(c => c.id === owner)) {
+    try { await loadCompany(owner); state.company = owner; } catch (e) {  }
+  }
+  if (DATA.roles.some(r => r.id === q.get('r'))) state.role = q.get('r');
+  initSwitchers(); $('#sel-role').value = state.role;
   render();
 })();
 </script>

@@ -29,7 +29,22 @@ CREATE TABLE IF NOT EXISTS audit(ts REAL, actor TEXT, action TEXT, detail TEXT);
 -- обучение на опыте: заголовки по источникам и дням (распознавание шаблонов) и ответы из памяти разборов
 CREATE TABLE IF NOT EXISTS story_titles(source TEXT, day TEXT, title TEXT, PRIMARY KEY(source, day, title));
 CREATE TABLE IF NOT EXISTS reuse(ts REAL, company_id TEXT, card_id TEXT);
+-- новости, которые клиент прислал сам (ссылка или текст): нужны для полного разбора позже и чтобы отличать их в ленте
+CREATE TABLE IF NOT EXISTS user_events(company_id TEXT, event_id TEXT, json TEXT, ts REAL, PRIMARY KEY(company_id, event_id));
 """
+
+
+class _Rows:
+    """Результат запроса, прочитанный целиком под блокировкой (вместо живого курсора)."""
+
+    def __init__(self, rows: list, description):
+        self._rows, self.description = rows, description
+
+    def fetchall(self) -> list:
+        return self._rows
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
 
 
 class Store:
@@ -43,11 +58,14 @@ class Store:
             pass
         self.lock = threading.Lock()
 
-    def _exec(self, sql, args=()):
+    def _exec(self, sql, args=()) -> _Rows:
+        """Запрос и чтение результата — под одной блокировкой. Соединение общее для потоков: если читать строки
+        после снятия блокировки, параллельный запрос перезапишет курсор (замер: 21 ответ 500 из 90 при 12 потоках)."""
         with self.lock:
             cur = self.db.execute(sql, args)
+            rows = _Rows(cur.fetchall() if cur.description else [], cur.description)
             self.db.commit()
-            return cur
+            return rows
 
     # ---------- карточки ----------
     def put_card(self, company_id: str, card: dict, origin: str) -> None:
@@ -130,6 +148,19 @@ class Store:
 
     def titles(self) -> list[tuple[str, str, str]]:
         return self._exec("SELECT source, day, title FROM story_titles").fetchall()
+
+    def put_user_event(self, company_id: str, event: dict) -> None:
+        self._exec("INSERT OR REPLACE INTO user_events VALUES(?,?,?,?)",
+                   (company_id, event["id"], json.dumps(event, ensure_ascii=False), time.time()))
+
+    def user_event(self, company_id: str, event_id: str) -> dict | None:
+        row = self._exec("SELECT json FROM user_events WHERE company_id=? AND event_id=?", (company_id, event_id)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def user_card_ids(self, company_id: str) -> list[str]:
+        """Карточки по новостям, которые клиент прислал сам, — свежие первыми."""
+        rows = self._exec("SELECT event_id FROM user_events WHERE company_id=? ORDER BY ts DESC", (company_id,)).fetchall()
+        return [f"{e}-{company_id}" for (e,) in rows]
 
     def log_reuse(self, company_id: str, card_id: str) -> None:
         self._exec("INSERT INTO reuse VALUES(?,?,?)", (time.time(), company_id, card_id))
