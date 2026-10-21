@@ -10,7 +10,8 @@
    - утверждение bank ссылается только на источник kind=bank;
    - позиция банка старше 12 месяцев обязана быть помечена stale (CONTRIBUTING.md, принцип 5);
    - числа из fact/bank-утверждений должны встречаться в тексте цитируемого источника
-     (если текст источника передан): так выдуманная цифра ловится кодом, а не обещанием модели.
+     (если текст источника передан): так выдуманная цифра ловится кодом, а не обещанием модели;
+   - входные данные расчётов (blocks.calc[].inputs) проверяются так же, как утверждения.
 """
 from __future__ import annotations
 
@@ -80,6 +81,9 @@ def _iter_stmts(card: dict):
     for b in STMT_BLOCKS:
         for k, s in enumerate(card.get("blocks", {}).get(b, [])):
             yield f"blocks.{b}[{k}]", s, True
+    for ci, c in enumerate(card.get("blocks", {}).get("calc", [])):
+        for k, s in enumerate(c.get("inputs", [])):
+            yield f"blocks.calc[{ci}].inputs[{k}]", s, True
     for qi, item in enumerate(card.get("chat", [])):
         for k, s in enumerate(item.get("a", [])):
             yield f"chat[{qi}].a[{k}]", s, False

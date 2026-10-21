@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from agent import profiles
+from agent import impact, profiles
 from agent.chat import answer
 from agent.llm import LLM, LLMUnavailable
 from agent.pipeline import Pipeline, event_from_text
@@ -76,7 +76,7 @@ def _seed() -> None:
         return
     for cid, cards in MOCK["insights"].items():
         for c in cards:
-            store.put_card(cid, c, "seed")
+            store.put_card(cid, impact.attach(c, profiles.get(cid), TODAY.isoformat()), "seed")
 
 
 _seed()
