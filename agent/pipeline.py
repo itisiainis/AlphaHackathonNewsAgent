@@ -17,6 +17,7 @@ from .matching import Match, match, rank
 
 ROOT = Path(__file__).resolve().parents[1]
 TOP_N = 3
+FULL_TEXT_MIN = 700  # короче — это анонс, перед разбором подтягиваем полный текст по ссылке
 
 
 def load_events(path: Path | None = None) -> list[dict]:
@@ -61,8 +62,29 @@ class Pipeline:
         p = profiles.get(company_id)
         return rank(self.events, profiles.features(p), p["bank_products"])[:limit]
 
+    def full_text(self, event: dict) -> dict:
+        """Дополняет короткую новость (анонс RSS) полным текстом статьи по ссылке; результат кешируется.
+
+        Не получилось (сайт недоступен, текст собирается скриптом) — остаётся анонс, и это видно
+        в основании карточки: «текст новости — анонс источника»."""
+        if event.get("text_kind") or len(event.get("text", "")) >= FULL_TEXT_MIN or not event.get("url", "").startswith("http"):
+            return event
+        cache = ROOT / "data" / "cache" / "articles" / f"{event['id']}.json"
+        if cache.exists():
+            return event | json.loads(cache.read_text(encoding="utf-8"))
+        try:
+            from .ingest.article import fetch_article
+            a = fetch_article(event["url"])
+            extra = {"text": a.text, "text_kind": "full"} if len(a.text) > len(event.get("text", "")) else {"text_kind": "summary"}
+        except (ValueError, OSError):
+            extra = {"text_kind": "summary"}
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(extra, ensure_ascii=False), encoding="utf-8")
+        return event | extra
+
     def analyze(self, event: dict, company_id: str, on_step=None) -> tuple[Result, Match]:
         """on_step(state) вызывается на каждом шаге агента — для показа трассы в реальном времени."""
+        event = self.full_text(event)
         p = profiles.get(company_id)
         m = match(event, profiles.features(p), p["bank_products"])
         agent = Agent(self.llm, self.bank, self.news, today=self.today, bank_meta=self.bank_meta)
