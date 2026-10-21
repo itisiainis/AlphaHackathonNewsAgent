@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS cards(company_id TEXT, card_id TEXT, origin TEXT, jso
                                  PRIMARY KEY(company_id, card_id));
 CREATE TABLE IF NOT EXISTS feedback(company_id TEXT, card_id TEXT, role TEXT, vote TEXT, ts REAL,
                                     PRIMARY KEY(company_id, card_id, role));
+CREATE TABLE IF NOT EXISTS requests(ts REAL, company_id TEXT, card_id TEXT, role TEXT, kind TEXT, label TEXT, comment TEXT);
 CREATE TABLE IF NOT EXISTS runs(ts REAL, company_id TEXT, event_id TEXT, ok INTEGER, errors TEXT,
                                 cost REAL, ms INTEGER, tools INTEGER, revisions INTEGER);
 """
@@ -63,16 +64,22 @@ class Store:
         self._exec("INSERT INTO runs VALUES(?,?,?,?,?,?,?,?,?)",
                    (time.time(), company_id, event_id, int(ok), json.dumps(errors, ensure_ascii=False), cost, ms, tools, revisions))
 
+    def put_request(self, company_id: str, card_id: str, role: str, kind: str, label: str, comment: str) -> None:
+        """Запрос клиента менеджеру из карточки: в рабочей версии уходит в CRM банка, здесь — в журнал."""
+        self._exec("INSERT INTO requests VALUES(?,?,?,?,?,?,?)", (time.time(), company_id, card_id, role, kind, label, comment))
+
     def metrics(self) -> dict:
         q = lambda sql: self._exec(sql).fetchone()  # noqa: E731
         fb_up, fb_down = q("SELECT SUM(vote='up'), SUM(vote='down') FROM feedback")
         runs, ok, cost, ms = q("SELECT COUNT(*), SUM(ok), SUM(cost), AVG(ms) FROM runs")
         by_origin = dict(self._exec("SELECT origin, COUNT(*) FROM cards GROUP BY origin").fetchall())
         votes = (fb_up or 0) + (fb_down or 0)
+        req, req_cards = q("SELECT COUNT(*), COUNT(DISTINCT company_id || card_id) FROM requests")
         return {
             "cards": by_origin,
             "feedback": {"useful": fb_up or 0, "not_relevant": fb_down or 0,
                          "useful_share": round((fb_up or 0) / votes, 2) if votes else None},
+            "requests": {"total": req or 0, "cards": req_cards or 0},  # конверсия инсайта в действие
             "agent_runs": {"total": runs or 0, "passed_validation": ok or 0,
                            "pass_rate": round((ok or 0) / runs, 2) if runs else None,
                            "cost_rub": round(cost or 0, 2), "avg_ms": int(ms or 0)},

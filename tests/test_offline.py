@@ -13,8 +13,8 @@ def card_for(title, text, cid="U_25835"):
 
 
 def test_rate_news_quotes_bank_on_same_topic_and_calculates():
-    card, trace = card_for("ЦБ сохранил ключевую ставку 14%",
-                           "Совет директоров Банка России сохранил ключевую ставку на уровне 14% годовых. Следующее заседание — 23 октября.")
+    card, trace = card_for("ЦБ снизил ключевую ставку до 14%",
+                           "Совет директоров Банка России снизил ключевую ставку с 16% до 14% годовых. Следующее заседание — 23 октября.")
     assert card is not None, trace[-2]["detail"]
     assert "14,0%" in card["blocks"]["bank"]["quote"] and card["sources"][1]["kind"] == "bank"
     assert card["blocks"]["calc"] and all(s["p"] != "ai" for s in card["key_points"])

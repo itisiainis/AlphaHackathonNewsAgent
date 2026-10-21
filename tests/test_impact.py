@@ -84,7 +84,8 @@ def test_profile_text_grounds_profile_inputs():
 
 def test_card_calc_block_validates_and_catches_invented_input():
     from tests.test_agent_loop import EVENT, ScriptedLLM, run
-    res = run(ScriptedLLM())
+    cut = EVENT | {"text": "Совет директоров Банка России 11 сентября снизил ключевую ставку с 16% до 14% годовых."}
+    res = run(ScriptedLLM(), cut)
     card = res.card
     calc = card["blocks"]["calc"][0]
     kinds = {card["sources"][i["src"]]["kind"] for i in calc["inputs"]}
@@ -92,5 +93,16 @@ def test_card_calc_block_validates_and_catches_invented_input():
     assert any(t["title"] == "calculate_impact()" for t in card["trace"]), "расчёт виден в трассе"
     bad = copy.deepcopy(card)
     bad["blocks"]["calc"][0]["inputs"][0]["t"] = "Ставка снижена до 9,5%"
-    texts = {i: s for i, s in enumerate([EVENT["title"] + "\n" + EVENT["text"]])}
+    texts = {0: cut["title"] + "\n" + cut["text"]}
     assert not validate_card(bad, source_texts=texts).ok
+
+
+def test_exposure_without_percent_in_news():
+    out = calcs("Автодилеры сообщили о затоваривании складов и снижении закупок у дистрибьюторов автозапчастей.", AUTO)
+    c = out[0]
+    assert c["title"].startswith("Выручка под влиянием") and c["value"] == "≈ 10,2 млрд ₽ в год"  # 22,3 × 46%
+    assert c["sign"] == "neutral" and "не прогноз потерь" in c["assumptions"][0]
+
+
+def test_hold_rate_gives_no_calc():
+    assert calcs("Банк России сохранил ключевую ставку на уровне 14% годовых.", AUTO) == []

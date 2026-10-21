@@ -33,7 +33,6 @@ select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:
 nav.side{background:#fff;border-right:1px solid var(--line);padding:16px 10px}
 nav.side a{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--ink-2);margin-bottom:2px}
 nav.side a.on{background:var(--bg);color:var(--ink);font-weight:600}
-nav.side a.dis{color:var(--ink-3);pointer-events:none}
 .badge-new{white-space:nowrap;display:inline-block;background:var(--new);color:#fff;border-radius:10px;font-size:11px;padding:0 7px;font-weight:600}
 main{padding:24px;max-width:860px;width:100%;min-width:0}
 h1{font-size:22px;margin:0 0 4px}
@@ -41,8 +40,17 @@ h2{font-size:16px;margin:0}
 .muted{color:var(--ink-3)}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
-.ph{height:10px;border-radius:5px;background:#eceef1;margin:8px 0}
-.ph.w60{width:60%}.ph.w40{width:40%}.ph.w80{width:80%}
+/* сводка компании на главной: только данные банка, без заглушек */
+.kv{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.kv:last-child{border-bottom:0}.kv span:first-child{color:var(--ink-2)}.kv b{font-weight:600;text-align:right}
+.card h3.card-h{font-size:13px;margin:0 0 6px;color:var(--ink)}
+.foot-note{font-size:12px;color:var(--ink-3);margin-top:6px}
+.quick{display:flex;gap:8px;margin:0 0 6px}.quick input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
+.quick-more{font-size:13px;margin:0 0 14px}.quick-more textarea{width:100%;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;margin-top:6px}
+.ctx{font-size:13px;color:var(--ink-2);margin:6px 0 14px}.ctx b{color:var(--ink);font-weight:600}
+nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
+.modal textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px}
+.ev-why{font-size:12px;color:var(--ink-2);margin-top:6px}
 .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px}
 .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
 .btn.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -65,9 +73,6 @@ h2{font-size:16px;margin:0}
 .dot-read{flex:0 0 8px}
 .chip{font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-2)}
 .forwho{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0 14px}
-.filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.filters button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px}
-.filters button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .dq{background:#fff7e0;border:1px solid #f1dc9c;color:#6b4d00;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}
 /* карточка-аккордеон */
 .ic{background:#fff;border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;transition:box-shadow .2s,border-color .2s;scroll-margin-top:70px}
@@ -167,7 +172,7 @@ h2{font-size:16px;margin:0}
 .step.k-pending .st{color:var(--ink-2);font-family:inherit;font-weight:500}
 @keyframes pulse{50%{background:var(--ai)}}
 @media (prefers-reduced-motion:reduce){.step.k-pending .dot{animation:none;background:var(--ai)}}
-.step .st{font-weight:600;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-word}
+.step .st{font-weight:600;font-size:13px;word-break:break-word}
 .step .sd{color:var(--ink-2);font-size:13px}
 .step .sm{font-size:11px;color:var(--ink-3)}
 .totals{border-top:1px solid var(--line);padding:12px 18px;font-size:13px;color:var(--ink-2)}
@@ -181,6 +186,7 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
   .layout{grid-template-columns:minmax(0,1fr)}
   nav.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 10px}
   nav.side a{white-space:nowrap}
+  nav.side .nav-foot{display:none}
   .grid3,.two{grid-template-columns:1fr}
   main{padding:16px}
   .ic-take{font-size:16px}
@@ -201,13 +207,15 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
 </div>
 <div class="overlay" id="overlay"></div>
 <aside class="drawer" id="drawer" aria-label="Шаги агента">
-  <header><b>Как ИИ пришёл к выводу</b><button class="btn" id="drawer-close">Закрыть</button></header>
+  <header><b>Как получен вывод</b><button class="btn" id="drawer-close">Закрыть</button></header>
   <div class="body" id="drawer-body"></div>
   <div class="totals" id="drawer-totals"></div>
 </aside>
-<div class="modal" id="modal">
-  <h2 id="modal-title">Заявка отправлена</h2>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <h2 id="modal-title"></h2>
   <p class="muted" id="modal-text"></p>
+  <form id="modal-form" hidden><textarea name="comment" rows="3" maxlength="1000" placeholder="Что обсудить (необязательно)"></textarea>
+    <button class="btn pri">Отправить менеджеру</button> <button type="button" class="btn" data-close>Отмена</button></form>
   <button class="btn pri" id="modal-ok">Понятно</button>
 </div>
 
@@ -217,7 +225,7 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
    бэкенд без данных (null), данные и действия идут через API. */
 let DATA = JSON.parse(document.getElementById('data').textContent);
 const API = DATA === null;
-const state = {company: null, role: null, filter: 'all', open: null,
+const state = {company: null, role: null, open: null,
   read: new Set(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {}, busy: false};
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
@@ -233,18 +241,23 @@ const IMPACT_RU = {high: 'высокое влияние', medium: 'средне�
 const TYPE_RU = {risk: 'риск', opportunity: 'возможность', info: 'к сведению'};
 const P_RU = {fact: 'факт', bank: 'банк', ai: 'ИИ'};
 const P_FULL = {fact: 'факт', bank: 'позиция банка', ai: 'вывод ИИ'};
-const STR_RU = {high: 'сильно', medium: 'умеренно', low: 'слабо'};
+const STR_RU = {high: 'сильное влияние', medium: 'умеренное влияние', low: 'слабое влияние'};
 const fmtDate = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'});
 const fmtDateY = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'});
 
 const company = () => DATA.companies.find(c => c.id === state.company);
 const role = () => DATA.roles.find(r => r.id === state.role);
-const isNew = i => i.is_new && !state.read.has(state.company + ':' + i.id);
+// «Сегодня» — дата сервера (воспроизводимая демонстрация задаётся APP_TODAY); давность влияет на порядок и метку «Новое»
+const today = () => new Date(((DATA.status && DATA.status.today) || (DATA.generated_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10)) + 'T00:00:00');
+const ageDays = i => Math.max(0, (today() - new Date(i.published + 'T00:00:00')) / 864e5);
+const NEW_DAYS = 14;
+const isNew = i => i.is_new && ageDays(i) <= NEW_DAYS && !state.read.has(state.company + ':' + i.id);
 const takeaway = i => (i.takeaway && (i.takeaway[state.role] || Object.values(i.takeaway)[0])) || i.why_short;
 function ranked() {
   const w = role().weights;
   return (DATA.insights[state.company] || [])
-    .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + (w[t] || 0), 0)}))
+    // старое событие опускается: после недели — минус 0,35 за день (месячное событие ≈ на уровень влияния ниже свежего)
+    .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + (w[t] || 0), 0) - Math.max(0, ageDays(i) - 7) * 0.35}))
     .sort((a, b) => b.score - a.score);
 }
 const newCount = () => ranked().filter(isNew).length;
@@ -281,15 +294,14 @@ function renderNav(route) {
   const n = newCount();
   $('#nav').innerHTML = `
     <a href="#home" class="${route === 'home' ? 'on' : ''}">Главная</a>
-    <a class="dis">Счета</a><a class="dis">Платежи</a><a class="dis">Документы</a>
     <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>
-    ${API ? `<a href="#analyze" class="${route === 'analyze' ? 'on' : ''}">Разобрать новость</a>
-    <a href="#quality" class="${route === 'quality' ? 'on' : ''}">Качество</a>` : ''}`;
+    ${API ? `<div class="nav-foot">Для сотрудников банка<a href="#quality" class="${route === 'quality' ? 'on' : ''}">Качество сервиса</a></div>` : ''}`;
 }
 function renderStatus() {
   // состояние модели и расход — служебная информация: только на странице «Качество», не в шапке
 }
-function showModal(title, text) { $('#modal-title').textContent = title; $('#modal-text').textContent = text;
+function showModal(title, text, form = false) { $('#modal-title').textContent = title; $('#modal-text').textContent = text;
+  $('#modal-form').hidden = !form; $('#modal-ok').hidden = form; if (form) $('#modal-form').reset();
   $('#modal').classList.add('on'); $('#overlay').classList.add('on'); }
 
 /* ---------- фрагменты ---------- */
@@ -315,10 +327,16 @@ function calcHtml(c, i) {
     <details><summary>Данные и допущения</summary>${c.inputs.map(s => stmtHtml(s, i)).join('')}<ul>${c.assumptions.map(a => `<li>${esc(a)}</li>`).join('')}</ul></details></div>`;
 }
 const list = (arr, i) => arr && arr.length ? arr.map(s => stmtHtml(s, i)).join('') : '<div class="muted">—</div>';
+const pctRu = x => x > 0 && x < 0.005 ? 'менее 1%' : Math.round(x * 100) + '%';
+// что влияет на отбор новостей: долг, валютные расчёты, главные отрасли покупателей и поставщиков
 function forWho(c) {
-  const chips = [c.okved + ' ' + c.industry, c.revenue_bn.toLocaleString('ru-RU') + ' млрд ₽', c.region, ...c.products,
-    ...(c.ved.length ? ['ВЭД: ' + c.ved.join(', ')] : []), ...(c.group_size > 1 ? ['группа: ' + c.group_size + ' юрлиц'] : [])];
-  return `<div class="forwho"><span class="muted">Подобрано для:</span>${chips.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>`;
+  const debt = c.products.filter(x => ['кредит', 'лизинг', 'депозиты', 'гарантии'].includes(x));
+  const side = s => s && s.top_industries && s.top_industries[0] ? `${s.top_industries[0].name.replace(/ \(\d+\)$/, '')} — ${pctRu(s.top_industries[0].share)}` : '';
+  const parts = [debt.length ? `<b>${esc(debt.join(', '))}</b>` : '<b>без кредитов в банке</b>',
+    c.ved.length ? `ВЭД: <b>${esc(c.ved.slice(0, 3).join(', '))}</b>` : 'без ВЭД',
+    side(c.counterparties.customers) ? `покупатели: <b>${esc(side(c.counterparties.customers))}</b>` : '',
+    side(c.counterparties.suppliers) ? `поставщики: <b>${esc(side(c.counterparties.suppliers))}</b>` : ''].filter(Boolean);
+  return `<div class="ctx">Учитываем: ${parts.join(' · ')}</div>`;
 }
 function srcShort(i) { const m = i.sources.length - 1; return esc(i.sources[0].name) + (m > 0 ? ` +${m}` : ''); }
 
@@ -356,11 +374,11 @@ function bodyHtml(i) {
       <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(f)}</span>`).join('')}
         ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></div>
     <div class="tools">
-      <button class="btn" data-trace="${i.id}">Как ИИ пришёл к выводу</button>
+      <button class="btn" data-trace="${i.id}">Как получен вывод</button>
       <button class="btn ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}">Задать вопрос</button>
       <span class="sp"></span>
-      <span class="muted">Полезно?</span>
-      <button class="btn ${fb === 'up' ? 'sel' : ''}" data-fb="up">Да</button>
+      <span class="muted">Оценка:</span>
+      <button class="btn ${fb === 'up' ? 'sel' : ''}" data-fb="up">Полезно</button>
       <button class="btn ${fb === 'down' ? 'sel' : ''}" data-fb="down">Не про нас</button>
     </div>
     <div class="chat ${state.chatOpen[i.id] ? 'on' : ''}">
@@ -372,43 +390,76 @@ function bodyHtml(i) {
 }
 
 /* ---------- экраны ---------- */
+// На главной — 3 разных сюжета: два события про одну ставку руководителю не нужны
+function topDistinct(items, k) {
+  const seen = new Set(), out = [];
+  for (const i of items) { const key = (i.topics || [])[0] + '|' + i.type; if (!seen.has(key)) { seen.add(key); out.push(i); } if (out.length === k) return out; }
+  return out.concat(items.filter(i => !out.includes(i))).slice(0, k);
+}
 function viewHome() {
-  const c = company(), top = ranked().slice(0, 3), n = newCount();
+  const c = company(), top = topDistinct(ranked(), 3), n = newCount();
   return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
-    <div class="grid3" style="margin-top:16px">${['Расчётный счёт', 'Валютный счёт', 'Кредиты и лизинг'].map(t => `<div class="card"><div class="muted">${t}</div><div class="ph w60"></div><div class="ph w40"></div></div>`).join('')}</div>
     <div class="card widget">
       <div class="widget-head"><h2>Важное для вашего бизнеса ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
       ${top.length ? top.map(i => `<a class="w-item" href="#feed/${i.id}"><span class="${isNew(i) ? 'dot-new' : 'dot-read'}"></span>
         <span><span class="tag ${i.type}">${TYPE_RU[i.type]}</span><div class="w-take" style="margin-top:4px">${esc(takeaway(i))}</div><div class="w-ev">${esc(i.title)}</div></span></a>`).join('')
         : `<div class="empty">${API ? 'Разобранных событий пока нет. <a class="linkbtn" href="#feed">Посмотреть отобранные новости →</a>' : 'Значимых событий за сутки нет'}</div>`}
     </div>
-    <div class="grid3" style="margin-top:16px">${['Последние платежи', 'Документы на подпись', 'Предложения'].map(t => `<div class="card"><div class="muted">${t}</div><div class="ph w80"></div><div class="ph w60"></div></div>`).join('')}</div>`;
+    ${companySummary(c)}`;
+}
+// Сводка «ваш бизнес в данных банка»: то, от чего зависит влияние новостей на компанию
+function flowCard(title, s, who) {
+  if (!s || !s.n) return `<div class="card"><h3 class="card-h">${title}</h3><div class="muted">В платежах через банк данных нет</div></div>`;
+  const rows = (s.top_industries || []).map(t => `<div class="kv"><span>${esc(t.name.replace(/ \(\d+\)$/, ''))}</span><b>${pctRu(t.share)}</b></div>`).join('');
+  const conc = s.top1_share !== undefined ? `<div class="kv"><span>Крупнейший ${who}</span><b>${pctRu(s.top1_share)}</b></div><div class="kv"><span>Пять крупнейших</span><b>${pctRu(s.top5_share)}</b></div>` : '';
+  return `<div class="card"><h3 class="card-h">${title}</h3>${rows}${conc}
+    <div class="foot-note">${s.n} контрагентов в платежах через банк; отрасль известна для ${pctRu(s.known_share || 0)} суммы</div></div>`;
+}
+function companySummary(c) {
+  const prods = c.products.length ? c.products.join(', ') : 'нет';
+  return `<div class="grid3" style="margin-top:16px">
+    <div class="card"><h3 class="card-h">Компания</h3>
+      <div class="kv"><span>Выручка за год</span><b>${c.revenue_bn.toLocaleString('ru-RU')} млрд ₽</b></div>
+      <div class="kv"><span>Регион</span><b>${esc(c.region)}</b></div>
+      <div class="kv"><span>Продукты банка</span><b>${esc(prods)}</b></div>
+      <div class="kv"><span>ВЭД</span><b>${c.ved.length ? esc(c.ved.join(', ')) : 'нет'}</b></div>
+      ${c.group_size > 1 ? `<div class="kv"><span>Группа</span><b>${c.group_size} юрлиц</b></div>` : ''}</div>
+    ${flowCard('Откуда приходят деньги', c.counterparties.customers, 'плательщик')}
+    ${flowCard('Кому платит компания', c.counterparties.suppliers, 'получатель')}
+  </div>`;
 }
 function viewFeed() {
   const c = company();
-  let items = ranked();
-  if (state.filter !== 'all') items = items.filter(i => i.type === state.filter);
-  const f = (id, label) => `<button data-f="${id}" class="${state.filter === id ? 'on' : ''}">${label}</button>`;
+  const items = ranked();
   const flash = state.flash; state.flash = '';  // уведомление о последнем запуске показываем один раз
   return `<h1>Новости для бизнеса</h1>${forWho(c)}
     ${flash ? `<div class="dq" role="status">${esc(flash)}</div>` : ''}
-    ${c.data_quality.length ? `<div class="dq"><b>Качество данных:</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
-    <div class="filters">${f('all', 'Все')}${f('risk', 'Риски')}${f('opportunity', 'Возможности')}${f('info', 'К сведению')}</div>
-    ${items.length ? items.map(cardHtml).join('') : '<div class="card empty">В этой категории событий нет</div>'}
-    ${API ? `<div class="sec"><h3>Свежие новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
+    ${c.data_quality.length ? `<div class="dq"><b>Данные о компании неполные — выводы ориентировочные.</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
+    ${API ? quickForm() : ''}
+    ${items.length ? items.map(cardHtml).join('') : '<div class="card empty">Разобранных событий пока нет — выберите новость ниже или вставьте ссылку</div>'}
+    ${API ? `<div class="sec"><h3>Ещё новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
+}
+function quickForm() {
+  return `<form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость">
+      <button class="btn pri" ${state.busy ? 'disabled' : ''}>Оценить</button></form>
+    <details class="quick-more"><summary class="linkbtn">Нет ссылки — вставить текст новости</summary>
+      <textarea id="quick-text" rows="5" maxlength="20000" placeholder="Текст новости"></textarea>
+      <button class="btn" id="quick-text-go" ${state.busy ? 'disabled' : ''}>Оценить текст</button> <span id="an-msg" class="muted" role="status"></span></details>`;
 }
 /* События, прошедшие отбор правилами (без LLM): видно, на какие признаки компании они сработали */
 const EVENTS_SHOWN = 5;
 function eventsHtml() {
-  const ev = state.events[state.company];
+  let ev = state.events[state.company];
   if (ev === undefined) return '<div class="muted">Подбираем новости…</div>';
   if (!ev.length) return '<div class="card empty">Значимых для компании новостей за последние дни нет</div>';
+  ev = ev.filter(e => !e.analyzed);  // разобранные уже в ленте карточками
+  if (!ev.length) return '<div class="card empty">Все значимые новости по профилю уже разобраны</div>';
   const more = state.moreEvents ? ev : ev.slice(0, EVENTS_SHOWN);
   return more.map(e => `<div class="card" style="margin-bottom:8px">
     <div class="ic-meta"><span class="imp">${esc(e.source)}${e.also ? ` +${e.also}` : ''}</span><span class="ic-date">${fmtDate(e.published)}</span></div>
     <div class="ic-event">${srcLink(e, esc(e.title))}</div>
-    <div style="margin-top:6px">${e.matched.map(m => `<span class="chip f">${esc(m)}</span>`).join('')}</div>
-    <div class="actions-row">${e.analyzed ? '<span class="muted">Разобрано — карточка в ленте</span>' : `<button class="btn" data-ev="${e.id}" ${state.busy ? 'disabled' : ''}>Разобрать для компании</button>`}</div></div>`).join('')
+    <div class="ev-why">Почему вам: ${esc(e.matched.join(' · '))}</div>
+    <div class="actions-row">${e.analyzed ? '<span class="muted">Разобрано — карточка в ленте</span>' : `<button class="btn" data-ev="${e.id}" ${state.busy ? 'disabled' : ''}>Получить разбор</button>`}</div></div>`).join('')
     + (ev.length > more.length ? `<button class="btn" data-more-events>Показать ещё ${ev.length - more.length}</button>` : '');
 }
 async function loadEvents() {
@@ -464,16 +515,6 @@ function bindEvents() {
   const more = document.querySelector('[data-more-events]');
   if (more) more.onclick = () => { state.moreEvents = true; $('#events-box').innerHTML = eventsHtml(); bindEvents(); };
 }
-function viewAnalyze() {
-  return `<h1>Разобрать новость</h1><div class="muted">Вставьте ссылку (статья, пост в Telegram, PDF) или текст новости, которой нет в ленте, — агент разберёт её для компании «${esc(company().display)}» и роли «${esc(role().name)}». Достаточно одной ссылки: текст мы прочитаем сами.</div>
-    <form class="card" id="an-form" style="margin-top:16px;display:grid;gap:10px">
-      <input name="url" type="url" placeholder="Ссылка: https://… (статья, t.me/канал/пост, PDF)" maxlength="500" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px">
-      <div class="muted" style="font-size:13px">или вставьте текст, если ссылки нет или сайт закрыт для чтения</div>
-      <input name="title" placeholder="Заголовок (необязательно)" maxlength="300" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px">
-      <textarea name="text" placeholder="Текст новости" rows="8" maxlength="20000" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px"></textarea>
-      <div><button class="btn pri" ${state.busy ? 'disabled' : ''}>Разобрать</button> <span id="an-msg" class="muted" role="status"></span></div>
-    </form>`;
-}
 function viewQuality() {
   return `<h1>Качество сервиса</h1><div class="muted">Метрики для регулярного мониторинга: обратная связь, проверка карточек, расход модели.</div><div id="q-box" class="card" style="margin-top:16px">Загружаем…</div>`;
 }
@@ -482,6 +523,7 @@ async function loadQuality() {
     const m = await api('/api/metrics'), f = m.feedback, r = m.agent_runs, pct = x => x === null ? '—' : Math.round(x * 100) + '%';
     $('#q-box').innerHTML = `<div class="grid3">
       <div><div class="muted">Полезно / не про нас</div><h2>${f.useful} / ${f.not_relevant}</h2><div class="muted">доля полезных ${pct(f.useful_share)}</div></div>
+      <div><div class="muted">Запросы менеджеру из карточек</div><h2>${m.requests ? m.requests.total : 0}</h2><div class="muted">по ${m.requests ? m.requests.cards : 0} разборам</div></div>
       <div><div class="muted">Запусков агента</div><h2>${r.total}</h2><div class="muted">прошли проверку ${pct(r.pass_rate)}</div></div>
       <div><div class="muted">Расход модели</div><h2>${r.cost_rub.toLocaleString('ru-RU')} ₽</h2><div class="muted">среднее время ${(r.avg_ms / 1000).toFixed(1).replace('.', ',')} с</div></div></div>
       <div class="src-line">Разборов в базе: ${Object.entries(m.cards).map(([k, v]) => `${ORIGIN_RU[k] || k} — ${v}`).join(', ')}</div>
@@ -520,8 +562,8 @@ function stepTitle(t) {
   return TOOL_RU[m[1]] + (qs && m[1].startsWith('search') ? `: «${qs}»` : '');
 }
 const stepHtml = (s, shown) => `<div class="step k-${s.kind}${shown ? ' shown' : ''}"><span class="dot"></span><div class="st">${esc(stepTitle(s.title))}</div><div class="sd">${esc(s.detail)}</div>
-    <div class="sm">${s.ms ? (s.ms / 1000).toFixed(1).replace('.', ',') + ' с' : ''}${s.cost ? ' · ' + rub(s.cost) + ' ₽' : ''}</div></div>`;
-const totalsText = tr => `Шагов: ${tr.length} · время: ${(tr.reduce((a, s) => a + s.ms, 0) / 1000).toFixed(1).replace('.', ',')} с · стоимость: ${rub(tr.reduce((a, s) => a + s.cost, 0))} ₽`;
+    <div class="sm">${s.ms ? (s.ms / 1000).toFixed(1).replace('.', ',') + ' с' : ''}</div></div>`;
+const totalsText = tr => `Шагов: ${tr.length} · время: ${(tr.reduce((a, s) => a + s.ms, 0) / 1000).toFixed(1).replace('.', ',')} с`;
 /* Трасса во время работы агента: готовые шаги + строка «что происходит сейчас» */
 function liveTrace(trace, pending) {
   traceTimers.forEach(clearTimeout); traceTimers = [];
@@ -547,16 +589,19 @@ function render(scrollToOpen = false) {
   if (r === 'feed' && arg && state.open !== arg) { state.open = arg; markRead(arg); scrollToOpen = true; }
   if (!state.busy) closeOverlays();
   renderNav(r); renderStatus();
-  const views = {feed: viewFeed, analyze: viewAnalyze, quality: viewQuality};
+  if (r === 'analyze') { location.replace('#feed'); return; }  // старые ссылки на отдельную страницу
+  const views = {feed: viewFeed, quality: viewQuality};
   $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))();
   state.firstPaint = false;
   bind();
   if (r === 'feed') { loadEvents(); bindEvents(); }
   if (r === 'quality' && API) loadQuality();
-  if (r === 'analyze' && API) $('#an-form').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target);
-    const body = {company_id: state.company, title: f.get('title').trim(), text: f.get('text').trim(), url: f.get('url').trim()};
-    if (!body.url && body.title.length < 5 && body.text.length < 40) { $('#an-msg').textContent = 'Нужна ссылка на новость, заголовок или текст'; return; }
-    runAgent('/api/analyze', body); };
+  if (r === 'feed' && API && $('#quick-an')) {
+    $('#quick-an').onsubmit = e => { e.preventDefault(); const url = e.target.url.value.trim(); if (url) runAgent('/api/analyze', {company_id: state.company, url}); };
+    $('#quick-text-go').onclick = () => { const text = $('#quick-text').value.trim();
+      if (text.length < 40) { $('#an-msg').textContent = 'Вставьте текст новости — хотя бы пару предложений'; return; }
+      runAgent('/api/analyze', {company_id: state.company, title: text.split(/[.!?\n]/)[0].slice(0, 200), text}); };
+  }
   if (scrollToOpen && state.open) { const el = document.getElementById('card-' + state.open); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
   else if (!arg) window.scrollTo(0, 0);
 }
@@ -568,7 +613,6 @@ function toggle(id) {
   render(true);
 }
 function bind() {
-  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { state.filter = b.dataset.f; render(); });
   document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => toggle(b.dataset.toggle));
   if (!state.open) return;
   const i = ranked().find(x => x.id === state.open); if (!i) return;
@@ -582,11 +626,12 @@ function bind() {
     out.textContent = v > 0 ? '→ ' + rubFmt(v * +inp.dataset.per, inp.dataset.signed === 'true') + ' ' + inp.dataset.period : '→ введите сумму, чтобы пересчитать';
   });
   card.querySelectorAll('[data-cta]').forEach(b => b.onclick = () => {
-    const mgr = b.dataset.cta === 'manager';
-    $('#modal-title').textContent = mgr ? 'Заявка отправлена' : b.dataset.label;
-    $('#modal-text').textContent = mgr ? 'Персональный менеджер свяжется с вами в течение рабочего дня. К заявке приложена эта карточка.'
-      : 'Менеджер подготовит условия продукта под профиль компании и свяжется с вами в течение рабочего дня.';
-    $('#modal').classList.add('on'); $('#overlay').classList.add('on');
+    if (!API) { showModal(b.dataset.label, 'Обратитесь к вашему персональному менеджеру — разбор события он увидит в карточке клиента.'); return; }
+    showModal(b.dataset.label, 'Менеджер получит этот разбор и свяжется с вами в течение рабочего дня.', true);
+    $('#modal-form').onsubmit = async e => { e.preventDefault();
+      try { await api(`/api/cards/${i.id}/request`, {company_id: state.company, role: state.role, kind: b.dataset.cta, label: b.dataset.label, comment: e.target.comment.value});
+        showModal('Запрос передан менеджеру', 'Менеджер свяжется с вами в течение рабочего дня. К запросу приложен разбор события.');
+      } catch (err) { showModal('Запрос не отправлен', err.message); } };
   });
   const log = card.querySelector('.chat-log');
   const push = (q, html) => { (state.chats[i.id] = state.chats[i.id] || []).push(`<div class="msg u">${esc(q)}</div>`, `<div class="msg a">${html}</div>`); log.innerHTML = state.chats[i.id].join(''); };
@@ -601,7 +646,7 @@ function bind() {
     } catch (err) { (state.chats[i.id] = state.chats[i.id] || []).push(`<div class="msg u">${esc(q)}</div>`, `<div class="msg a muted">${esc(err.message)}</div>`); }
     log.innerHTML = state.chats[i.id].join(''); };
 }
-$('#overlay').onclick = closeOverlays; $('#drawer-close').onclick = closeOverlays; $('#modal-ok').onclick = closeOverlays;
+$('#overlay').onclick = closeOverlays; $('#drawer-close').onclick = closeOverlays; $('#modal-ok').onclick = closeOverlays; $('#modal [data-close]').onclick = closeOverlays;
 window.addEventListener('hashchange', () => render());
 (async function boot() {
   if (API) {

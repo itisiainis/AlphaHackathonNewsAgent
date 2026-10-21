@@ -68,17 +68,18 @@ class ScriptedLLM:
         return Completion(json.dumps(out, ensure_ascii=False), role, 100, 50, 0.01, 5, False)
 
 
-def run(llm):
+def run(llm, event=EVENT):
     p = profiles.get("U_25835")
-    m = match(EVENT, profiles.features(p), p["bank_products"])
-    return Agent(llm, BANK, NEWS, today=TODAY).run(EVENT, "U_25835", m)
+    m = match(event, profiles.features(p), p["bank_products"])
+    return Agent(llm, BANK, NEWS, today=TODAY).run(event, "U_25835", m)
 
 
 def test_full_cycle_produces_valid_card():
     res = run(ScriptedLLM())
     assert res.card is not None, res.report.errors
     c = res.card
-    assert [s["kind"] for s in c["sources"]] == ["news", "bank", "stat"], "stat — профиль компании для расчёта"
+    assert [s["kind"] for s in c["sources"]] == ["news", "bank"]
+    assert "calc" not in c["blocks"], "ставка не изменилась — расчёта эффекта нет"
     assert c["key_points"][1]["src"] == 1 and c["blocks"]["what"][0]["src"] == 0
     assert c["blocks"]["bank"]["date"] == "2026-09-11" and not c["blocks"]["bank"]["stale"]
     kinds = [t["kind"] for t in c["trace"]]
