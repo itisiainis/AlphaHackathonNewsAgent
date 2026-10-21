@@ -20,7 +20,8 @@ COPY data/news/events.sample.json ./data/news/
 COPY data/cards ./data/cards
 COPY data/eval ./data/eval
 
-RUN useradd --create-home app && mkdir -p /app/data/cache && chown -R app /app/data
+# код читается непривилегированным пользователем при любом umask на машине, где собирают образ
+RUN chmod -R a+rX /app && useradd --create-home app && mkdir -p /app/data/cache && chown -R app /app/data
 USER app
 
 ENV COLLECT_ON_START=1
