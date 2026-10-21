@@ -161,8 +161,11 @@ def merge_store(path: Path, fresh: list[dict], today: datetime) -> list[dict]:
     return events
 
 
-def collect(hours: int = 48, llm=None) -> dict:
+def collect(hours: int = 48, llm=None, disabled: set[str] | None = None) -> dict:
+    """disabled — названия источников, отключённых сотрудником банка в панели управления."""
     sources = json.loads((ROOT / "data" / "sources.json").read_text(encoding="utf-8"))
+    for kind in ("rss", "telegram"):
+        sources[kind] = [x for x in sources.get(kind, []) if x["name"] not in (disabled or set())]
     posts, failures = asyncio.run(fetch_all(sources, hours))
     events = to_events(posts)
     triaged = triage(llm, events) if llm is not None and getattr(llm, "online", False) else 0
