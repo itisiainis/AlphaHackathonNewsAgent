@@ -27,9 +27,13 @@ from agent.contract import validate_card
 from agent.learning import Learner
 from agent.llm import LLM, LLMUnavailable
 from agent.loop import refresh_saved
+from agent.offline import CHANNELS_STEP
 from agent.offline import UNAVAILABLE as OFFLINE_NOTICE
 from agent.okved import short_name
 from agent.pipeline import Pipeline, event_from_text
+from agent.sensitivity import diverse as diverse_events
+from agent.sensitivity import factors as factors_of
+from agent.sensitivity import hits as factor_hits_of
 from agent.slices import SUGGESTED, data_answer
 
 from .store import Store
@@ -131,6 +135,29 @@ SKIPPED_PRECOMPUTED: dict[str, list[str]] = {}  # в панели управле
 _load_precomputed()
 
 
+def _refresh_rules() -> None:
+    """Краткие разборы из кеша прошлого запуска, собранные до каналов влияния (вывод-ярлык вместо вывода), пересобираются
+    по тому же событию: из потока новостей или из новостей, которые прислал клиент. Событие выпало из потока — разбор
+    остаётся как был."""
+    for cid, card, _, _ in store.all_cards("rules"):
+        if any(st.get("title") == CHANNELS_STEP for st in card.get("trace", [])):
+            continue
+        eid = card["id"][: -len(cid) - 1] if card["id"].endswith("-" + cid) else card["id"]
+        ev = next((e for e in pipe.events if e["id"] == eid), None) or store.user_event(cid, eid)
+        if not ev or profiles.get(cid) is None:
+            continue
+        try:
+            fresh, _, _ = pipe.rules(ev, cid, fetch=False)
+        except Exception:  # пересборка одного разбора не должна мешать запуску
+            log.exception("пересборка краткого разбора %s", card["id"])
+            continue
+        if fresh:
+            store.put_card(cid, fresh, "rules")
+
+
+_refresh_rules()
+
+
 COLLECT_EVERY_MIN = int(os.environ.get("COLLECT_EVERY_MIN", "60"))
 # Разметка новостей моделью Gemma при сборе: ~0,003 ₽ за пачку из 20 новостей. 0 — только словари, без расхода
 COLLECT_TRIAGE = os.environ.get("COLLECT_TRIAGE", "1") == "1"
@@ -178,7 +205,13 @@ def _company(cid: str) -> dict:
     v = profiles.view(p)
     if mock:
         v["display"] = mock["display"]  # подписи демо-компаний команда сформулировала вручную
+    v["factors"] = factors_of(p)  # факторы чувствительности по данным банка (agent/sensitivity.py) — блок на главной
     return v
+
+
+def _factor_hits(company: dict, cards: list[dict]) -> dict[str, list[str]]:
+    """Какие факторы чувствительности затрагивает каждая карточка — для блока «Чувствительность бизнеса» и метки карточки."""
+    return {c["id"]: h for c in cards if (h := factor_hits_of(c, company["factors"]))}
 
 
 def _status() -> dict:
@@ -219,8 +252,10 @@ def bootstrap():
                      "sector": short_name(profiles.get(i)["okved2"]),
                      "revenue_bn": round(profiles.get(i)["revenue_rub"] / 1e9, 1)} for i in profiles.all_ids()),
                    key=lambda x: -x["revenue_bn"])
+    companies = [_company(i) for i in ids]
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
-            "companies": [_company(i) for i in ids], "all_companies": all_c,
+            "companies": companies, "all_companies": all_c,
+            "factor_hits": {c["id"]: _factor_hits(c, insights[c["id"]]) for c in companies},
             "insights": insights, "origins": origins, "user_cards": user_cards, "status": _status(), "chat_suggestions": SUGGESTED,
             "follow_ups": FOLLOW_UPS, "learned": learner.topic_weights()}
 
@@ -232,7 +267,7 @@ def _ensure_briefs(cid: str) -> None:
     """У каждой компании в ленте сразу есть разборы: для лучших по отбору событий — краткий разбор без модели
     (бесплатно, миллисекунды). Полный разбор ИИ — по кнопке. Свежие события важнее примеров команды."""
     have = {c["id"] for c, o in store.cards(cid) if o != "seed"}
-    for ev, _ in pipe.ranked(cid, BRIEFS):
+    for ev, _ in diverse_events(pipe.ranked(cid, 12), BRIEFS):  # лучшие события по разным факторам чувствительности
         if f"{ev['id']}-{cid}" in have:
             continue
         try:
@@ -249,8 +284,9 @@ def company(cid: str):
     _company(cid)
     _ensure_briefs(cid)
     rows = _visible(cid)
-    return {"company": _company(cid), "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows},
-            "user_cards": store.user_card_ids(cid)}
+    comp = _company(cid)
+    return {"company": comp, "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows},
+            "user_cards": store.user_card_ids(cid), "factor_hits": _factor_hits(comp, [c for c, _ in rows])}
 
 
 def _role_weights(role: str) -> dict:
@@ -503,7 +539,7 @@ def chat(card_id: str, body: ChatIn):
 
 class FeedbackIn(BaseModel):
     company_id: str
-    role: str = Field(pattern="^(cfo|ceo|treasurer)$")
+    role: str = Field(pattern="^(cfo|ceo|treasurer|accountant)$")
     vote: str = Field(pattern="^(up|down)$")
 
 
@@ -515,7 +551,7 @@ def feedback(card_id: str, body: FeedbackIn):
 
 class RequestIn(BaseModel):
     company_id: str
-    role: str = Field(pattern="^(cfo|ceo|treasurer)$")
+    role: str = Field(pattern="^(cfo|ceo|treasurer|accountant)$")
     kind: str = Field(pattern="^(manager|product)$")
     label: str = Field(max_length=120)
     comment: str = Field(default="", max_length=1000)

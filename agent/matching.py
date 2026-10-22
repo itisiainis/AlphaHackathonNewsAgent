@@ -78,6 +78,11 @@ CB_PAST = re.compile(r"\bв (?:январе|феврале|марте|апрел
                      r"\bс (?:лета|весны|осени|зимы|начала года)\b|\bранее\b|после того как|в прошлом|хотя")
 CB_EXPECT = re.compile(r"\bжд[её]т|\bждут|ожида|прогноз|\bмо(?:жет|гут)\b|рассчитыва|закладыва")
 CB_BASE = SELECT_MIN
+# Смена общей ставки налога касается всех компаний — как решение ЦБ: НДС или налог на прибыль «с 20% до 22%»,
+# «повысить НДС до 22%» в заголовке или первой фразе. Льготный НДС на отдельные товары и вычеты сюда не попадают
+TAX_CHANGE = re.compile(r"(?:ндс|налог\w* на (?:добавленную стоимость|прибыль))[^.]{0,80}?(?:\bс\s+\d{1,2}(?:[.,]\d)?\s*%\s+до\s+"
+                        r"\d{1,2}(?:[.,]\d)?\s*%|(?:повы|подн|увелич|сниз|пониз)\w*[^.]{0,40}?\bдо\s+\d{1,2}(?:[.,]\d)?\s*%)")
+TAX_BASE = SELECT_MIN
 BANK_VOICE = bank_voice_sources()  # каналы самого банка: bank_voice в data/sources.json
 
 
@@ -126,6 +131,13 @@ def cb_decision(title: str, text: str) -> bool:
         if CB_BANK.search(s) and re.search(r"ключев\w* ставк", s) and CB_VERB.search(s):
             return True
     return False
+
+
+def tax_change(title: str, text: str) -> bool:
+    """Смена общей ставки НДС или налога на прибыль — в заголовке или первой фразе (не упоминание в середине текста)."""
+    body = text[len(title):] if title and text.startswith(title) else text
+    first = okved.SENTENCE_END.split(body.strip()[:600], maxsplit=1)[0] if body.strip() else ""
+    return any(TAX_CHANGE.search(s.lower().replace("ё", "е")) for s in (title, first))
 
 
 def _country_rx(c: str) -> str:
@@ -188,6 +200,9 @@ def match(event: dict, feats: dict, products: list[str]) -> Match:
             _add(m, "решение Банка России по ставке", "кредитов в Альфа-Банке у вас нет — влияние через покупателей и курс",
                  CB_BASE, kind="macro")
 
+    if tax_change(title, body):
+        _add(m, "изменение налога для всех компаний", "ставка налога меняет цены и расходы любой компании", TAX_BASE, kind="tax")
+
     if "курс" in topics and feats["ved"]:
         countries = feats["countries"]
         _add(m, "ВЭД: " + ", ".join(country_name(c) for c in countries[:3]),
@@ -215,7 +230,7 @@ def match(event: dict, feats: dict, products: list[str]) -> Match:
             enough = feats.get(kind + "_n", FLOW_MIN_N) >= FLOW_MIN_N
             if share >= FLOW_MIN and enough:
                 _add(m, f"{round(share * 100)}% {name} — {who(s)}", why + note, 6 * share * k, kind=kind, sector=s,
-                     share=round(share, 2))
+                     share=round(share, 3))  # доля как в подписи и профиле: 0,835 → «84%», а не «83%»
 
     hit = _sanctions(title, body, own_goods, feats["countries"])
     if hit and hit[0] == "goods":

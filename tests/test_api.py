@@ -116,3 +116,13 @@ def test_pasted_news_can_be_upgraded_and_is_marked_as_users(client):
     assert r.status_code == 200 and r.json()["card"]["id"] == b["card"]["id"]   # без ключа — краткий разбор, но не 404
     assert b["card"]["id"] in client.get("/api/companies/U_177581").json()["user_cards"]
     assert b["card"]["id"] in client.get("/api/bootstrap").json()["user_cards"]["U_177581"]
+
+
+def test_company_has_sensitivity_factors_and_hits(client):
+    d = client.get("/api/companies/U_25835").json()
+    ids = [f["id"] for f in d["company"]["factors"]]
+    assert ids[0] == "rate" and "buyers" in ids
+    assert d["factor_hits"] and all(set(h) <= set(ids) for h in d["factor_hits"].values())
+    assert set(client.get("/api/bootstrap").json()["factor_hits"]) >= {"U_25835", "U_177581", "U_200890"}
+    r = client.post("/api/cards/i-rate-auto/feedback", json={"company_id": "U_25835", "role": "accountant", "vote": "up"})
+    assert r.status_code == 200, "главный бухгалтер — допустимая роль"
