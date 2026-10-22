@@ -18,13 +18,15 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from . import profiles
+from . import house_view, profiles
 from .contract import Report, validate_card
 from .contract.validator import numbers_in
+from .ingest.bank_docs import strip_artefacts
 from .kb import BM25Index
 from .llm import LLM, NO_REASONING, ROUTING, LLMUnavailable, extract_json
 from .matching import Match
-from .prompts import AGENT_SYSTEM, CHECK_SYSTEM, DRAFT_SYSTEM, ROLES_RU, tools_block
+from .offline import NO_BANK_VIEW, _bank_quote, _stems
+from .prompts import AGENT_SYSTEM, CHECK_SYSTEM, DRAFT_SYSTEM, ROLES_RU, house_view_block, tools_block
 from .tools import ToolSession
 
 MAX_TOOL_STEPS = 5
@@ -39,12 +41,47 @@ BANK_VIEW = re.compile(r"прогноз|ожида|считае|полагае|�
 
 
 def quote_matches(quote: str, source: str, share: float = 0.6) -> bool:
-    """Цитата банка должна опираться на текст документа: не меньше 60% её слов (по основе из 5 букв) есть в источнике."""
+    """Утверждение опирается на текст документа: не меньше 60% его слов (по основе из 5 букв) есть в источнике.
+    Мягкая проверка пересказа («Проще говоря» рядом с цитатой, позиция банка в коротком слое);
+    цитата blocks.bank.quote — только verbatim()."""
     words = {w[:5] for w in re.findall(r"[а-яёa-z]{5,}", quote.lower())}
     if not words:
         return True
     src = {w[:5] for w in re.findall(r"[а-яёa-z]{5,}", source.lower())}
     return len(words & src) / len(words) >= share
+
+
+QUOTE_MIN = 20  # короче — не цитата, а пара слов из документа
+
+
+def norm_quote(text: str) -> str:
+    """Текст для сверки дословности. Различия, которых читатель не видит или которые внёс OCR, не считаются:
+    регистр, ё/е, пробелы, мягкий перенос и перенос слова по строкам («ожи-\\nдаем»), вид кавычек и тире,
+    ссылки на рисунки («(cm Рис.7)»); точку, запятую и точку с запятой OCR путает — для сверки это один знак."""
+    t = strip_artefacts(text).replace("\xad", "").lower().replace("ё", "е")
+    t = re.sub(r"[‐‑‒–—―−]", "-", t)
+    t = re.sub(r"(?<=[а-яa-z])-\s+(?=[а-яa-z])", "", t)
+    t = re.sub(r"[«»„“”‟\"'‘’‚]", '"', t)
+    t = re.sub(r"[.,;]", ",", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def verbatim(quote: str, source: str) -> bool:
+    """Цитата банка — непрерывный кусок текста документа после norm_quote: от границы слова до границы слова и
+    без отрезанного отрицания («ожидаем снижения» из «не ожидаем снижения» — не цитата). Внешние кавычки и
+    многоточия по краям не мешают; многоточие внутри — пропуск текста, такая «цитата» не дословна."""
+    q = norm_quote(quote).strip(' "…,')
+    if len(q) < QUOTE_MIN:
+        return False
+    src = norm_quote(source)
+    at = src.find(q)
+    while at >= 0:
+        end = at + len(q)
+        if ((at == 0 or not src[at - 1].isalnum()) and (end == len(src) or not src[end].isalnum())
+                and not re.search(r"(?:^|\s)н[еи]\s*$", src[max(0, at - 4):at])):
+            return True
+        at = src.find(q, at + 1)
+    return False
 
 
 CODE_RE = re.compile(r"\s*\((?:ОКВЭД\s*)?\d{2}(?:\.\d+)*\)")
@@ -111,7 +148,8 @@ class Agent:
 
     @staticmethod
     def _sources_block(ses: ToolSession) -> str:
-        return "\n\n".join(f"[{s.label}] {s.kind} · {s.name} · {s.date}{' · УСТАРЕЛО' if s.stale else ''}\n{s.text[:1200]}"
+        return "\n\n".join(f"[{s.label}] {s.kind} · {s.name} · {s.date}{' · УСТАРЕЛО' if s.stale else ''}"
+                           f"{' · ' + s.revised if s.revised else ''}\n{s.text[:1200]}"
                            for s in ses.sources)
 
     # ---------- основной сценарий ----------
@@ -136,7 +174,7 @@ class Agent:
                     tool = "search_news" if verdict.get("research_in") == "news" else "search_bank_analytics"
                     res, entry = ses.call(tool, {"query": q})
                     trace.append({"kind": "research", "title": f"{tool}(\"{q}\")",
-                                  "detail": f"повторный поиск по замечанию проверки: {_count(res)} объект(ов)",
+                                  "detail": f"повторный поиск по замечанию проверки: {_count(res)} объект(ов)" + ses.note(res),
                                   "ms": entry["ms"], "cost": 0})
                     observations.append({"tool": tool, "args": {"query": q}, "result": res})
                 good = (card, rep) if rep.ok else None
@@ -203,7 +241,7 @@ class Agent:
             args = ", ".join(f"{k}={json.dumps(v, ensure_ascii=False)}" for k, v in (act.get("args") or {}).items())
             trace.append({"kind": "tool", "title": f"{name}({args})", "ms": entry["ms"] + think["ms"], "cost": think["cost"],
                           "detail": (act.get("thought") or "")[:200] + (" · ошибка: " + result["error"] if not entry["ok"] else
-                                     f" · результат: {_count(result)} объект(ов)")})
+                                     f" · результат: {_count(result)} объект(ов)" + ses.note(result))})
             observations.append({"tool": name, "args": act.get("args"), "result": result})
             self._emit(trace, "Модель выбирает следующий шаг…")
             messages += [{"role": "assistant", "content": json.dumps(act, ensure_ascii=False)},
@@ -219,7 +257,7 @@ class Agent:
         res, entry = ses.call("search_bank_analytics", {"query": q})
         observations.append({"tool": "search_bank_analytics", "args": {"query": q}, "result": res})
         trace.append({"kind": "tool", "title": f"search_bank_analytics(\"{q[:60]}\")", "ms": entry["ms"], "cost": 0,
-                      "detail": f"обязательный шаг (модель не искала позицию банка): {_count(res)} фрагм."})
+                      "detail": f"обязательный шаг (модель не искала позицию банка): {_count(res)} фрагм." + ses.note(res)})
         self._emit(trace)
 
     def _calculate(self, ses: ToolSession, observations: list[dict], trace: list) -> None:
@@ -251,7 +289,8 @@ class Agent:
             user += "\n\nУроки прошлых разборов (частые замечания проверки — не повторяй):\n- " + "\n- ".join(self.lessons)
         if issues:
             user += "\n\nЗамечания проверки, которые нужно исправить:\n- " + "\n- ".join(issues[:10])
-        system = DRAFT_SYSTEM.format(roles=", ".join(f"{k} — {v}" for k, v in ROLES_RU.items()))
+        system = (DRAFT_SYSTEM.format(roles=", ".join(f"{k} — {v}" for k, v in ROLES_RU.items()))
+                  + house_view_block(self.today, ses.sources))  # действующие прогнозы банка (agent/house_view.py)
         draft = self._ask("draft", [{"role": "system", "content": system}, {"role": "user", "content": user}],
                           trace, "draft", "Черновик карточки" if not issues else "Правка черновика", max_tokens=10000, think=not issues)
         n = sum(len(draft.get("blocks", {}).get(b, [])) for b in ("what", "why", "risks", "opportunities", "actions"))
@@ -381,28 +420,41 @@ class Agent:
         b = draft.get("blocks", {})
         blocks = {k: stmts(b.get(k)) for k in ("what", "why", "risks", "opportunities", "actions")}
         key_points = stmts(draft.get("key_points"))[:3]
-        bank_src = by_label.get((b.get("bank") or {}).get("src") or "")
-        quote = (b.get("bank") or {}).get("quote", "")
-        if bank_src and bank_src.kind == "bank" and quote and not quote_matches(quote, bank_src.text):
-            # «цитата» не похожа на текст документа (модель написала своими словами) — цитатой её не показываем
-            repairs.append("позиция банка не совпала с текстом документа → убрана")
+        bank_in = b.get("bank") if isinstance(b.get("bank"), dict) else {}
+        bank_src = by_label.get(bank_in.get("src") or "")
+        if bank_src and bank_src.kind != "bank":
+            bank_src = None
+        quote = str(bank_in.get("quote") or "").strip()
+        plain = no_codes(str(bank_in.get("plain") or "").strip())
+        if bank_src and not (quote and verbatim(quote, bank_src.text)):
+            # цитата — только дословно: пересказ или дописанный хвост («…», при этом инфляция …) цитатой не показываем
+            said, quote = quote, ""
             if not bank_src.stale:
-                bank_src = None
-            quote = ""
-        if bank_src and bank_src.kind == "bank" and bank_src.stale and not quote:
+                # дословное предложение-позицию берём из того же фрагмента, как в разборе без модели (agent/offline.py)
+                ev = ses.event
+                quote = _bank_quote(bank_src.text, _stems(" ".join([ev.get("title", ""), ev.get("text", "")[:1500], said])),
+                                    title=bank_src.doc, event=ev, today=self.today, doc_date=bank_src.date)
+            if quote:
+                repairs.append("цитата банка не дословная → дословное предложение того же документа" if said else
+                               "цитата банка → дословное предложение документа")
+                if said and not plain and quote_matches(said, quote) and not house_view.revisions_in(said, self.today):
+                    plain = no_codes(said)  # пересказ той же мысли — «проще говоря», вывод ИИ рядом с дословной цитатой
+            elif said:
+                repairs.append("позиция банка не совпала с текстом документа → убрана")
+            if not quote and not bank_src.stale:
+                bank_src = None  # дословной позиции банка во фрагменте нет — честная плашка
+        if bank_src and bank_src.stale and not quote:
             idx(bank_src.label)
             bank = {"quote": "", "doc": f"Свежей оценки банка нет. Последняя — «{bank_src.doc or bank_src.name}» "
                                        f"от {bank_src.date}: старше 12 месяцев, в выводе не используется",
                     "date": bank_src.date, "stale": True}
-        elif bank_src and bank_src.kind == "bank":
+        elif bank_src:
             idx(bank_src.label)
             bank = {"quote": quote, "doc": bank_src.doc or bank_src.name, "date": bank_src.date, "stale": bank_src.stale}
-            plain = no_codes(str((b.get("bank") or {}).get("plain") or "").strip())
             if quote and plain and not bank_src.stale:
                 bank["plain"] = plain  # «проще говоря» — вывод ИИ рядом с дословной цитатой
         else:
-            bank = {"quote": "", "doc": "Отраслевой оценки банка по этому событию нет — вывод на основе данных компании и новости",
-                    "date": self.today.isoformat(), "stale": False}
+            bank = {"quote": "", "doc": NO_BANK_VIEW, "date": self.today.isoformat(), "stale": False}
 
         # расчёты — после текста и позиции банка, чтобы источники карточки шли в порядке чтения
         calc = [c | {"inputs": [{**i, "src": idx(i["src"])} for i in c["inputs"]]} for c in ses.calcs]

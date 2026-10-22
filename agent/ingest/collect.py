@@ -12,6 +12,8 @@
    и отрасли отбрасываются (политика, спорт, происшествия) — это дешёвый первый фильтр.
 4. Если задан ключ модели — Gemma пачками по 20 уточняет важность, темы, отрасли и помечает
    рекламу (схема пачечной оценки — из бота). Без ключа важность считается эвристикой.
+5. Каналы самого банка (bank_voice: true в data/sources.json) дают событиям пометку bank_voice: пост, где говорит
+   экономист банка, — это позиция банка, а не пересказ рынка (agent/kb.py add_posts, scripts/build_house_view.py).
 """
 from __future__ import annotations
 
@@ -110,7 +112,8 @@ def to_events(posts: list[tuple[Post, dict]]) -> list[dict]:
             events.append({"id": _event_id(p), "title": _title(p), "text": text,
                            "published": p.date.date().isoformat(), "source": src["name"],
                            "kind": src.get("kind", "news"), "url": p.link, "official": bool(src.get("official")),
-                           "topics": topics, "sectors": sectors, "also": [], "importance": 0, "gist": ""})
+                           "topics": topics, "sectors": sectors, "also": [], "importance": 0, "gist": ""}
+                          | ({"bank_voice": True} if src.get("bank_voice") else {}))
             sigs.append(sig)
     for ev in events:
         # эвристика без LLM: чем больше изданий написали, тем важнее; регулятор и министерства — важнее

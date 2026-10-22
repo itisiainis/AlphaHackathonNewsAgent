@@ -131,6 +131,7 @@ def features(p: dict) -> dict:
         "sector_role": role,
         "customer_sectors": {b["okved2"]: b["share"] for b in p["customers"]["by_industry"]},
         "supplier_sectors": {b["okved2"]: b["share"] for b in p["suppliers"]["by_industry"]},
+        "customers_n": p["customers"]["n"], "suppliers_n": p["suppliers"]["n"],  # контрагентов в выборке банка
         "has_debt": bool({"кредит", "лизинг"} & set(p["bank_products"])),
         "has_deposits": "депозиты" in p["bank_products"],
         "has_guarantees": "гарантии" in p["bank_products"],

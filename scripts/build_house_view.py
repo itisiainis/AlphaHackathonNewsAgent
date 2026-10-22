@@ -18,6 +18,10 @@
    только если меняет значение (иначе формулировка документа точнее).
 Что не разобралось, но нужно, — в MANUAL вручную (manual: true); такие цитаты проходят ту же сверку.
 
+Цитата — часть предложения с прогнозом, если она понятна сама по себе (голос банка, слово показателя, горизонт),
+иначе всё предложение. Сверка (verify): цитата дословно стоит на своей странице или в посте и сама называет
+значение со словом показателя; не прошла — скрипт останавливается, файл не пишется.
+
 Пересмотр: тот же показатель и горизонт, более поздняя дата, другое значение (с допуском на округление
 87 ↔ 87,2 ₽) → у старой записи superseded_by = документ действующего прогноза.
 """
@@ -44,6 +48,9 @@ VOICE = re.compile(r"\b(?:мы|наш\w*)\b|ожидаем|жд[её]м|прог
 NOT_BANK = re.compile(r"консенсус|аналитик|прогноз\w* ЦБ|по прогнозу ЦБ|Минэк", re.I)
 SKIP_PART = re.compile(r"раньше|ранее|изначально|первоначально|предыдущ|вместо|средн|м/м|н/н|кв/кв|диапазон", re.I)
 SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[А-ЯЁA-Z«\"(])|\n+")
+# Части длинного предложения для цитаты: «…по данным 1П26: мы понизили прогноз…», «…года, На конец года мы ожидаем…»
+# (распознавание склеило два предложения через запятую). Каждая такая граница — и граница PART_SPLIT.
+SEG_SPLIT = re.compile(r";\s+|:\s+|\s+[–—-]\s+|,\s+(?=[А-ЯЁ][а-яё])")
 PCT = re.compile(r"(?<![\d,.])(-?(?:0|[1-9]\d?)(?:,\d{1,2})?)\s?%")          # «13,5%», но не «01%» (ошибка OCR)
 RUB = re.compile(r"(?<![\d,.])([1-9]\d{0,2}(?:,\d{1,2})?)\s?руб\.?\s?/\s?(\$|юан)", re.I)
 YEAR_H = re.compile(r"(?:на конец|по итогам|к концу|на|в)\s+(20\d\d)\s*(?:г\.?|год\w*)", re.I)
@@ -110,8 +117,18 @@ def from_sentences(text: str, year: str) -> list[tuple[str, str, float, str]]:
             ind, hor = inds.pop(), hs.pop()
             vals = _values(part, ind)
             if len(vals) == 1:
-                out.append((ind, hor, vals[0], _clean(sent)))
+                out.append((ind, hor, vals[0], _quote(sent, part, ind, hor, year)))
     return out
+
+
+def _quote(sent: str, part: str, ind: str, hor: str, year: str) -> str:
+    """Цитата — часть предложения, где стоит прогноз, если она сама себя объясняет: голос банка, слово показателя,
+    тот же горизонт. «…слабого роста производства, очевидного по данным 1П26: мы понизили наш прогноз … ожидаем
+    роста ВВП всего на 0,1% г/г» → цитата начинается с «мы понизили». Иначе — всё предложение."""
+    seg = next((x for x in SEG_SPLIT.split(sent) if part in x), sent)
+    if seg != sent and VOICE.search(seg) and WORDS[ind].search(seg) and _horizons(seg, year) == {hor}:
+        return _clean(seg)
+    return _clean(sent)
 
 
 def from_table(page: str) -> list[tuple[str, str, float, str]]:
@@ -203,6 +220,23 @@ def verify(entries: list[dict], docs: list[dict], posts: list[dict]) -> None:
         where = pages.get((e["doc_id"], e["page"])) if e["page"] else texts.get(e["doc_id"])
         if not where or norm(e["quote"]) not in where:
             raise SystemExit(f"цитата не найдена в источнике: {e['doc_id']} стр. {e['page']}: «{e['quote'][:80]}»")
+        if not states_value(e):
+            raise SystemExit(f"цитата не называет значение {e['value']} ({e['indicator']}): {e['doc_id']} стр. {e['page']}: "
+                             f"«{e['quote'][:80]}»")
+
+
+QUOTE_NUM = re.compile(r"(?<![\d,.])\d{1,3}(?:,\d{1,2})?(?![\d])")
+
+
+def _value_at(e: dict) -> int | None:
+    """Позиция последнего упоминания значения прогноза в цитате (14% = 14,0%); нет — None."""
+    pos = [m.start() for m in QUOTE_NUM.finditer(e["quote"]) if abs(_num(m.group(0)) - abs(e["value"])) < 1e-9]
+    return pos[-1] if pos else None
+
+
+def states_value(e: dict) -> bool:
+    """Цитата сама называет прогноз: в ней есть слово показателя и само значение."""
+    return bool(WORDS[e["indicator"]].search(e["quote"])) and _value_at(e) is not None
 
 
 def build() -> list[dict]:
@@ -248,8 +282,17 @@ def hand_check(entries: list[dict]) -> str:
                 seen.add((e["doc_id"], e["value"]))
                 mark = "пересмотрено" if e["superseded_by"] else "действует"
                 rows.append(f"{ind:<9} {hor:<8} {fmt_value(e['value'], e['unit']):>8}  {e['date']}  {e['doc_id']:<14} "
-                            f"стр.{e['page'] or '—':<2} {mark:<12} {e['quote'][:80]}")
+                            f"стр.{e['page'] or '—':<2} {mark:<12} {_excerpt(e)}")
     return "\n".join(rows)
+
+
+def _excerpt(e: dict, width: int = 80) -> str:
+    """Начало цитаты (80 знаков), а если значение стоит дальше — 80 знаков вокруг него: сверять нужно само число."""
+    q, pos = e["quote"], _value_at(e) or 0
+    if len(q) <= width or pos < width - 10:
+        return q[:width]
+    start = min(pos - width // 2, len(q) - width)
+    return "…" + q[start:start + width]
 
 
 if __name__ == "__main__":
