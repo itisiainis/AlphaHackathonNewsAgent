@@ -23,12 +23,14 @@
 article:published_time, NewsArticle в JSON-LD); или страница без пометки, где связного текста меньше
 ARTICLE_MIN знаков. Иначе раздел становился «карточкой» по случайному набору заголовков
 (interfax.ru/business/ → «возможность, высокое влияние» с расчётом налога). Короткая заметка с пометкой
-статьи (молния агентства, 400 знаков) — материал, её разбираем.
+статьи (молния агентства, 400 знаков) и короткое сообщение официального сайта (cbr.ru, minfin.gov.ru…) — материал,
+их разбираем. NewsArticle в JSON-LD засчитывается только у самой страницы, не у элементов списка заголовков.
 """
 from __future__ import annotations
 
 import html as html_lib
 import ipaddress
+import json
 import re
 import socket
 from dataclasses import dataclass
@@ -289,7 +291,7 @@ def _extract(page: str) -> tuple[str, str, str, dict]:
     page_kind = {"block_links": block_links, "block_share": block_share, "page_links": page_links,
                  "page_share": page_share,
                  "article": p.meta.get("og:type", "").lower() == "article" or bool(p.meta.get("article:published_time"))
-                 or bool(re.search(r'"@type"\s*:\s*"(?:News)?Article"', page))}
+                 or _ld_article(page)}
     if len(text) < 300:  # страница собирается скриптом — текст лежит в JSON внутри страницы
         text = _script_text(page) or text
     if len(text) < 200:
@@ -297,6 +299,37 @@ def _extract(page: str) -> tuple[str, str, str, dict]:
     title = (p.meta.get("og:title") or p.title).strip()
     return (html_lib.unescape(title), html_lib.unescape(text), p.meta.get("article:published_time", "")[:10],
             page_kind)
+
+
+LD_RE = re.compile(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', re.S | re.I)
+LD_ARTICLE = {"NewsArticle", "Article", "ReportageNewsArticle", "AnalysisNewsArticle", "BlogPosting"}
+
+
+def _ld_article(page: str) -> bool:
+    """Страница помечена в JSON-LD как материал: сам объект, его @graph или mainEntity — NewsArticle. Элементы
+    списка (ItemList → itemListElement) не в счёт: так размечены ленты разделов (rbc.ru/economics/)."""
+    for m in LD_RE.finditer(page):
+        try:
+            data = json.loads(m.group(1).strip(), strict=False)
+        except ValueError:
+            continue
+        top = [d for d in (data if isinstance(data, list) else [data]) if isinstance(d, dict)]
+        nodes = [x for d in top for x in [d, *(d.get("@graph") or []), d.get("mainEntity")] if isinstance(x, dict)]
+        for d in nodes:
+            types = d.get("@type") if isinstance(d.get("@type"), list) else [d.get("@type")]
+            if LD_ARTICLE & set(map(str, types)):
+                return True
+    return False
+
+
+# Официальные сайты: короткое сообщение (анонс заседания ЦБ, 500 знаков, без og:type) — материал, а не служебная страница
+OFFICIAL = ("cbr.ru", "minfin.gov.ru", "economy.gov.ru", "government.ru", "kremlin.ru", "nalog.gov.ru", "rosstat.gov.ru",
+            "customs.gov.ru", "fas.gov.ru", "duma.gov.ru")
+
+
+def official(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return any(host == d or host.endswith("." + d) for d in OFFICIAL)
 
 
 def check_article(text: str, page_kind: dict) -> None:
@@ -307,8 +340,9 @@ def check_article(text: str, page_kind: dict) -> None:
     # у статьи лента «читайте также» бывает длинной, поэтому вся страница проверяется, только если она не статья
     if not k["article"] and k["page_links"] >= INDEX_LINKS and k["page_share"] > INDEX_LINK_SHARE:
         raise NotArticle()
-    # короткая заметка с пометкой «статья» (молния агентства) — материал; без пометки — служебная страница
-    if len(text) < ARTICLE_MIN and not k["article"]:
+    # короткая заметка с пометкой «статья» (молния агентства) или сообщение официального сайта — материал;
+    # без пометки — служебная страница
+    if len(text) < ARTICLE_MIN and not k["article"] and not k.get("official"):
         raise NotArticle()
 
 
@@ -355,5 +389,5 @@ def fetch_article(url: str, client: httpx.Client | None = None) -> Article:
     title, text, published, page_kind = _extract(_decode(r))
     if len(text) < 80:
         raise ValueError("не удалось извлечь текст со страницы — вставьте текст вручную")
-    check_article(text, page_kind)
+    check_article(text, page_kind | {"official": official(url)})
     return Article(url, title, text, published, "html")

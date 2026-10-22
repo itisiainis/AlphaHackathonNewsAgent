@@ -26,6 +26,7 @@ from agent.chat import FOLLOW_UPS, answer, card_answer
 from agent.contract import validate_card
 from agent.learning import Learner
 from agent.llm import LLM, LLMUnavailable
+from agent.loop import refresh_saved
 from agent.offline import UNAVAILABLE as OFFLINE_NOTICE
 from agent.okved import short_name
 from agent.pipeline import Pipeline, event_from_text
@@ -93,20 +94,40 @@ _seed()
 
 def _load_precomputed() -> None:
     """Разборы агента, посчитанные заранее (scripts/run_agent.py --save → data/cards/<компания>/<id>.json).
-    Экономит бюджет: готовую карточку не нужно пересчитывать при каждом запуске."""
+    Экономит бюджет: готовую карточку не нужно пересчитывать при каждом запуске. Кеш (APP_CACHE_DIR) переживает
+    перезапуск, поэтому проверка идёт и по уже сохранённой карточке: разбор агентом на сервере новее файла — берём его,
+    файл новее (пересчитали) — берём файл."""
     for f in sorted((ROOT / "data" / "cards").glob("*/*.json")):
         cid = f.parent.name
-        if profiles.get(cid) is None or store.card(cid, f.stem):
+        if profiles.get(cid) is None:
             continue
-        try:
-            card = json.loads(f.read_text(encoding="utf-8"))
-        except ValueError:
-            log.warning("не читается %s", f)
-            continue
-        if validate_card(card, today=TODAY).ok:
-            store.put_card(cid, card, "agent")
+        meta = store.card_meta(cid, f.stem)
+        stored = store.card(cid, f.stem) if meta and meta[0] == "agent" else None
+        if stored and meta[1] >= f.stat().st_mtime:
+            card = stored
+        else:
+            try:
+                card = json.loads(f.read_text(encoding="utf-8"))
+            except ValueError:
+                log.warning("не читается %s", f)
+                continue
+        rep = validate_card(card, today=TODAY, check_revised=True)
+        if rep.ok:
+            # по правилам нынешнего кода: итог трассы — из её же шагов (разборы до правки итога писали «Все проверки
+            # пройдены» после замечаний), без кодов отраслей в выводах ИИ
+            card = refresh_saved(card)
+            if card != stored:
+                store.put_card(cid, card, "agent")
+        else:
+            # разбор, посчитанный до пересмотра прогноза банка (или не прошедший проверку), не показываем:
+            # неверная позиция банка хуже, чем краткий разбор того же события; пересчитать — scripts/run_agent.py
+            SKIPPED_PRECOMPUTED[f"{cid}/{f.stem}"] = rep.errors[:3]
+            log.warning("готовый разбор %s/%s не загружен: %s", cid, f.stem, "; ".join(rep.errors[:2]))
+            if stored:
+                store.drop_card(cid, f.stem)  # сохранён прошлым запуском, до проверки — убираем из ленты
 
 
+SKIPPED_PRECOMPUTED: dict[str, list[str]] = {}  # в панели управления: что пересчитать
 _load_precomputed()
 
 

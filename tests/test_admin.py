@@ -48,6 +48,15 @@ def test_overview_flags_requests_and_offline_model(ctx):
     assert c.get("/api/admin/overview", headers=H).json()["requests_new"] == 0
 
 
+def test_overview_names_precomputed_cards_left_out(ctx):
+    """Готовый разбор с прогнозом банка до пересмотра 11.09 клиентам не показан — панель говорит, что пересчитать."""
+    _, c = ctx
+    o = c.get("/api/admin/overview", headers=H).json()
+    assert "U_25835/ev-e31c37f5eb-U_25835" in o["skipped_precomputed"]
+    assert any("Готовые разборы ИИ не показаны клиентам" in a["text"] and "scripts/run_agent.py" in a["text"]
+               for a in o["attention"])
+
+
 def test_hidden_card_disappears_for_client(ctx):
     _, c = ctx
     assert "i-rate-auto" in [x["id"] for x in c.get("/api/companies/U_25835").json()["insights"]]

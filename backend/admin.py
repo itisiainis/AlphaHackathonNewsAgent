@@ -161,7 +161,7 @@ def put_settings(body: dict, who: str = Depends(admin)):
 
 
 # ---------- обзор ----------
-def _attention(m: dict, st: dict, fresh_h: float | None, new_req: int) -> list[dict]:
+def _attention(m: dict, st: dict, fresh_h: float | None, new_req: int, skipped: dict | None = None) -> list[dict]:
     """Что требует внимания сотрудника — правила простые и видны в коде."""
     out = []
     f, r = m["feedback"], m["agent_runs"]
@@ -179,6 +179,10 @@ def _attention(m: dict, st: dict, fresh_h: float | None, new_req: int) -> list[d
         out.append({"level": "medium", "text": "Свежих новостей больше суток нет — проверьте сбор и источники."})
     if new_req:
         out.append({"level": "high", "text": f"Необработанных запросов менеджеру: {new_req}."})
+    if skipped:
+        names = ", ".join(sorted(skipped)[:3]) + (" и др." if len(skipped) > 3 else "")
+        out.append({"level": "medium", "text": f"Готовые разборы ИИ не показаны клиентам: {len(skipped)} ({names}) — "
+                    "посчитаны до пересмотра прогноза банка или не прошли проверку. Пересчитать: scripts/run_agent.py --save."})
     return out
 
 
@@ -202,7 +206,8 @@ def overview():
     return {"metrics": m, "status": st, "news": {"last_published": last, "hours_ago": fresh_h, "events": len(a.pipe.events)},
             "collect": a.LAST_COLLECT, "requests_new": new_req, "hidden": len(a.store.hidden()),
             "reused": a.store.rows("SELECT COUNT(*) AS n FROM reuse")[0]["n"], "clients_with_votes": len(clients),
-            "attention": _attention(m, st, fresh_h, new_req)}
+            "attention": _attention(m, st, fresh_h, new_req, a.SKIPPED_PRECOMPUTED),
+            "skipped_precomputed": a.SKIPPED_PRECOMPUTED}
 
 
 # ---------- клиенты ----------

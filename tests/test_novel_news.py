@@ -2,7 +2,7 @@
 
 Пункты из аудита (origin: audit) проверяются строго — каждый отдельным тестом. Пункты, которые команда пишет вслепую
 (origin: team-blind), — замер обобщения: по ним требуется общий балл не ниже порога, а не каждый пункт.
-Расчёты (allowed_calc_titles) пока не проверяются — их включает W2-T4 после правок калькулятора.
+Расчёты кодом (allowed_calc_titles): для каждой отобранной компании — только допустимые для этой новости.
 """
 import json
 
@@ -35,7 +35,6 @@ def test_blind_items_score():
     assert blind["score"] >= BLIND_MIN, r["errors"]
 
 
-@pytest.mark.skip(reason="допустимые расчёты проверяет W2-T4 после правок калькулятора (agent/impact.py)")
 def test_calc_titles():
     r = evaluate_novel(calc=True)
     assert r["score"] == 1.0, r["errors"]

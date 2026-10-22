@@ -164,13 +164,16 @@ docker compose up --build
 ```bash
 python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.lock -r requirements-dev.txt
-pytest -q tests                                   # 155 тестов, без сети и ключей
+pytest -q tests                                   # 381 тест, без сети и ключей
 python -m scripts.eval_learning all               # замеры обучения на опыте (docs/experiments/learning.md)
 ruff check .
 uvicorn backend.app:app --reload                  # http://localhost:8000
 python -m agent.ingest.collect 48                 # собрать новости за 48 часов
 python -m agent.ingest.bank_docs                  # OCR аналитики (нужны tesseract-ocr, tesseract-ocr-rus, poppler-utils)
 python -m scripts.run_agent U_25835 --top 1 --save  # разбор агентом из консоли и сохранение в data/cards (нужен ключ)
+# дымовые проверки живого сервера (в конце каждой волны работ; против боевого сервера — с --no-model):
+python scripts/smoke_demo.py --base http://127.0.0.1:8000 --strict
+NODE_PATH=<путь к node_modules с playwright> node scripts/smoke_ui.js http://127.0.0.1:8000 /tmp/smoke-ui
 ```
 
 Статический прототип без бэкенда: `python frontend/build.py` → `frontend/prototype.html`.

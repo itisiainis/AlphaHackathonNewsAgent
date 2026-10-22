@@ -36,7 +36,7 @@ WORDS = {"key_rate": re.compile(r"ставк|\bКС\b", re.I), "inflation": re.c
          "usd_rub": re.compile(r"руб\.?\s?/\s?\$|доллар|\bUSD\b|курс\w* рубл", re.I),
          "cny_rub": re.compile(r"юан|\bCNY\b", re.I), "gdp": re.compile(r"\bВВП\b")}
 # Ставки по депозитам, ипотеке, купонам и налогам — не ключевая ставка
-NOT_KEY_RATE = re.compile(r"депозит|вклад|ипотек|ипотечн|купон|доходност|ОФЗ|НДС|налог|пошлин|по кредит|кредитн|аренд", re.I)
+NOT_KEY_RATE = re.compile(r"депозит|вклад|ипотек|ипотечн|купон|доходност|ОФЗ|НДС|налог|пошлин|по кредит|кредитн|аренд|лизинг", re.I)
 TOL = {"usd_rub": 0.5, "cny_rub": 0.1}  # курс в тексте округляют до рубля; проценты сравниваются до десятых
 NEAR = 150  # слово показателя — не дальше этого числа знаков от значения
 MONTHS_GEN = ("января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября",
@@ -231,6 +231,28 @@ def _clause(sent: str, pos: int) -> str:
     return sent[lo:hi]
 
 
+PCT_AFTER = re.compile(r"\s?(?:%|процент)")
+RUB_AFTER = re.compile(r"\s?(?:₽|руб|р\.)")
+NOT_FORECAST_AFTER = re.compile(r"\s?(?:млн|млрд|трлн|тыс|п\.\s?п|б\.\s?п|раз)")
+# другая величина ближе к числу, чем слово показателя: «рентабельность 13,5% при высокой ставке»
+OTHER_MEASURE = re.compile(r"рентабельн|маржинальн|марж[аиу]|дол[яиюе]|выручк|прибыл|продаж|цен[аыу]\b|рост\w* зарплат|безработ", re.I)
+
+
+def _unit_ok(sent: str, pos: int, unit: str) -> bool:
+    """Число — прогноз этого показателя, а не сумма, доля или другой процент: «13,5 млн ₽», «95% платежей» не в счёт."""
+    m = NUM.match(sent, pos)
+    tail = sent[m.end():m.end() + 12] if m else ""
+    if NOT_FORECAST_AFTER.match(tail):
+        return False
+    if unit == "%":
+        if not PCT_AFTER.match(tail):
+            return False
+    elif PCT_AFTER.match(tail) or not (RUB_AFTER.match(tail) or re.search(r"руб\.?\s?/|за доллар|за юань", sent[max(0, pos - 40):pos + 40])):
+        return False
+    head = sent[max(0, pos - 40):pos]
+    return not OTHER_MEASURE.search(head)
+
+
 def revisions_in(text: str, today: date | None = None, before: str | None = None,
                  entries: list[dict] | None = None) -> list[dict]:
     """Пересмотренные прогнозы, которые текст повторяет как действующие.
@@ -255,7 +277,7 @@ def revisions_in(text: str, today: date | None = None, before: str | None = None
             nums = list(_numbers(sent))
             for v, pos in nums:
                 hit = next((e for e in old if same(ind, e["value"], v)), None)
-                if not hit or not _near_word(sent, ind, pos):
+                if not hit or not _near_word(sent, ind, pos) or not _unit_ok(sent, pos, hit["unit"]):
                     continue
                 part = _clause(sent, pos)
                 years = set(re.findall(r"\b20\d\d\b", part))

@@ -153,7 +153,7 @@ def test_card_basis_states_missing_industry_assessment():
     p = profiles.get("U_25835")
     m = match(EVENT, profiles.features(p), p["bank_products"])
     res = Agent(ScriptedLLM(), BANK, NEWS, today=TODAY, bank_meta=meta).run(EVENT, "U_25835", m)
-    assert res.card and res.card["blocks"]["basis"]["coverage"].startswith("Отраслевой оценки банка по ОКВЭД 45.31.1 нет")
+    assert res.card and res.card["blocks"]["basis"]["coverage"].startswith("Отраслевой оценки банка по отрасли «Торговля и ремонт автотранспорта» нет")
 
 
 def test_failed_revision_keeps_card_that_passed_code_check():

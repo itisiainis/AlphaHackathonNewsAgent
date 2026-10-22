@@ -59,6 +59,10 @@ PASSING_FACTOR = 0.5
 # Санкции, запреты и пошлины, названные в одном предложении с товаром компании или страной её ВЭД
 SANCTIONS = re.compile(r"санкц|запрет|эмбарго|потол\w* цен|пошлин")
 SANCTIONS_W = 3
+# в предложении об ограничении должна быть торговля товаром: ввоз, вывоз, поставки
+TRADE = re.compile(r"ввоз|вывоз|импорт|экспорт|транзит|поставк|поставл|товар|продукци|сырь|закуп|продаж|рынок|рынк")
+# торговля (45–47) — вид деятельности, а не товар: «оптовая торговля» не бывает «вашим товаром» под санкциями
+TRADE_SECTORS = {"45", "46", "47"}
 # страна ВЭД засчитывается, только если ограничение — в торговле с Россией: «американские пошлины… продажи
 # в Китае» (Volkswagen) — не про ваши поставки из Китая
 RUSSIA = re.compile(r"росси|\bрф\b|отечествен")
@@ -69,6 +73,10 @@ EASED = re.compile(r"сниз|сниж|отмен|снял|снят|смягч|�
 CB_BANK = re.compile(r"банк\w* росси|\bцб\b|центробанк|регулятор")
 CB_VERB = re.compile(r"(?:сохранил|оставил|снизил|понизил|повысил|поднял)\w*|принял\w* решени|"
                      r"решени\w* (?:о |об )?(?:сохран|оставить|сниз|сниж|повыс|повыш)")
+# упоминание прошлого решения или ожидание — не новость о решении
+CB_PAST = re.compile(r"\bв (?:январе|феврале|марте|апреле|мае|июне|июле|августе|сентябре|октябре|ноябре|декабре)\b|"
+                     r"\bс (?:лета|весны|осени|зимы|начала года)\b|\bранее\b|после того как|в прошлом|хотя")
+CB_EXPECT = re.compile(r"\bжд[её]т|\bждут|ожида|прогноз|\bмо(?:жет|гут)\b|рассчитыва|закладыва")
 CB_BASE = SELECT_MIN
 BANK_VOICE = bank_voice_sources()  # каналы самого банка: bank_voice в data/sources.json
 
@@ -107,18 +115,23 @@ def bank_voice(event: dict) -> bool:
 
 def cb_decision(title: str, text: str) -> bool:
     """Решение Банка России по ключевой ставке в заголовке или начале текста (а не прогноз и не анонс заседания)."""
-    head = (title + ".\n" + text[:600]).lower().replace("ё", "е")
-    for s in okved.SENTENCE_END.split(head):
+    body = text[len(title):] if title and text.startswith(title) else text  # пост Telegram повторяет заголовок
+    first = okved.SENTENCE_END.split(body.strip()[:600], maxsplit=1)[0] if body.strip() else ""
+    for s in (title, first):
+        s = s.lower().replace("ё", "е")
         if okved.FOREIGN_CB.search(s) and not okved.RUS_CB.search(s):
-            continue  # ФРС, ЕЦБ, «ЦБ Турции»
+            continue  # ФРС, ЕЦБ, «ЦБ Мексики»
+        if CB_PAST.search(s) or CB_EXPECT.search(s):
+            continue  # «…хотя ЦБ с лета снизил ставку», «рынок ждёт решения о сохранении»
         if CB_BANK.search(s) and re.search(r"ключев\w* ставк", s) and CB_VERB.search(s):
             return True
     return False
 
 
 def _country_rx(c: str) -> str:
-    """Страна ВЭД в тексте новости: «Китай» → «Китая, КНР, Пекин»; для стран без словаря — первые 5 букв."""
-    return FOREIGN.get(c) or re.escape(c.lower()[:5])
+    """Страна ВЭД в тексте новости: «Китай» → «Китая, КНР, Пекин»; для стран без словаря — первые 5 букв.
+    Только с начала слова: «Чили» не должна находиться в «получили»."""
+    return r"(?<![а-яёa-z])(?:" + (FOREIGN.get(c) or re.escape(c.lower()[:5])) + ")"
 
 
 @lru_cache(maxsize=4096)
@@ -132,9 +145,11 @@ def _sanctions(title: str, body: str, goods: set[str], countries: list[str]) -> 
     """Ограничения на товар компании или в торговле России со страной её ВЭД — в одном предложении с самим
     ограничением. Третий элемент — ограничение смягчают («снизил пошлины», «снял запрет»)."""
     for s, secs in _restrictions(title, body):
-        hit = sorted(secs & goods)
+        hit = sorted(secs & goods - TRADE_SECTORS)  # товар назван прямо: «санкции против нефти РФ»
         if hit:
             return "goods", hit[0], bool(EASED.search(s))
+        if not TRADE.search(s):
+            continue  # страна без торговли в той же фразе: «запрет на въезд», «санкции против банков»
         c = next((c for c in countries if re.search(_country_rx(c), s)), None)
         if c and RUSSIA.search(s):
             return "country", c, bool(EASED.search(s))
