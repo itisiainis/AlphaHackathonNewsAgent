@@ -22,7 +22,7 @@ from . import house_view, profiles
 from .contract import Report, validate_card
 from .contract.validator import numbers_in
 from .ingest.bank_docs import strip_artefacts
-from .kb import BM25Index
+from .kb import BM25Index, no_industry_view
 from .llm import LLM, NO_REASONING, ROUTING, LLMUnavailable, extract_json
 from .matching import Match
 from .offline import NO_BANK_VIEW, _bank_quote, _stems
@@ -84,12 +84,37 @@ def verbatim(quote: str, source: str) -> bool:
     return False
 
 
-CODE_RE = re.compile(r"\s*\((?:ОКВЭД\s*)?\d{2}(?:\.\d+)*\)")
+CODE_RE = re.compile(r"\s*\((?:ОКВЭД\s*)?\d{2}(?:\.\d+)*\)|\s+(?:по\s+)?ОКВЭД\s*\d{2}(?:\.\d+)*")
 
 
 def no_codes(text: str) -> str:
-    """«Автодилеры (45)» → «Автодилеры»: коды отраслей в выводе руководителю не нужны — убирает код, а не модель."""
+    """«Автодилеры (45)» → «Автодилеры», «оценка банка по ОКВЭД 47.71 недоступна» → «оценка банка недоступна»:
+    коды отраслей в выводе руководителю не нужны — убирает код, а не модель."""
     return CODE_RE.sub("", text)
+
+
+OLD_NO_VIEW = re.compile(r"Отраслевой оценки банка по ОКВЭД (\d{2}[\d.]*|—) нет — вывод опирается на макроаналитику банка\.")
+
+
+def refresh_saved(card: dict) -> dict:
+    """Готовый разбор (data/cards) — по правилам нынешнего кода, без модели и без изменения смысла выводов:
+    итог трассы — по её же шагам, коды отраслей убраны из выводов ИИ и из пометки об отраслевой оценке."""
+    def plain(s):
+        return {**s, "t": no_codes(s["t"])} if isinstance(s, dict) and s.get("p") == "ai" and isinstance(s.get("t"), str) else s
+
+    blocks = dict(card.get("blocks") or {})
+    for k in ("what", "why", "risks", "opportunities", "actions"):
+        if isinstance(blocks.get(k), list):
+            blocks[k] = [plain(s) for s in blocks[k]]
+    bank, basis = blocks.get("bank"), blocks.get("basis")
+    if isinstance(bank, dict) and isinstance(bank.get("plain"), str):
+        blocks["bank"] = {**bank, "plain": no_codes(bank["plain"])}
+    if isinstance(basis, dict) and isinstance(basis.get("coverage"), str):
+        blocks["basis"] = {**basis, "coverage": OLD_NO_VIEW.sub(
+            lambda m: no_industry_view(None if m.group(1) == "—" else m.group(1)), basis["coverage"])}
+    return {**card, "takeaway": {r: no_codes(str(t)) for r, t in (card.get("takeaway") or {}).items()},
+            "why_short": no_codes(str(card.get("why_short", ""))), "key_points": [plain(s) for s in card.get("key_points") or []],
+            "blocks": blocks, "trace": restate_final(card.get("trace") or [])}
 
 
 def _count(result) -> int:
@@ -108,6 +133,46 @@ class Result:
     tool_log: list[dict] = field(default_factory=list)
     error: str = ""
     unavailable: bool = False  # модель недоступна (нет ключа, бюджет, сбой) — можно показать разбор правилами
+
+
+def final_note(code: str, verdict: dict | None) -> str:
+    """Итог трассы — как было на самом деле: код (сводка проверки), проверяющая модель, правка."""
+    parts = ["Проверка кодом пройдена" if code == "Все проверки пройдены" else f"Проверка кодом: {code}"]
+    if verdict is not None:
+        if verdict.get("ok") is None:
+            parts.append("проверка второй моделью не выполнена")
+        elif verdict.get("ok") is False:
+            parts.append("проверяющая модель оставила замечания: " + "; ".join(map(str, verdict.get("issues", [])))[:400])
+        else:
+            parts.append("вторая модель замечаний не нашла")
+    return " · ".join(p for p in parts if p)
+
+
+def restate_final(trace: list[dict]) -> list[dict]:
+    """Итог готового разбора — заново из его же шагов. Разборы, посчитанные до правки итога, писали «Все проверки
+    пройдены» и тогда, когда замечания проверяющей модели никто повторно не проверил; шаги трассы при этом верны."""
+    if not trace or trace[-1].get("kind") != "done" or trace[-1].get("title") != "Карточка готова":
+        return trace
+    code, verdict, revised = "", None, False
+    kept = (code, verdict)  # что было до правки: правку, не прошедшую проверку кодом, цикл откатывает
+    for st in trace[:-1]:
+        title, detail = str(st.get("title") or ""), str(st.get("detail") or "")
+        if st.get("kind") == "check" and "(код)" in title:
+            code = detail.split(" Исправлено до проверки:")[0].strip()
+        elif st.get("kind") == "check" and "(модель)" in title:
+            revised = False
+            verdict = ({"ok": None} if detail.startswith("не выполнена") else
+                       {"ok": True} if detail.strip() in ("", "замечаний нет") else {"ok": False, "issues": [detail]})
+        elif st.get("kind") == "check" and title == "Правка черновика":
+            if revised:  # в карточке — прежний черновик, к нему и относятся замечания
+                code, verdict = kept
+            revised = False
+        elif st.get("kind") == "draft":
+            kept, revised = (code, verdict), verdict is not None
+    note = final_note(code or "Все проверки пройдены", verdict)
+    if revised and verdict and verdict.get("ok") is False:
+        note += " · черновик исправлен по замечаниям, повторно моделью не проверен"
+    return trace[:-1] + [{**trace[-1], "detail": note}]
 
 
 class Agent:
@@ -200,7 +265,7 @@ class Agent:
             return Result(None, Report(errors=[f"ответ модели не разобран: {e}"]), trace, ses.log, error=str(e))
 
         trace.append({"kind": "done", "title": "Карточка готова" if rep.ok else "Карточка не прошла проверку",
-                      "detail": self._final_note(rep, verdict if rep.ok else None), "ms": 0, "cost": 0})
+                      "detail": final_note(rep.summary(), verdict if rep.ok else None), "ms": 0, "cost": 0})
         self._emit(trace)
         card["trace"] = [self._public_step(t) for t in trace]
         return Result(card if rep.ok else None, rep, trace, ses.log)
@@ -325,20 +390,6 @@ class Agent:
         trace[-1]["detail"] = "замечаний нет" if verdict.get("ok") else "; ".join(map(str, verdict.get("issues", [])))[:1500]
         self._emit(trace)
         return verdict
-
-    @staticmethod
-    def _final_note(rep: Report, verdict: dict | None) -> str:
-        """Итог трассы — как было на самом деле: код, проверяющая модель, правка."""
-        code = rep.summary()
-        parts = ["Проверка кодом пройдена" if code == "Все проверки пройдены" else f"Проверка кодом: {code}"]
-        if verdict is not None:
-            if verdict.get("ok") is None:
-                parts.append("проверка второй моделью не выполнена")
-            elif verdict.get("ok") is False:
-                parts.append("проверяющая модель оставила замечания: " + "; ".join(map(str, verdict.get("issues", [])))[:400])
-            else:
-                parts.append("вторая модель замечаний не нашла")
-        return " · ".join(p for p in parts if p)
 
     @staticmethod
     def _public_step(t: dict) -> dict:

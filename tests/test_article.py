@@ -119,6 +119,31 @@ def test_short_page_without_article_mark_is_not_an_article(monkeypatch):
     assert "ключевую ставку" in fetch_article("https://flash.example/news/1", c).text
 
 
+def test_jsonld_marks_the_page_itself_not_items_of_a_headline_list(monkeypatch):
+    """rbc.ru/economics/: NewsArticle внутри ItemList (лента раздела) — не пометка статьи; у самой страницы — пометка."""
+    monkeypatch.setattr(article, "check_url", lambda u: u)
+    body = f"<body><div><p>{PARA}</p><p>{PARA}</p></div></body>"
+    ld = lambda obj: f'<script type="application/ld+json">{__import__("json").dumps(obj)}</script>'  # noqa: E731
+    section = ld({"@type": "ItemList", "itemListElement": [{"@type": "NewsArticle", "headline": "ЦБ сохранил ставку"}]})
+    own = ld({"@context": "https://schema.org", "@graph": [{"@type": "WebPage"}, {"@type": "NewsArticle", "headline": "x"}]})
+    c = _client({"section.example": (200, {"content-type": "text/html"}, f"<html><head>{section}</head>{body}</html>".encode()),
+                 "story.example": (200, {"content-type": "text/html"}, f"<html><head>{own}</head>{body}</html>".encode())})
+    with pytest.raises(article.NotArticle):
+        fetch_article("https://section.example/economics/", c)
+    assert "ключевую ставку" in fetch_article("https://story.example/news/1", c).text
+
+
+def test_short_official_announcement_is_a_material(monkeypatch):
+    """Анонс Банка России на cbr.ru — 500 знаков без og:type: материал, а не «Это не статья»."""
+    monkeypatch.setattr(article, "check_url", lambda u: u)
+    page = f"<html><head><title>Банк России</title></head><body><div><p>{PARA}</p><p>{PARA}</p></div></body></html>".encode()
+    c = _client({"cbr.ru": (200, {"content-type": "text/html"}, page),
+                 "cbr.ru.evil.example": (200, {"content-type": "text/html"}, page)})
+    assert "ключевую ставку" in fetch_article("https://www.cbr.ru/press/event/?id=32923", c).text
+    with pytest.raises(article.NotArticle):  # имя, лишь похожее на официальное, — не официальный сайт
+        fetch_article("https://cbr.ru.evil.example/press/", c)
+
+
 def test_article_with_long_related_list_is_still_an_article():
     related = "".join(f'<li><a href="/n/{k}">Читайте также: другая новость номер {k} про экономику и рынки</a></li>'
                       for k in range(30))

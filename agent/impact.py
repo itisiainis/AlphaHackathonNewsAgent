@@ -88,13 +88,14 @@ def _blank(m: re.Match) -> str:
     return " " * len(m.group())  # вырезаем оборот, не сдвигая позиции в строке
 
 
-DOWN = r"сниз|понизи|снижен|смягч|уменьш|сократ|сокращ|упал|упад|подешев|обвал|рухн|падени"
-UP = r"повыс|повыш|поднял|подня|повышен|ужесточ|увелич|вырос|вырас|рост|подорож|ускор"
+DOWN = r"сниз|понизи|снижен|смягч|уменьш|сократ|сокращ|упал|упад|упаст|подешев|обвал|рухн|падени"
+UP = r"повыс|повыш|поднял|подня|повышен|ужесточ|увелич|вырос|вырас|рост|подорож|ускор|подскоч"
 HOLD = r"сохрани|оставил|без изменени|не стал менять|паузу"
 
 # Прогноз, ожидание, предложение или условие — не свершившийся факт: расчёт становится сценарием «Если …»
-MODAL = re.compile(r"ожида|прогноз|\bмо(?:жет|гут)\b|\bесли\b|вероятн|планиру|аналитик|предлага|предложил|рассматрива|"
-                   r"не исключ|по мнению")
+MODAL = re.compile(r"(?<![а-яё])ожида|прогноз|\bмо(?:жет|гут)\b|\bесли\b|вероятн|планиру|аналитик|предлага|предложил|рассматрива|"
+                   r"не исключ|по мнению|\bжд[её]т\b|\bждут\b|закладыва|допуска|консенсус|по оценк")
+# «ожида» — с начала слова: «неожиданный рост» — факт.
 # Обороты, где те же слова факт прогнозом не делают: «как и ожидалось», «сильнее ожиданий»,
 # «вариант снижения не рассматривался», «ухудшил прогноз по инфляции», «по данным аналитиков»
 NOT_MODAL = re.compile(
@@ -104,7 +105,7 @@ NOT_MODAL = re.compile(
     r"(?:ухудшил|улучшил|понизил|повысил|сохранил|пересмотрел|изменил|снизил|обновил)\w*\s+(?:\w+\s+)?прогноз\w*|"
     r"по (?:данным|подсчетам) аналитик\w*")
 # «…, ожидают аналитики», «…, считают экономисты» после числа — тоже прогноз; «…, отметив, что ожидает…» — нет
-MODAL_AFTER = re.compile(r",\s*(?:—\s*)?(?:ожида|прогнозир|счита|полага|предполага|допуска|не исключа)\w*\s|по мнению")
+MODAL_AFTER = re.compile(r",\s*(?:—\s*)?(?:ожида|прогнозир|счита|полага|предполага|допуска|не исключа)\w*\s|по мнению|по оценк|по прогноз")
 SCENARIO = "Это сценарий из новости, а не свершившийся факт"
 
 
@@ -124,6 +125,9 @@ def _scenario(c: dict, cond: str) -> dict:
 
     Условие отделено запятой, а не двоеточием: в главном выводе за названием расчёта идёт «: сумма»."""
     t = c["title"].replace(": ", " — ")
+    # без двойного условия: «Если рынок вырастет на 3%, выручка при продажах как у рынка»
+    t = re.sub(r"^Выручка, если ваши (цены|продажи) изменятся как у рынка$",
+               lambda m: f"выручка при {'ценах' if m.group(1) == 'цены' else 'продажах'} как у рынка", t)
     return c | {"title": f"Если {cond}, {t[:1].lower() + t[1:]}", "sign": "neutral", "strength": "low",
                 "assumptions": c["assumptions"] + [SCENARIO]}
 
@@ -179,7 +183,17 @@ def _rate_in(t: str) -> dict:
 RATE_CTX = re.compile(r"ключев|\bцб\b|банк\w* росси|регулятор|центробанк")
 FOREIGN_CB = re.compile(r"\bфрс\b|\bецб\b|федеральн\w* резерв|банк\w* (?:англии|японии|китая|кореи|канады)|народн\w* банк")
 RUS_CB = re.compile(r"\bцб\b|банк\w* росси")
-NOT_KEY = re.compile(r"ндс|налог|пошлин|утильсбор|акциз|аренд|купон|ипотек|вклад|депозит")
+NOT_KEY = re.compile(r"ндс|налог|пошлин|утильсбор|акциз|аренд|купон|ипотек|вклад|депозит|доходност|офз|облигац|кредит|резерв")
+DECISION = re.compile(r"сниз|пониз|повыс|подня")  # решение по ставке, а не упоминание или ожидание
+
+
+def _key_mention(t: str) -> bool:
+    """Есть «ставка», не уточнённая как налог, аренда, ипотека, купон: «ключевую ставку», «снизил ставку»."""
+    for m in re.finditer(r"(\w+\s+)?ставк\w*((?:\s+\S+){0,3})", t):
+        before = m.group(1) or ""
+        if before.startswith("ключев") or not NOT_KEY.search(before + m.group(2)):
+            return True
+    return False
 
 
 def _key_rate_sentence(t: str) -> bool:
@@ -187,11 +201,7 @@ def _key_rate_sentence(t: str) -> bool:
         return False
     if FOREIGN_CB.search(t) and not RUS_CB.search(t):
         return False
-    for m in re.finditer(r"(\w+\s+)?ставк\w*((?:\s+\S+){0,3})", t):
-        before = m.group(1) or ""
-        if before.startswith("ключев") or not NOT_KEY.search(before + m.group(2)):
-            return True
-    return False
+    return _key_mention(t)
 
 
 def rate_shock(text: str) -> dict | None:
@@ -206,6 +216,11 @@ def rate_shock(text: str) -> dict | None:
         t = _low(s)
         if not _key_rate_sentence(t):
             continue
+        # части фразы о других ставках не дают изменения ключевой: «…снизил ключевую ставку до 15%, ставки по
+        # ипотеке снизятся на 2 п.п.» — 2 п.п. про ипотеку
+        parts = CLAUSES.split(t)
+        if any("ставк" in c and not _key_mention(c) for c in parts):
+            t = ", ".join(c.strip() for c in parts if "ставк" not in c or _key_mention(c))
         r = _rate_in(t)
         here = _modal(t, r.pop("end", None))
         if "level" in r and not 2 <= r["level"] <= 40:
@@ -215,7 +230,8 @@ def rate_shock(text: str) -> dict | None:
         if "level" in r and "level" not in found:
             found["level"], src["level"] = r["level"], s
         # явное изменение («с 16% до 14%», «на 200 б.п.») важнее общего «сохранил» из заголовка, факт — важнее прогноза
-        if "delta" in r and ("delta" not in found or (found["delta"] == 0 and r["delta"] and modal <= here)
+        if "delta" in r and ("delta" not in found
+                             or (found["delta"] == 0 and r["delta"] and not here and DECISION.search(t))
                              or (modal and not here)):
             found["delta"], src["delta"], modal = r["delta"], s, here
         if "level" in found and found.get("delta") and not modal:
@@ -339,16 +355,24 @@ FOREIGN = {"ОАЭ": r"оаэ|дуба|абу-даби|эмират", "КИТА�
 
 # Показатели, которые не спрос и не цены отрасли: запасы, ВВП, долги, прибыль, капитализация
 NOT_MARKET = r"запас|резерв|ввп|задолженност|просроч|прибыл|капитализац|убыт|инфляц"
-PRICE = r"цен|подорож|подешев|стоимост|тариф|котировк"
+PRICE = r"(?<![а-яё])цен(?!тр)|подорож|подешев|стоимост|тариф|котировк"  # не «оценка», «сценарий», «Центральная Азия»
 # «импортные автомобили» и «экспортная пошлина» — не объём импорта или экспорта
 VOLUME = r"продаж|спрос|выпуск|производств|отгрузк|потреблен|ввод|выдач|импорт(?!н)|экспорт(?!н)|перевоз|оборот"
 # Биржевая цена товара — мировой ориентир для всех, а не рынок другой страны: «медь на LME», «бензин на бирже»
-BENCH = r"\blme\b|\bлбм\b|бирж|\bcomex\b"
+BENCH = r"\blme\b|\bлбм\b|\bcomex\b|биржев\w* (?:цен|котировк)|цен\w*[^.]{0,30}на бирж|товарно-сырьев|спбмтсб"
+# акции, облигации, индексы — новости фондового рынка, а не цены товаров («Акции ММК на Мосбирже упали на 5%»)
+SECURITIES = r"\bакци(?:и|й|ям|ями|ях|я|ю)\b|бумаг|облигац|доходност|индекс|капитализац"
+# премия к биржевой цене (надбавка для покупателей одной страны) — не цена товара: «премия на алюминий упала на 35%»
+PREMIUM = r"\bпреми(?:я|и|ю|ей|ям|ях)\b"
 # Розничная цена — цена продажи для АЗС и магазина; биржевая и оптовая — цена закупки
 RETAIL = r"розничн|на азс|на заправк|мелкоопт"
 WHOLESALE = r"бирж|оптов|закупочн|\bнпз\b|\blme\b"
 # Слова отрасли, которых нет в общем справочнике, но которые нужны для закупок: «арматура» — металл
 EXTRA_STEMS = {"24": r"арматур"}
+
+
+CROSS = r"экспорт|импорт|ввоз|вывоз"  # торговля через границу, а не продажи внутри страны
+PARTS = re.compile(r",(?!\d)|;|\s(?:а|но|тогда как|при этом|в то время как)\s")  # части фразы с отдельными числами
 
 
 def sector_shocks(text: str, skip: list[str] | tuple = ()) -> list[dict]:
@@ -363,29 +387,45 @@ def sector_shocks(text: str, skip: list[str] | tuple = ()) -> list[dict]:
         t = _low(s)
         if ("ключев" in t and "ставк" in t) or _key_rate_sentence(t) or "курс" in t or re.search(NOT_MARKET, t):
             continue
-        m = re.search(r"(" + DOWN + "|" + UP + r")\w*[^.%;]{0,80}?на\s+" + PCT, t) or \
-            re.search(r"на\s+" + PCT + r"[^.%;]{0,40}?(" + DOWN + "|" + UP + r")", t)
-        if not m:
+        if re.search(SECURITIES, t) or re.search(PREMIUM, t):
             continue
-        verb, val = (m.group(1), m.group(2)) if not m.group(1)[0].isdigit() else (m.group(2), m.group(1))
-        sectors = sorted(set(sectors_in(s)) | {c for c, rx in EXTRA_STEMS.items() if re.search(rx, t)})
-        bench = bool(re.search(BENCH, t)) and "индекс" not in t and bool(set(sectors) - {"66"})
-        if bench:
-            sectors = [x for x in sectors if x != "66"]  # биржа здесь — площадка цены, а не отрасль брокеров
-        if not sectors:
-            continue
-        v = _f(val)
-        if not 0 < v <= 80:
-            continue
-        change = -v if re.match(DOWN, verb) else v
-        kind = "price" if re.search(PRICE, t) or bench else "volume" if re.search(VOLUME, t) else None
-        if kind is None:  # «просроченная задолженность выросла на 43%» — не спрос и не цены
-            continue
-        if any(x["quote"] == s[:300] for x in out):
-            continue
-        out.append({"sectors": sectors, "kind": kind, "change": change, "raw": val, "quote": s[:300],
-                    "abroad": [] if bench else [k for k, v in FOREIGN.items() if re.search(v, t)],
-                    "modal": _modal(t, m.end()), "sentence": s})
+        abroad = [k for k, v in FOREIGN.items() if re.search(v, t)]
+        # экспорт, импорт, рынок другой страны — не спрос внутри страны: продажи машин не переносим на автодилеров
+        cross = bool(abroad) or bool(re.search(CROSS, t))
+        # два процента в одной фразе — у каждой части свои отрасль и число («Цены на новостройки выросли на 3%,
+        # а стоимость арматуры — на 5%»); отрасль, глагол, вид шока и оговорка прогноза без повтора — из предыдущей
+        # части («спрос на жильё подскочил на 5%, а число сделок выросло на 3%» — обе части про жильё)
+        parts = PARTS.split(s) if len(re.findall(PCT, t)) > 1 else [s]
+        verb = kind_prev = None
+        modal, ctx = False, []
+        for part in parts:
+            tp = _low(part)
+            ctx = sorted(set(sectors_in(part)) | {c for c, rx in EXTRA_STEMS.items() if re.search(rx, tp)}) or ctx
+            m = re.search(r"(" + DOWN + "|" + UP + r")\w*[^.%;]{0,80}?на\s+" + PCT, tp) or \
+                re.search(r"на\s+" + PCT + r"[^.%;]{0,40}?(" + DOWN + "|" + UP + r")", tp)
+            if m:
+                verb, val = (m.group(1), m.group(2)) if not m.group(1)[0].isdigit() else (m.group(2), m.group(1))
+            elif verb and (m := re.search(r"на\s+" + PCT, tp)):
+                val = m.group(1)
+            else:
+                continue
+            modal = modal or _modal(tp, m.end())
+            sectors = list(ctx)
+            bench = bool(re.search(BENCH, t)) and "индекс" not in t and bool(set(sectors) - {"66"})
+            if bench:
+                sectors = [x for x in sectors if x != "66"]  # биржа здесь — площадка цены, а не отрасль брокеров
+            kind = "price" if re.search(PRICE, tp) or bench else "volume" if re.search(VOLUME, tp) else kind_prev
+            kind_prev = kind
+            v = _f(val)
+            if not sectors or not 0 < v <= 80:
+                continue
+            if kind is None:  # «просроченная задолженность выросла на 43%» — не спрос и не цены
+                continue
+            if any(x["quote"] == s[:300] and x["sectors"] == sectors for x in out):
+                continue
+            out.append({"sectors": sectors, "kind": kind, "change": -v if re.match(DOWN, verb) else v, "raw": val,
+                        "quote": s[:300], "abroad": [] if bench else abroad, "bench": bench, "cross": cross,
+                        "modal": modal, "sentence": s})
     return out
 
 
@@ -403,8 +443,10 @@ INPUTS = {
 AUTO_CHAIN = {"29": ["45"]}
 
 
-def _chain(sectors) -> list[str]:
-    return list(dict.fromkeys([*sectors, *(x for s in sectors for x in AUTO_CHAIN.get(s, []))]))
+def _chain(sh: dict) -> list[str]:
+    if sh.get("cross"):  # «экспорт автомобилей из Китая вырос» — не продажи российским покупателям автодилеров
+        return list(sh["sectors"])
+    return list(dict.fromkeys([*sh["sectors"], *(x for s in sh["sectors"] for x in AUTO_CHAIN.get(s, []))]))
 
 
 def _input_goods(p: dict, sh: dict) -> dict | None:
@@ -420,10 +462,12 @@ def _input_goods(p: dict, sh: dict) -> dict | None:
 def _price_moves(sentence: str) -> list[tuple[str, float, str]]:
     """«Биржевые цены на бензин выросли на 8%, розничные — на 1,2%» → [('in', 8, '8'), ('out', 1.2, '1,2')]."""
     out, verb = [], None
-    for c in re.split(r",(?!\d)|;|\s(?:а|но|тогда как|при этом|в то время как)\s", _low(sentence)):
+    for c in PARTS.split(_low(sentence)):
         v = re.search("(" + DOWN + "|" + UP + ")", c)
         verb = v.group(1) if v else verb  # «розничные — на 1,2%»: глагол из предыдущей части
         m = re.search(r"на\s+" + PCT, c)
+        if re.search(VOLUME, c) and not re.search(PRICE, c):
+            continue  # «продажи топлива на АЗС упали на 3%» — объём продаж, а не цена
         if m and verb:
             out.append(("out" if re.search(RETAIL, c) else "in", (-1 if re.match(DOWN, verb) else 1) * _f(m.group(1)), m.group(1)))
     return out
@@ -543,8 +587,8 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
         c = _calc(
             "Валютные расчёты", f"{_plus(eff)}{rub(eff)} на каждый 1 млрд ₽ валютных закупок "
             f"({'дороже' if ch > 0 else 'дешевле'} в рублях)",
-            f"1 млрд ₽ × {_pc(ch)}", [fact(fx["quote"]), fact(f"ВЭД: {countries}", profile_src)],
-            ["Направление ВЭД (импорт или экспорт) в данных не указано: для импортёра это расход, "
+            f"1 млрд ₽ × {_pc(ch)}", [fact(fx["quote"]), fact(f"Внешняя торговля: {countries}", profile_src)],
+            ["Направление внешней торговли (импорт или экспорт) в данных не указано: для импортёра это расход, "
              "для экспортёра — такая же прибавка к рублёвой выручке",
              "Без учёта хеджирования и валютной оговорки в контрактах"],
             _sign("Валютные расчёты", eff),
@@ -580,7 +624,7 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
                 notes = ["Ставка применяется ко всей базе; льготы и переходные периоды не учтены",
                          "Переложение в цены покупателям не учтено"]
                 if kind == "экспортная пошлина":
-                    notes.insert(0, "Направление ВЭД в данных не указано: это расход, только если вы вывозите этот товар")
+                    notes.insert(0, "Направление внешней торговли в данных не указано: это расход, только если вы вывозите этот товар")
                 if du.get("new"):
                     notes.insert(0, "Пошлина вводится впервые: её ставка целиком — новый расход")
                 if du.get("cancel"):
@@ -591,14 +635,17 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
 
     cust, supp = _flows(p, "customers"), _flows(p, "suppliers")
     trade = p["okved2"] in ("46", "47")
-    shocks = [sh for sh in sector_shocks(text, used)
-              # рынок другой страны, с которой компания не работает
-              if not any(c not in p["foreign_trade"]["countries"] and not (c == "ЕВРОСОЮЗ" and ved) for c in sh["abroad"])]
+    # рынок другой страны, с которой компания не работает: страна названа во фразе шока или в заголовке и начале
+    # новости («В Германии бензин и дизель подорожали… Цены выросли на 37%»); мировые биржевые цены — для всех
+    lead = [c for c, rx in FOREIGN.items() if re.search(rx, _low(event.get("title", "") + " " + event.get("text", "")[:300]))]
+    alien = lambda cs: any(c not in p["foreign_trade"]["countries"] and not (c == "ЕВРОСОЮЗ" and ved) for c in cs)  # noqa: E731
+    shocks = [sh for sh in sector_shocks(text, used) if not alien(sh["abroad"]) and (sh["bench"] or not alien(lead))]
     blocked = False     # шок был, но за месяц или неделю — на год не переносим и масштаб не показываем
 
     # 1. Цена того, что компания закупает: закупки, а если двигаются и закупочные, и розничные цены — маржа
     moves: dict[str, dict] = {}
     rest = []
+    paired: set[str] = set()  # фразы, давшие и закупочную, и розничную цену: другие их части — уже в марже
     for sh in shocks:
         g = _input_goods(p, sh)
         if not g:
@@ -617,8 +664,10 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
         if {"in", "out"} <= {x[0] for x in pair}:  # обе цены в одной фразе
             mv.setdefault("in", (next(x for x in pair if x[0] == "in")[1], sh))
             mv.setdefault("out", (next(x for x in pair if x[0] == "out")[1], sh))
+            paired.add(sh["sentence"])
         else:
             mv.setdefault("in", (sh["change"], sh))
+    rest = [sh for sh in rest if sh["sentence"] not in paired]
     # розничная цена того же товара в другой фразе («Розничные цены на АЗС выросли на 1,2%») — цена продажи: пара для маржи
     for mv in moves.values():
         g = mv["g"]
@@ -659,11 +708,13 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
     revenue_done = False
     for sh in rest:
         ch, kind = sh["change"], sh["kind"]
-        sectors = [s for s in _chain(sh["sectors"]) if s not in seen]
+        sectors = [s for s in _chain(sh) if s not in seen]
         what = "цены" if kind == "price" else "спрос/объёмы"
         period = _period(sh["quote"], text, sh["raw"])
-        can_revenue = not revenue_done and period != "short"
-        blocked = blocked or period == "short"
+        # рынок другой страны («экспорт автомобилей из Китая вырос на 20%») — не ваши продажи: выручку не считаем,
+        # и «размер эффекта в новости не указан» тоже было бы неправдой
+        can_revenue = not revenue_done and period != "short" and not sh["abroad"]
+        blocked = blocked or period == "short" or bool(sh["abroad"])
         cond = (f"цены {'вырастут' if ch > 0 else 'снизятся'}" if kind == "price" else
                 f"рынок {'вырастет' if ch > 0 else 'сократится'}") + f" на {num(abs(ch), 2)}%"
         out: list[dict] = []
@@ -697,7 +748,7 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
                     f"{num(R / BN)} млрд ₽ × {round(share * 100)}% × {_pc(ch)}",
                     [sh_news, fact(f"Выручка компании за год: {num(R / BN)} млрд ₽", profile_src),
                      fact(f"{round(share * 100)}% поступлений через банк — {who(best)}", profile_src)],
-                    [f"Выручка от этих покупателей меняется так же, как {what} в их отрасли (эластичность 1)",
+                    [f"Выручка от этих покупателей меняется так же, как {what} в их отрасли",
                      f"Доля — по платежам через банк; отрасль плательщика известна для {pct(p['customers']['known_industry_share'])} "
                      "поступлений, поэтому это оценка по известной части"] + ([MONTH_YOY] if period == "month_yoy" else []),
                     _sign("Выручка", eff), strength="medium"))
@@ -726,7 +777,7 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
     head = event.get("title", "") + " " + event.get("text", "")[:600]
     abroad = [c for c, rx in FOREIGN.items() if re.search(rx, _low(head))]
     if not calcs and not blocked and not (abroad and not set(abroad) & set(p["foreign_trade"]["countries"])):
-        best = max(_chain(sectors_in(head)), key=lambda s: cust.get(s, 0), default=None)
+        best = max(_chain({"sectors": sectors_in(head)}), key=lambda s: cust.get(s, 0), default=None)
         share = cust.get(best, 0) if best else 0
         if share >= EXPOSURE_MIN:
             calcs.append(_calc(

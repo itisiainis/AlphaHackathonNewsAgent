@@ -2,7 +2,7 @@
 import pytest
 
 from agent import okved, profiles
-from agent.matching import match
+from agent.matching import cb_decision, match
 from agent.pipeline import event_from_text
 
 AUTO, DEVEL, METALS, CLOTHES = "U_25835", "U_177581", "U_200890", "U_1595"
@@ -144,6 +144,11 @@ def test_stoplist_and_word_boundaries(text, sector):
     ("Ключевая ставка останется высокой до весны", True),
     ("Банк России снизил ключевую ставку с 16% до 14% годовых", True),
     ("Повышение НДС может подтолкнуть ЦБ к сохранению жёсткой ставки", True),
+    # руководители и совет директоров Банка России — тоже он (проверка волны 1: раньше не тегировалось)
+    ("Набиуллина допустила снижение ставки в декабре", True),
+    ("Заботкин: пространство для снижения ставки сохраняется", True),
+    ("Совет директоров сохранил ставку на уровне 14%", True),
+    ("Совет директоров компании утвердил ставку дивидендов", False),
 ])
 def test_key_rate_is_not_tax_rent_coupon_or_foreign_rate(text, is_rate):
     assert ("ставка" in okved.topics_in(text)) is is_rate
@@ -283,3 +288,45 @@ def test_macro_route(tmp_path):
     full = c.get("/api/companies/U_57706/macro").json()
     assert full["selected"] >= 3 and not full["needed"] and full["items"] == []
     assert c.get("/api/companies/U_0/macro").status_code == 404
+
+
+# ---------- случаи из независимой проверки волны 1 ----------
+@pytest.mark.parametrize("title", ["ЦБ Мексики снизил ключевую ставку до 7%", "ЦБ Австралии сохранил ключевую ставку",
+                                   "ЦБ Израиля снизил ключевую ставку до 4%", "Центральный банк Бразилии повысил ключевую ставку"])
+def test_foreign_central_bank_is_not_bank_of_russia(title):
+    assert not cb_decision(title, "")
+    m = score("U_25835", title, "")
+    assert not any("Банка России" in r["feature"] for r in m.reasons)
+
+
+@pytest.mark.parametrize("title,text", [
+    ("Продажи автомобилей в сентябре выросли на 12%", "Рост поддержали автокредиты: ЦБ в июле понизил ключевую ставку."),
+    ("Ипотека остаётся дорогой", "Ставки по ипотеке не снижаются, хотя ЦБ с лета снизил ключевую ставку."),
+    ("Рынок ждёт решения о сохранении ключевой ставки", "Аналитики ожидают, что ЦБ сохранит ставку 14%."),
+])
+def test_background_mention_or_expectation_is_not_a_decision(title, text):
+    assert not cb_decision(title, text)
+
+
+def test_actual_decision_counts():
+    assert cb_decision("Банк России снизил ключевую ставку до 14%", "Совет директоров Банка России снизил ставку на 200 б.п.")
+
+
+def test_trade_as_activity_is_not_goods_under_sanctions():
+    m = score("U_19717", "Власти Петербурга запретили мигрантам работать в торговле", "Запрет действует с 1 января.")
+    assert not any(r.get("kind") == "sanctions" for r in m.reasons)
+
+
+def test_headline_sector_words_are_not_passing():
+    """Отрасль в заголовке («строительная отрасль», «нефтепродукты») — предмет новости, вес не снижается."""
+    m = score("U_177581", "Строительная отрасль теряет компании пачками", "За год число застройщиков сократилось на 8%.")
+    assert m.selected
+    m = score("U_19717", "Стоимость нефти и нефтепродуктов растёт — Новак", "Цены на бензин на бирже выросли на 4%.")
+    assert m.selected
+
+
+def test_sector_in_cause_clause_is_passing():
+    """«…из-за ударов по НПЗ» — нефтепереработка упомянута вскользь: новость про спутниковую связь."""
+    from agent import okved
+    assert "19" in okved.passing_sectors("Маск ограничил доступ к Starshield",
+                                         "Компания ограничила доступ к спутникам из-за ударов по НПЗ.")

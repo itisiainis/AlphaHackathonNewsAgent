@@ -80,6 +80,14 @@ class Store:
         row = self._exec("SELECT json FROM cards WHERE company_id=? AND card_id=?", (company_id, card_id)).fetchone()
         return json.loads(row[0]) if row else None
 
+    def card_meta(self, company_id: str, card_id: str) -> tuple[str, float] | None:
+        """(происхождение, когда сохранена) — или None, если карточки нет."""
+        row = self._exec("SELECT origin, created FROM cards WHERE company_id=? AND card_id=?", (company_id, card_id)).fetchone()
+        return (row[0], row[1]) if row else None
+
+    def drop_card(self, company_id: str, card_id: str) -> None:
+        self._exec("DELETE FROM cards WHERE company_id=? AND card_id=?", (company_id, card_id))
+
     def companies_with_cards(self) -> list[str]:
         return [r[0] for r in self._exec("SELECT DISTINCT company_id FROM cards").fetchall()]
 

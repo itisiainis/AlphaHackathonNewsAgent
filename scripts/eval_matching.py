@@ -72,7 +72,7 @@ def check_item(it: dict, calc: bool = False) -> tuple[int, list[str]]:
             errors.append(f"{it['id']}: {'лишнее' if m.selected else 'пропуск'} {cid} (оценка {m.score}; "
                           f"{', '.join(m.matched) or 'нет признаков'})")
     allowed = it.get("allowed_calc_titles")
-    if calc and allowed is not None:  # расчёты кодом: только допустимые для этой новости (включает W2-T4)
+    if calc and allowed is not None:  # расчёты кодом: только допустимые для этой новости
         from agent.impact import compute
 
         for cid in it.get("select", []):

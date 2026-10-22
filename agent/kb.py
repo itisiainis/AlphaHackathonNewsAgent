@@ -34,6 +34,7 @@ from pathlib import Path
 
 from . import house_view
 from .contract.validator import is_stale
+from .okved import short_name
 
 STEM_LEN = 6
 SECTOR_BOOST = 1.5
@@ -248,5 +249,10 @@ def industry_assessment(meta: list[dict], okved_codes: list[str], today: date) -
         d = max(docs, key=lambda x: x["date"] or "")
         return {"status": "stale", "note": f"Последняя отраслевая оценка банка — «{d['title']}» ({d['date']}): "
                                            "старше 12 месяцев, в выводе не используется."}
-    return {"status": "none", "note": f"Отраслевой оценки банка по ОКВЭД {okved_codes[0] if okved_codes else '—'} нет — "
-                                      "вывод опирается на макроаналитику банка."}
+    return {"status": "none", "note": no_industry_view(okved_codes[0] if okved_codes else None)}
+
+
+def no_industry_view(okved2: str | None) -> str:
+    """Отраслевой оценки нет — словами: код отрасли руководителю не нужен (CLAUDE.md, принцип 4а)."""
+    return (f"Отраслевой оценки банка по отрасли «{short_name(okved2)}» нет" if okved2 else "Отраслевой оценки банка нет") + \
+        " — вывод опирается на макроаналитику банка."

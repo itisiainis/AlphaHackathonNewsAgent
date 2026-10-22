@@ -321,3 +321,17 @@ def test_validator_accepts_bank_quote_from_the_newer_document():
                               "doc": "Ключевая ставка ЦБ РФ", "date": "2026-09-11", "stale": False}
     rep = validate_card(card, today=TODAY, check_revised=True)
     assert not any(e.startswith("blocks.bank.quote") for e in rep.errors)
+
+
+# ---------- случаи из независимой проверки: число без единицы показателя — не прогноз ----------
+@pytest.mark.parametrize("text", [
+    "Рост ставки на 1 п.п. добавит 13,5 млн ₽ расходов.", "Компания платит 13,5 млрд ₽ процентов при ставке 21%.",
+    "Рентабельность 13,5% при высокой ставке.", "Ставка по лизингу 13,5%.",
+    "95% платежей поставщикам идут в долларах.", "Курс доллара 87 ₽, доля импорта 95%."])
+def test_numbers_that_are_not_the_forecast_are_not_flagged(text):
+    assert house_view.revisions_in(text, date(2026, 10, 21)) == []
+
+
+def test_superseded_forecast_is_still_flagged():
+    assert house_view.revisions_in("Альфа-Банк ждёт ещё два снижения ключевой ставки до конца 2026 г. до 13,5%.",
+                                   date(2026, 10, 21))

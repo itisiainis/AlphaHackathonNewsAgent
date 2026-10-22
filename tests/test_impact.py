@@ -322,3 +322,92 @@ def test_key_rate_still_found():
 def test_rate_sentence_is_not_a_sector_shock():
     out = calcs("Банк России снизил ключевую ставку на 100 б.п. Ставки по ипотеке снизились на 2 п.п.", DEVEL)
     assert titles(out) == ["Стоимость долга"]
+
+
+# ---------- случаи из независимой проверки волны 1 ----------
+def test_stock_exchange_news_is_not_a_commodity_price():
+    """«бирж» совпадало с «Мосбиржа»: падение акций ММК давало металлотрейдеру «выручка −3 млрд ₽»."""
+    text = "Акции ММК на Мосбирже упали на 5% после публикации отчётности металлургов."
+    assert calcs(text, METALS) == [] and calcs(text, DEVEL) == []
+
+
+def test_bond_yields_after_hold_do_not_turn_hold_into_cut():
+    r = impact.rate_shock("Банк России сохранил ключевую ставку на уровне 16,5%. "
+                          "После решения ЦБ по ставке доходность ОФЗ снизилась на 30 б.п.")
+    assert r["delta"] == 0 and r["level"] == 16.5
+
+
+def test_market_expectation_after_hold_is_not_a_decision():
+    r = impact.rate_shock("Банк России сохранил ключевую ставку 16,5%. "
+                          "Участники рынка закладывают снижение ключевой ставки на 100 б.п. в декабре.")
+    assert r["delta"] == 0
+    one = calcs("ЦБ сохранил ключевую ставку на уровне 16,5%, но рынок ждёт снижения на 100 б.п. в декабре.", AUTO)
+    assert all(c["title"].startswith("Если") and c["sign"] == "neutral" for c in one)  # ожидание — сценарий, не факт
+
+
+def test_retail_sales_volume_is_not_a_retail_price():
+    out = calcs("Биржевые цены на бензин выросли на 8%, а продажи топлива на АЗС упали на 3% г/г.", FUEL)
+    assert not any(c["title"].startswith("Маржа") for c in out)
+    assert any(c["title"].startswith("Закупки") and c["sign"] == "risk" for c in out)
+
+
+def test_foreign_market_named_in_lead_is_not_applied():
+    """Цены в Германии (страна — в первой фразе) не меняют закупки российской АЗС."""
+    out = impact.compute({"title": "В Германии бензин и дизель подорожали из-за налога",
+                          "text": "Цены на бензин и дизель выросли на 37% с начала года."}, FUEL)
+    assert out == []
+
+
+def test_lme_price_is_global_benchmark():
+    assert calcs("Медь на LME подорожала на 8%.", METALS)
+
+
+def test_other_rate_in_the_same_sentence_is_not_the_key_rate_change():
+    """«…до 15%, ставки по ипотеке снизятся на 2 п.п.» — 2 п.п. про ипотеку; изменение ключевой ставки не названо."""
+    r = impact.rate_shock("Банк России снизил ключевую ставку до 15%, ставки по ипотеке снизятся на 2 п.п.")
+    assert r["level"] == 15 and "delta" not in r
+    assert calcs("Банк России снизил ключевую ставку до 15%, ставки по ипотеке снизятся на 2 п.п.", AUTO) == []
+    r = impact.rate_shock("Банк России, как и ожидалось, снизил ключевую ставку на 50 б.п., до 16,5%.")
+    assert r["delta"] == pytest.approx(-0.5) and r["level"] == 16.5 and not r["modal"]
+
+
+def test_price_premium_is_not_a_metal_price():
+    """Премия к цене LME для покупателей одной страны — надбавка, а не цена металла (было: «закупки −350 млн»)."""
+    text = "Премия на алюминий на LME для японских покупателей упала на 35%."
+    assert calcs(text, DEVEL) == [] and calcs(text, METALS) == []
+
+
+def test_each_part_of_a_compound_sentence_keeps_its_own_number():
+    out = calcs("Цены на новостройки в Москве выросли на 3% г/г, а стоимость арматуры — на 5%.", DEVEL)
+    metal = next(c for c in out if c["title"] == "Закупки металла")
+    assert metal["scale"]["per_bn"] == pytest.approx(50_000_000)  # 5% — арматура, а не 3% новостроек
+    # отрасль названа в первой части, число — в обеих; «неожиданный» — не прогноз (история 21 дня)
+    own = calcs("Вторичный рынок недвижимости Москвы демонстрирует неожиданный импульс: за сентябрь спрос на жилье "
+                "подскочил на 5%, а общее число сделок за первые три квартала года увеличилось на 3%.", DEVEL)
+    assert [(c["title"], c["formula"]) for c in own] == [
+        ("Выручка, если ваши продажи изменятся как у рынка", "42,4 млрд ₽ × +5%")]
+
+
+def test_wording_is_not_mistaken_for_price_or_missed_as_fall():
+    # «по оценке» — не «цена», а оговорка прогноза; «упасть» — падение
+    out = calcs("Продажи автомобилей в 2027 году сократятся на 15%, по оценке АЕБ.", AUTO)
+    assert out and all(c["title"].startswith("Если рынок сократится на 15%") and c["sign"] == "neutral" for c in out)
+    out = calcs("Продажи автомобилей могут упасть на 15%.", AUTO)
+    assert out and all(c["title"].startswith("Если рынок сократится на 15%") for c in out)
+    assert not any("размер эффекта в новости не указан" in " ".join(c["assumptions"]) for c in out)
+
+
+def test_export_volume_and_foreign_markets_do_not_become_your_numbers():
+    # «Центральную Азию» — не «цена»: объём экспорта дизеля не меняет закупки АЗС
+    assert calcs("Российский экспорт дизеля в Центральную Азию вырос на 19% м/м.", FUEL) == []
+    # экспорт машин из Китая — не продажи покупателей российского опта автозапчастей
+    assert calcs("Экспорт автомобилей из Китая вырос на 20% г/г.", AUTO) == []
+
+
+def test_scenario_titles_have_one_condition_and_assumptions_have_no_jargon():
+    out = calcs("Аналитики ожидают, что цены на новостройки вырастут на 4%.", DEVEL)
+    assert [c["title"] for c in out] == ["Если цены вырастут на 4%, выручка при ценах как у рынка"]
+    texts = [s for p, t in ((AUTO, "Рубль ослаб к юаню на 5%."), (AUTO, "Продажи легковых автомобилей выросли на 12%."),
+                            (OIL, "Экспортная пошлина на нефтепродукты вырастет на 10%."))
+             for c in calcs(t, p) for s in c["assumptions"] + [i["t"] for i in c["inputs"]]]
+    assert texts and not [s for s in texts if "ВЭД" in s or "эластичн" in s]
