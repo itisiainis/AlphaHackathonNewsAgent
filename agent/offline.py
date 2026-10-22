@@ -6,9 +6,11 @@
 - что произошло — информативные предложения новости (факт, источник S1);
 - почему важно — признаки компании, на которые сработал отбор (факт из профиля, источник «статистика»);
 - позиция банка — фрагмент аналитики, только свежий и только если совпадает с темой события;
-- сколько это в деньгах — расчёт кодом (agent/impact.py).
-Выводов, рисков и действий «от ИИ» здесь нет: их без модели не пишем. Карточка помечается как
-разбор правилами, и полный разбор агентом её заменит, когда модель станет доступна.
+- сколько это в деньгах — расчёт кодом (agent/impact.py);
+- что это значит для вас и что сделать — каналы влияния (agent/channels.py): главный вывод под роль, риски,
+  возможности и действия. Это выводы по правилам (происхождение «rule»), а не выводы ИИ: каждый собран кодом из
+  новости, профиля по данным банка, расчёта и взгляда банка. Карточка помечается как краткий разбор, и полный
+  разбор агентом её заменит, когда модель станет доступна.
 """
 from __future__ import annotations
 
@@ -16,7 +18,7 @@ import re
 import time
 from datetime import date
 
-from . import house_view, profiles
+from . import channels, house_view, profiles
 from .contract import validate_card
 from .impact import _sentences
 from .ingest.bank_docs import strip_artefacts
@@ -25,11 +27,12 @@ from .matching import Match
 from .okved import plain, topics_in, who
 from .tools import Source, ToolSession
 
-TOPICS = {"ставка", "долг", "курс", "ликвидность", "отрасль", "спрос", "контрагенты"}
-NOTICE = "Краткий разбор: факты новости, данные компании, позиция банка и расчёт — без выводов ИИ."
+TOPICS = {"ставка", "долг", "курс", "ликвидность", "отрасль", "спрос", "контрагенты", "налоги"}
+NOTICE = "Краткий разбор: факты новости, данные компании, позиция банка, расчёт и выводы по правилам — без выводов ИИ."
 UNAVAILABLE = "ИИ-аналитик сейчас недоступен. " + NOTICE
 # Честная плашка, когда дословной позиции банка нет — одна и та же в кратком разборе и у агента (agent/loop.py)
 NO_BANK_VIEW = "Свежей позиции банка по этому событию нет"
+CHANNELS_STEP = "Каналы влияния (код)"  # шаг трассы; по нему сервер узнаёт разборы, собранные до каналов влияния
 
 
 # частые слова, совпадение по которым ничего не говорит о теме
@@ -310,6 +313,14 @@ def bank_position(ses: ToolSession, event: dict, facts: list[str], today: date) 
     return None, "", title, f"фрагментов по теме события: {len(found)}, дословной позиции банка в них нет — «{NO_BANK_VIEW}»"
 
 
+# Запасной главный вывод под роль, если каналов влияния нет: (расчёты по приоритету, виды признаков отбора по приоритету)
+FALLBACK = {"cfo": (("Стоимость долга", "Валютные", "Выручка"), ("debt", "fx", "customers", "suppliers", "own")),
+            "ceo": (("Выручка", "Закупки", "Стоимость долга"), ("customers", "own", "suppliers", "demand", "debt", "fx")),
+            "treasurer": (("Стоимость долга", "Валютные", "Доход по депозитам"), ("debt", "fx", "deposits", "customers")),
+            "accountant": (("Утильсбор", "Пошлина", "Налог", "Валютные", "Стоимость долга"),
+                           ("fx", "debt", "customers", "suppliers", "own"))}
+
+
 def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news: BM25Index,
                today: date, bank_meta: list[dict] | None = None) -> tuple[dict, list[dict]]:
     """Карточка контракта без LLM и трасса её сборки."""
@@ -340,6 +351,10 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
     step("tool", "calculate_impact()", "; ".join(f"{c['title']}: {c['value']}" for c in calcs)[:200] or
          "числового шока в новости нет — расчёта нет", t0)
 
+    t0 = time.monotonic()
+    chs = channels.build(event, match, p, calcs, today, channels.meetings_for(bank, news))
+    step("plan", CHANNELS_STEP, channels.as_text(chs)[:600] or "каналов влияния не найдено — вывод по признакам отбора", t0)
+
     # метки S… → индексы sources[] в порядке появления в карточке
     cited: list[str] = ["S1"]
 
@@ -364,22 +379,22 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
         c = next((c for c in calcs if c["title"].startswith(prefer)), calcs[0] if calcs else None)
         return _take(c) if c else headline(match, order)
 
-    signs = {c["sign"] for c in calcs}
+    takes = channels.takeaways(chs)
+    st = channels.statements(chs)
     card = {
         "id": f"{event['id']}-{company_id}",
-        "type": "risk" if "risk" in signs else "opportunity" if "opportunity" in signs else "info",
+        "type": channels.card_type(chs, calcs),
         "impact": "high" if match.score >= 6 else "medium" if match.score >= 3.5 else "low",
         "topics": [t for t in event.get("topics", []) if t in TOPICS] or ["отрасль"],
         "is_new": True, "published": event.get("published") or today.isoformat(),
         "title": event.get("title", "")[:200],
-        "takeaway": {"cfo": pick(("Стоимость долга", "Валютные", "Выручка"), ("debt", "fx", "customers", "suppliers", "own")),
-                     "ceo": pick(("Выручка", "Закупки", "Стоимость долга"), ("customers", "own", "suppliers", "demand", "debt", "fx")),
-                     "treasurer": pick(("Стоимость долга", "Валютные", "Доход по депозитам"), ("debt", "fx", "deposits", "customers"))},
+        # главный вывод под роль — из каналов влияния; каналов нет — из расчёта или признаков отбора
+        "takeaway": {role: takes[role] or pick(*FALLBACK[role]) for role in FALLBACK},
         # короткий слой: почему вам, позиция банка, факт новости — заголовок события уже виден в карточке
         "key_points": (why[:1] + ([bank_stmt] if bank_stmt else []) + what[:1])[:3],
         "why_short": match.reasons[0]["why"] if match.reasons else "Событие из отобранных для компании новостей",
         "matched": match.matched, "sources": sources,
-        "blocks": {"what": what, "why": why, "risks": [], "opportunities": [], "actions": [],
+        "blocks": {"what": what, "why": why, "risks": st["risks"], "opportunities": st["opportunities"], "actions": st["actions"],
                    **({"calc": calc} if calc else {}),
                    "bank": bank_block or {"quote": "", "doc": NO_BANK_VIEW, "date": today.isoformat(), "stale": False},
                    "basis": {"features": match.matched + [f"Продукты банка: {', '.join(p['bank_products']) or 'нет'}"],

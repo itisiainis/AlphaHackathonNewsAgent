@@ -12,7 +12,7 @@
    - числа из fact/bank-утверждений должны встречаться в тексте цитируемого источника
      (если текст источника передан): так выдуманная цифра ловится кодом, а не обещанием модели;
    - входные данные расчётов (blocks.calc[].inputs) проверяются так же, как утверждения.
-3. Понятность выводов (style): коды отраслей, жаргон и повтор заголовка события в выводах ИИ.
+3. Понятность выводов (style): коды отраслей, жаргон и повтор заголовка события в выводах ИИ и выводах по правилам.
    Показывать карточку можно, но агент отправляет её на правку — руководитель должен понять вывод без словаря.
 4. Пересмотренная позиция банка (check_revised=True, agent/house_view.py): позиция банка, цитата банка, заголовок
    или главный вывод повторяют прогноз, который банк уже пересмотрел (13,5% на конец 2026 года после 11.09),
@@ -157,7 +157,7 @@ def validate_card(card: dict, today: date | None = None, source_texts: dict[int,
         rep.warnings.append("blocks.bank: stale=true, но материалу меньше 12 месяцев")
 
     for k, a in enumerate(card["blocks"]["actions"]):
-        if a.get("cta") and a["p"] != "ai":
+        if a.get("cta") and a["p"] not in ("ai", "rule"):  # действие предлагает аналитик или правило, а не источник
             rep.warnings.append(f"blocks.actions[{k}]: кнопка действия у утверждения «{a['p']}»")
     rep.style = style_issues(card)
     if check_revised:
@@ -198,7 +198,7 @@ def revised_issues(card: dict, today: date, source_texts: dict[int, str] | None 
             revs = found(s["t"], src(s.get("src")).get("date"))
             if revs:
                 (errors if strict else warnings).append(msg(where, s["t"], revs))
-        elif s["p"] == "ai":
+        elif s["p"] in ("ai", "rule"):
             revs = [r for r in found(s["t"]) if (r["indicator"], r["horizon"]) not in news_says]
             if revs:
                 warnings.append(msg(where, s["t"], revs))
@@ -225,10 +225,10 @@ def repeats_title(text: str, title: str, share: float = 0.8) -> bool:
 
 
 def style_issues(card: dict) -> list[str]:
-    """Понятность выводов ИИ: без кодов отраслей и жаргона, без повтора заголовка. Факты и цитаты банка не трогаем —
-    они переписываются из источника как есть."""
+    """Понятность выводов ИИ и выводов по правилам: без кодов отраслей и жаргона, без повтора заголовка. Факты и цитаты
+    банка не трогаем — они переписываются из источника как есть."""
     texts = [(f"takeaway.{r}", t) for r, t in card["takeaway"].items()] + [("why_short", card["why_short"])]
-    texts += [(w, s["t"]) for w, s, strict in _iter_stmts(card) if strict and s["p"] == "ai"]
+    texts += [(w, s["t"]) for w, s, strict in _iter_stmts(card) if strict and s["p"] in ("ai", "rule")]
     if card["blocks"]["bank"].get("plain"):
         texts.append(("blocks.bank.plain", card["blocks"]["bank"]["plain"]))
     out = []

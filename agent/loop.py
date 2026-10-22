@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from . import house_view, profiles
+from . import channels, house_view, profiles, sensitivity
 from .contract import Report, validate_card
 from .contract.validator import numbers_in
 from .ingest.bank_docs import strip_artefacts
@@ -346,6 +346,12 @@ class Agent:
         if ses.calcs:
             user += "\n\nРасчёты эффекта (код):\n" + "\n".join(
                 f"- {c['title']}: {c['value']} ({c['formula']}); допущения: {'; '.join(c['assumptions'])}" for c in ses.calcs)
+        p = profiles.get(ses.company_id)
+        chs = channels.build(ses.event, match, p, ses.calcs, self.today, channels.meetings_for(self.bank, self.news))
+        if chs:
+            user += "\n\nКаналы влияния (код, по данным банка — каркас вывода):\n" + channels.as_text(chs)
+        user += "\n\nФакторы чувствительности компании (код, по данным банка):\n" + "\n".join(
+            f"- {x['title']}: {x['detail']}" for x in sensitivity.factors(p))
         if self.precedents:
             user += ("\n\nПрошлые разборы для этой компании (контекст, не источник — цифры из них не бери): "
                      "если тема та же, скажи, что изменилось с тех пор.\n" + "\n".join(

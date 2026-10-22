@@ -6,7 +6,7 @@ HTML = render("null")
 
 
 def test_no_model_banner():
-    assert "ИИ-аналитик недоступен — краткие разборы: факты, позиция банка и расчёт, без выводов ИИ" in HTML
+    assert "ИИ-аналитик недоступен — краткие разборы: факты, позиция банка, расчёт и выводы по правилам, без ИИ" in HTML
 
 
 def test_investment_disclaimer():

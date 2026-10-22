@@ -13,6 +13,7 @@
   --fact:#5b6472; --fact-bg:#eef0f3;
   --bank:#e3262f; --bank-bg:#fdecec;
   --ai:#6b4fd8; --ai-bg:#efebfc;
+  --rule:#0f7b8a; --rule-bg:#e7f4f5;
   --new:#1a73e8; --new-bg:#e8f0fe;
   --risk:#d23b3b; --opp:#1f9d60; --info:#6b7280;
   --r:14px;
@@ -60,6 +61,16 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .widget-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
 .w-item{display:flex;gap:10px;align-items:flex-start;text-decoration:none;padding:12px 0;border-top:1px solid var(--line)}
 .w-item:first-of-type{border-top:0}
+/* «Чувствительность бизнеса»: факторы по данным банка и свежее событие по каждому */
+.factors{margin-top:16px}
+.factor{display:grid;grid-template-columns:10px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.factor:first-of-type{border-top:0}
+.factor .lv{width:10px;height:10px;border-radius:50%;margin-top:5px;background:#cdd1d8}
+.factor .lv.high{background:var(--bank)}.factor .lv.medium{background:#e8a33a}
+.factor b{font-size:14px}.factor .pd{font-size:12px;color:var(--muted)}
+.factor .ps{font-size:13px;margin-top:3px}.factor .ps a{text-decoration:none}
+.factor .ps.risk a{color:var(--bank)}.factor .ps.opportunity a{color:#1d8a4b}.factor .ps.calm{color:var(--muted)}
+.factor-tag{font-size:11px;color:var(--rule);border:1px solid #bfe0e3;border-radius:999px;padding:1px 8px;white-space:nowrap}
 .w-item:hover .w-take{color:var(--brand)}
 .w-take{font-weight:600;font-size:15px}
 .w-ev{font-size:13px;color:var(--ink-3)}
@@ -126,6 +137,7 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .stmt.fact{border-color:#cdd1d8;background:transparent}
 .stmt.bank{border-color:var(--bank);background:var(--bank-bg)}
 .stmt.ai{border-color:var(--ai);background:var(--ai-bg)}
+.stmt.rule{border-color:var(--rule);background:var(--rule-bg)}
 .stmt sup a,.kp sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .str{font-size:11px;color:var(--ink-3);margin-left:6px}
 /* расчёт эффекта кодом: формула видна, сумма пересчитывается под пользователя */
@@ -161,7 +173,7 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .tools .sp{flex:1}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:12px}
 .legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
-.legend .l-fact::before{background:#cdd1d8}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}
+.legend .l-fact::before{background:#cdd1d8}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}.legend .l-rule::before{background:var(--rule)}
 /* чат */
 .chat{display:none;margin-top:12px;background:var(--bg);border-radius:12px;padding:12px}
 .chat.on{display:block}
@@ -318,7 +330,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 const IMPACT = {high: 3, medium: 2, low: 1};
 const IMPACT_RU = {high: 'высокое влияние', medium: 'среднее влияние', low: 'низкое влияние'};
 const TYPE_RU = {risk: 'риск', opportunity: 'возможность', info: 'к сведению'};
-const P_FULL = {fact: 'факт', bank: 'позиция банка', ai: 'вывод ИИ'};
+const P_FULL = {fact: 'факт', bank: 'позиция банка', ai: 'вывод ИИ', rule: 'вывод по правилам: собран кодом из новости, данных банка, расчёта и взгляда банка, без ИИ'};
 const STR_RU = {high: 'сильное влияние', medium: 'умеренное влияние', low: 'слабое влияние'};
 const fmtDate = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'});
 const fmtDateY = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'});
@@ -330,7 +342,8 @@ const today = () => new Date(((DATA.status && DATA.status.today) || (DATA.genera
 const ageDays = i => Math.max(0, (today() - new Date(i.published + 'T00:00:00')) / 864e5);
 const NEW_DAYS = 14;
 const isNew = i => i.is_new && ageDays(i) <= NEW_DAYS && !state.read.has(state.company + ':' + i.id);
-const takeaway = i => (i.takeaway && (i.takeaway[state.role] || Object.values(i.takeaway)[0])) || i.why_short;
+// у разборов, собранных до роли главбуха, его вывода нет — показываем вывод финансового директора
+const takeaway = i => (i.takeaway && (i.takeaway[state.role] || i.takeaway.cfo || Object.values(i.takeaway)[0])) || i.why_short;
 // Вес темы для роли: правила + чему научили оценки клиентов (для роли и для этой компании) — backend agent/learning.py
 function topicWeight(t) {
   const L = DATA.learned || {}, r = (L.roles || {})[state.role] || {}, c = ((L.companies || {})[state.company] || {})[state.role] || {};
@@ -394,6 +407,7 @@ async function loadCompany(id) {
   if (DATA.companies.some(c => c.id === id)) return;  // две параллельные загрузки одной компании
   DATA.companies.push(r.company); DATA.insights[id] = r.insights; (DATA.origins = DATA.origins || {})[id] = r.origins;
   (DATA.user_cards = DATA.user_cards || {})[id] = r.user_cards || [];
+  (DATA.factor_hits = DATA.factor_hits || {})[id] = r.factor_hits || {};
 }
 function initSwitchers() {
   $('#sel-company').innerHTML = companyOptions();
@@ -418,7 +432,7 @@ function renderNav(route) {
    к модели отношения не имеет и плашку не включает. */
 const aiReady = () => !!(DATA.status && DATA.status.llm_online && !(DATA.status.spent_today_rub >= DATA.status.budget_rub));
 const aiBanner = () => API && DATA.status && !aiReady()
-  ? '<div class="ai-off" role="status">ИИ-аналитик недоступен — краткие разборы: факты, позиция банка и расчёт, без выводов ИИ</div>' : '';
+  ? '<div class="ai-off" role="status">ИИ-аналитик недоступен — краткие разборы: факты, позиция банка, расчёт и выводы по правилам, без ИИ</div>' : '';
 /* Диалог и панель шагов: Esc закрывает, фокус возвращается на кнопку, которая их открыла
    (если её перерисовали — на такую же кнопку с теми же data-атрибутами) */
 let opener = null;
@@ -576,7 +590,7 @@ function cardHtml(i) {
   const chips = numChips(i, take), bank = (i.key_points || []).find(s => s.p === 'bank');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка и расчёт — без выводов ИИ">краткий разбор</span>' : ''}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка, расчёт и выводы по правилам — без ИИ">краткий разбор</span>' : ''}${factorTag(i)}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
       <div class="ic-take">${esc(take)}</div>
       ${chips.length ? `<div class="nchips">${chips.map(c => `<span class="nchip">${esc(c)}</span>`).join('')}</div>` : ''}
       ${bank ? kpNote(bank, i) ? `<div class="kp-bank kp-note">${esc(bank.t)}${ref(bank, i)}</div>` : `<div class="kp-bank" title="Позиция банка">${esc(bank.t)}${ref(bank, i)}</div>` : ''}
@@ -599,7 +613,7 @@ function bodyHtml(i) {
   const chatLog = (state.chats[i.id] || []).join('');
   const srcNames = [...new Set(i.sources.map(s => s.name))].slice(0, 3).join(', ');
   return `<div class="ic-body">
-    <div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span><span class="l-ai">вывод ИИ</span></div>
+    ${legendHtml(i)}
     ${b.actions.length ? `<div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>` : ''}
     ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${calcsOf(i).map(c => calcHtml(c, i)).join('')}</div>` : ''}
     ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
@@ -672,7 +686,43 @@ function viewHome() {
       ${body}
       ${disclaimerHtml(top.length ? top : last ? [last] : [])}
     </div>
+    ${factorsHtml(c)}
     ${companySummary(c)}`;
+}
+/* Чувствительность бизнеса (backend agent/sensitivity.py): факторы, через которые внешние события влияют на компанию, по данным
+   банка, и свежее событие по каждому. Сначала факторы с риском или возможностью, потом важные для выбранной роли */
+const TYPE_STATUS = {risk: 'Риск', opportunity: 'Возможность', info: 'Мониторинг'};
+const TOPIC_FACTOR = {'ставка': 'rate', 'долг': 'rate', 'курс': 'fx', 'налоги': 'taxes', 'контрагенты': 'buyers',
+                    'ликвидность': 'concentration', 'спрос': 'market', 'отрасль': 'market'};
+function factorIds(i) {
+  const hits = ((DATA.factor_hits || {})[state.company] || {})[i.id];
+  if (hits) return hits;
+  const have = new Set((company().factors || []).map(p => p.id));  // новый разбор, пока сервер его не разметил
+  return [...new Set((i.topics || []).map(t => TOPIC_FACTOR[t]).filter(id => have.has(id)))];
+}
+function factorTag(i) {
+  const id = factorIds(i)[0], p = id && (company().factors || []).find(x => x.id === id);
+  return p ? `<span class="factor-tag" title="Фактор чувствительности бизнеса, на который влияет событие">${esc(p.title)}</span>` : '';
+}
+function factorsHtml(c) {
+  if (!(c.factors || []).length) return '';
+  const items = ranked().filter(i => i.group !== 'old' && i.group !== 'mine');
+  const LV = {high: 0, medium: 1, low: 2}, rank = r => (r || []).indexOf(state.role) < 0 ? 9 : r.indexOf(state.role);
+  const pressure = x => !x.top ? 0 : x.top.type === 'info' ? 1 : 2;  // сначала факторы, по которым есть риск или возможность
+  const rows = c.factors.map(p => {
+    const hit = items.filter(i => factorIds(i).includes(p.id));
+    const top = hit.find(i => i.type !== 'info') || hit[0];
+    return {p, top, n: hit.length};
+  }).sort((a, b) => pressure(b) - pressure(a) || rank(a.p.roles) - rank(b.p.roles) || LV[a.p.level] - LV[b.p.level]).slice(0, 5);
+  const row = ({p, top, n}) => `<div class="factor"><span class="lv ${p.level}" title="${{high: 'высокая чувствительность', medium: 'средняя чувствительность', low: 'низкая чувствительность'}[p.level]}"></span>
+    <div><b>${esc(p.title)}</b><div class="pd">${esc(p.detail)}</div>
+      ${top ? `<div class="ps ${top.type}">${TYPE_STATUS[top.type]}: <a href="#feed/${top.id}">${esc(homeLine(top))} →</a>${n > 1 ? ` <span class="muted">+${n - 1}</span>` : ''}</div>`
+        : `<div class="ps calm">Значимых событий нет · отслеживаем: ${esc(p.watch)}</div>`}</div></div>`;
+  return `<div class="card factors"><h2>Чувствительность бизнеса</h2><div class="muted" style="margin-bottom:4px">Факторы, через которые внешние события влияют на компанию, — по данным Альфа-Банка</div>${rows.map(row).join('')}</div>`;
+}
+function legendHtml(i) {
+  const ps = new Set([...i.key_points, ...['what', 'why', 'risks', 'opportunities', 'actions'].flatMap(k => i.blocks[k] || [])].map(s => s.p));
+  return `<div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span>${ps.has('ai') || origin(i) !== 'rules' ? '<span class="l-ai">вывод ИИ</span>' : ''}${ps.has('rule') ? `<span class="l-rule" title="${P_FULL.rule}">вывод по правилам</span>` : ''}</div>`;
 }
 // Сводка «ваш бизнес в данных банка»: то, от чего зависит влияние новостей на компанию
 function flowCard(title, s, who) {
@@ -956,7 +1006,7 @@ const pct = x => x === null || x === undefined ? '—' : Math.round(x * 100) + '
 const sec = ms => ms ? (ms / 1000).toFixed(1).replace('.', ',') + ' с' : '—';
 const num = x => (+x || 0).toLocaleString('ru-RU', {maximumFractionDigits: 2});
 const dt = ts => new Date(ts * 1000).toLocaleString('ru-RU', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
-const ROLE_RU = {cfo: 'Фин. директор', ceo: 'Ген. директор', treasurer: 'Казначей'};
+const ROLE_RU = {cfo: 'Фин. директор', ceo: 'Ген. директор', treasurer: 'Казначей', accountant: 'Главбух'};
 const REQ_RU = {new: 'Новый', in_work: 'В работе', done: 'Закрыт'};
 const TASK_RU = {triage: 'Разметка новостей при сборе', agent: 'Выбор следующего шага агента', draft: 'Черновик разбора',
   check: 'Проверка черновика', chat: 'Ответы на вопросы клиента', vision: 'Сканы и графики'};
