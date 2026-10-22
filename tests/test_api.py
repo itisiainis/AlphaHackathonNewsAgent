@@ -77,7 +77,9 @@ def test_rate_limit_on_costly_endpoints(client):
 
 def test_any_company_gets_briefs_without_model(client):
     """Открыл компанию — в ленте сразу разборы лучших событий (без модели, с пометкой), а не пустой экран."""
-    d = client.get("/api/companies/U_200890").json()
+    # опт топливом: у опта металлами U_200890 единственное значимое событие уже разобрано ИИ (data/cards), а
+    # «запас золота ЦБ» и «цифровое золото», дававшие ему краткие разборы, отбор больше не пропускает
+    d = client.get("/api/companies/U_57706").json()
     rules = [c for c in d["insights"] if d["origins"][c["id"]] == "rules"]
     assert rules, "для компании с отобранными событиями должен быть краткий разбор"
     c = rules[0]

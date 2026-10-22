@@ -5,8 +5,9 @@ from datetime import date
 from agent import okved, profiles
 from agent.kb import BM25Index
 from agent.llm import Completion, LLMUnavailable
-from agent.loop import Agent
+from agent.loop import Agent, verbatim
 from agent.matching import match
+from agent.offline import NO_BANK_VIEW
 from agent.tools import ToolSession
 
 TODAY = date(2026, 10, 20)
@@ -169,11 +170,62 @@ def test_failed_revision_keeps_card_that_passed_code_check():
 
 
 def test_bank_quote_written_by_model_is_not_shown_as_quote():
+    """Текст модели — не цитата: вместо него дословное предложение-позиция из того же фрагмента банка; чужой по смыслу
+    текст не становится и «проще говоря»."""
     d = json.loads(json.dumps(DRAFT))
     d["blocks"]["bank"] = {"quote": "Отраслевой оценки влияния дефицита меди на металлотрейдеров в аналитике банка нет", "src": "S2"}
     res = run(ScriptedLLM(draft=d))
-    assert res.card is not None and res.card["blocks"]["bank"]["quote"] == ""
-    assert any("позиция банка не совпала" in t["detail"] for t in res.trace if t["title"] == "Самопроверка (код)")
+    bank = res.card["blocks"]["bank"]
+    assert bank["quote"] and verbatim(bank["quote"], BANK.items[0]["text"]) and "меди" not in bank["quote"]
+    assert "plain" not in bank
+    assert any("не дословная" in t["detail"] for t in res.trace if t["title"] == "Самопроверка (код)")
+
+
+# ---------- цитата банка: только дословно (аудит: U_25835 дописал в кавычки «при этом инфляция … ДКП») ----------
+def page_1h26() -> str:
+    """Стр. 3 «Макростатистики 1П26» (31.07) — источник цитаты U_25835; OCR поставил «,» вместо «.» перед «На конец года»."""
+    from pathlib import Path
+    docs = json.loads((Path(__file__).parents[1] / "data" / "bank" / "docs.json").read_text(encoding="utf-8"))
+    return next(ch["text"] for d in docs if d["id"] == "bank-84899553" for ch in d["chunks"] if "заложить в прогноз" in ch["text"])
+
+
+def test_quote_with_appended_tail_is_not_verbatim():
+    quote = ("«Мы считаем возможным заложить в прогноз ещё два снижения ключевой ставки до конца текущего года. На конец "
+             "года мы ожидаем ключевую ставку на уровне 13,5%», при этом инфляция по итогам 2026 г. — 7,5% г/г будет "
+             "сдерживать смягчение ДКП")
+    assert not verbatim(quote, page_1h26())
+    # сама цитата без хвоста — дословна: регистр, ё/е, кавычки и путаница OCR «,» вместо «.» не мешают
+    assert verbatim(quote.split("»,")[0] + "»", page_1h26())
+
+
+def test_ocr_hyphenated_sentence_is_verbatim():
+    src = "Если раньше мы ориенти-\nровались на ставку 13,5%, то теперь мы ожи- даем ее сохранения на теку\xadщем значении 14,0% до конца года."
+    assert verbatim("Теперь мы ожидаем её сохранения на текущем значении 14,0% до конца года.", src)
+    assert verbatim("…мы ориентировались на ставку 13,5%, то теперь…", src)
+    assert not verbatim("мы ожидаем ее сохранения … до конца года", src), "пропуск внутри — не дословно"
+    assert not verbatim("ожидаем снижения ставки", "Мы не ожидаем снижения ставки в этом году."), "отрезанное «не»"
+    assert not verbatim("на уровне", src), "пара слов — не цитата"
+
+
+def test_paraphrase_becomes_plain_next_to_verbatim_quote():
+    d = json.loads(json.dumps(DRAFT))
+    d["blocks"]["bank"] = {"quote": "Банк ждёт сохранения ставки на текущем значении 14,0% до конца года", "src": "S2"}
+    res = run(ScriptedLLM(draft=d))
+    bank = res.card["blocks"]["bank"]
+    assert verbatim(bank["quote"], BANK.items[0]["text"]) and "14,0%" in bank["quote"]
+    assert bank["plain"] == "Банк ждёт сохранения ставки на текущем значении 14,0% до конца года"
+
+
+def test_no_position_in_fragment_shows_honest_plate():
+    """Во фрагменте только расписание заседаний — ни цитаты модели, ни подстановки: плашка «позиции банка нет»."""
+    bank = BM25Index([{**BANK.items[0], "text": "До конца года состоится два заседания ЦБ по ключевой ставке "
+                                                "(23 октября и 18 декабря). Аукционы ОФЗ пройдут по средам."}])
+    d = json.loads(json.dumps(DRAFT))
+    d["blocks"]["bank"] = {"quote": "Банк ждёт сохранения ставки 14,0% до конца года", "src": "S2"}
+    d["key_points"] = d["key_points"][:1] + [{"t": "Ставка — главный риск для долга", "p": "ai"}]
+    p = profiles.get("U_25835")
+    res = Agent(ScriptedLLM(draft=d), bank, NEWS, today=TODAY).run(EVENT, "U_25835", match(EVENT, profiles.features(p), p["bank_products"]))
+    assert res.card["blocks"]["bank"] == {"quote": "", "doc": NO_BANK_VIEW, "date": TODAY.isoformat(), "stale": False}
 
 
 # ---------- замкнутая самопроверка (по аудиту: правка не перепроверялась, метки источников расходились) ----------

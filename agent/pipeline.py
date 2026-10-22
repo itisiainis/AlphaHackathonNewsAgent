@@ -10,7 +10,7 @@ from datetime import date
 from pathlib import Path
 
 from . import okved, profiles
-from .kb import BM25Index, load_bank_index, load_bank_meta
+from .kb import BM25Index, add_posts, load_bank_index, load_bank_meta
 from .llm import LLM
 from .loop import Agent, Result
 from .matching import Match, match, rank
@@ -62,13 +62,14 @@ class Pipeline:
     def __init__(self, llm: LLM, today: date | None = None):
         self.llm = llm
         self.today = today or date.today()
-        self.bank = load_bank_index(ROOT / "data" / "bank" / "docs.json")
+        self.bank = self.bank_docs = load_bank_index(ROOT / "data" / "bank" / "docs.json")
         self.bank_meta = load_bank_meta(ROOT / "data" / "bank" / "docs.json")
         self.reload_news()
 
     def reload_news(self):
         self.events = load_events()
         self.news = news_index(self.events)
+        self.bank = add_posts(self.bank_docs, self.events)  # посты экономистов банка — тоже аналитика банка (agent/kb.py)
 
     learner = None  # agent/learning.py: подключает бэкенд, если есть хранилище опыта
 

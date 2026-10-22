@@ -14,6 +14,10 @@
    - входные данные расчётов (blocks.calc[].inputs) проверяются так же, как утверждения.
 3. Понятность выводов (style): коды отраслей, жаргон и повтор заголовка события в выводах ИИ.
    Показывать карточку можно, но агент отправляет её на правку — руководитель должен понять вывод без словаря.
+4. Пересмотренная позиция банка (check_revised=True, agent/house_view.py): позиция банка, цитата банка, заголовок
+   или главный вывод повторяют прогноз, который банк уже пересмотрел (13,5% на конец 2026 года после 11.09),
+   — ошибка «позиция банка пересмотрена: с 11.09 банк ждёт 14,0%». Вывод ИИ с таким числом — предупреждение.
+   По умолчанию выключено: так загружаются уже готовые карточки; включают цикл агента и загрузка при старте.
 """
 from __future__ import annotations
 
@@ -25,6 +29,8 @@ from functools import lru_cache
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
+
+from .. import house_view
 
 SCHEMA_PATH = Path(__file__).with_name("card.schema.json")
 STALE_DAYS = 365
@@ -113,8 +119,10 @@ def _human(err) -> str:
     return tpl.format(v=", ".join(map(str, v)) if isinstance(v, list) else v)
 
 
-def validate_card(card: dict, today: date | None = None, source_texts: dict[int, str] | None = None) -> Report:
-    """Проверяет карточку. source_texts — {индекс источника: текст}, если агент их видел."""
+def validate_card(card: dict, today: date | None = None, source_texts: dict[int, str] | None = None,
+                  check_revised: bool = False) -> Report:
+    """Проверяет карточку. source_texts — {индекс источника: текст}, если агент их видел.
+    check_revised — искать пересмотренные прогнозы банка, выданные за действующие (см. revised_issues)."""
     today = today or date.today()
     rep = Report()
 
@@ -152,7 +160,58 @@ def validate_card(card: dict, today: date | None = None, source_texts: dict[int,
         if a.get("cta") and a["p"] != "ai":
             rep.warnings.append(f"blocks.actions[{k}]: кнопка действия у утверждения «{a['p']}»")
     rep.style = style_issues(card)
+    if check_revised:
+        errors, warnings = revised_issues(card, today, source_texts)
+        rep.errors += errors
+        rep.warnings += warnings
     return rep
+
+
+def revised_issues(card: dict, today: date, source_texts: dict[int, str] | None = None) -> tuple[list[str], list[str]]:
+    """Пересмотренный прогноз банка, выданный за действующий: (ошибки, предупреждения).
+
+    Ошибка — в позиции банка (p=bank, blocks.bank.quote / plain), заголовке и главном выводе (takeaway).
+    Материал не старше действующего прогноза не проверяется: свежий документ сам говорит «раньше 13,5%, теперь 14,0%».
+    Если старое значение называет сама новость (факт из новости или текст события), заголовок и главный вывод
+    его повторяют законно: «ЦБ снизил ставку до 13,5%» — это событие, а не позиция банка. Вывод ИИ — предупреждение."""
+    sources = card.get("sources", [])
+
+    def src(i) -> dict:
+        return sources[i] if isinstance(i, int) and 0 <= i < len(sources) else {}
+
+    def found(text: str, before: str | None = None) -> list[dict]:
+        return house_view.revisions_in(text or "", today, before=before)
+
+    # что называет сама новость: факты из новостей и текст события
+    news_says = {(r["indicator"], r["horizon"]) for _, s, _ in _iter_stmts(card)
+                 if s["p"] == "fact" and src(s.get("src")).get("kind") == "news" for r in found(s["t"])}
+    news_says |= {(r["indicator"], r["horizon"]) for i, t in (source_texts or {}).items()
+                  if src(i).get("kind") == "news" for r in found(t)}
+
+    def msg(where: str, text: str, revs: list[dict]) -> str:
+        cur = "; ".join(f"с {house_view.day(r['current']['date'])} банк ждёт {house_view.revision_note(r)}" for r in revs)
+        return f"{where}: позиция банка пересмотрена: {cur} — «{text[:60]}»"
+
+    errors, warnings = [], []
+    for where, s, strict in _iter_stmts(card):
+        if s["p"] == "bank":
+            revs = found(s["t"], src(s.get("src")).get("date"))
+            if revs:
+                (errors if strict else warnings).append(msg(where, s["t"], revs))
+        elif s["p"] == "ai":
+            revs = [r for r in found(s["t"]) if (r["indicator"], r["horizon"]) not in news_says]
+            if revs:
+                warnings.append(msg(where, s["t"], revs))
+    bank = card.get("blocks", {}).get("bank", {})
+    for key in ("quote", "plain"):
+        revs = found(bank.get(key, ""), bank.get("date"))
+        if revs:
+            errors.append(msg(f"blocks.bank.{key}", bank[key], revs))
+    for where, text in [("title", card.get("title", ""))] + [(f"takeaway.{r}", t) for r, t in card.get("takeaway", {}).items()]:
+        revs = [r for r in found(text) if (r["indicator"], r["horizon"]) not in news_says]
+        if revs:
+            errors.append(msg(where, text, revs))
+    return errors, warnings
 
 
 def _stems(text: str) -> set[str]:

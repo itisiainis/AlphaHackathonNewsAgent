@@ -22,3 +22,13 @@ def test_dates_from_text_and_filename():
 def test_chunks_are_tagged_with_sectors():
     ch = chunk_pages(["Продажи новых легковых автомобилей упали.\n\nЦены на сталь выросли."], size=30)
     assert ch[0]["sectors"] and "29" in ch[0]["sectors"] and "24" in ch[1]["sectors"]
+
+
+def test_strip_artefacts_removes_figure_references_only():
+    """«(cm Рис.7)» — ссылка на рисунок, распознанная OCR латиницей: в цитате без документа она не нужна."""
+    from agent.ingest.bank_docs import strip_artefacts
+    assert strip_artefacts("до 5,5% г/г на конец 2027 года (cm Рис.7).") == "до 5,5% г/г на конец 2027 года."
+    assert strip_artefacts("нулевой рост (см. Рис. 5), слабая динамика") == "нулевой рост, слабая динамика"
+    assert strip_artefacts("покупателями ОФЗ-ПД (см Таблицу ниже) на аукционах") == "покупателями ОФЗ-ПД на аукционах"
+    keep = "см нашу публикацию «Прогноз решения по ставке» (по оценке банка)"
+    assert strip_artefacts(keep) == keep, "содержательные скобки не трогаем"

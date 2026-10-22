@@ -128,7 +128,7 @@ class BM25Index:
 
         Выдача остаётся не длиннее top_k за счёт самых слабых обычных фрагментов; действующий прогноз
         и помеченный старый не выбрасываются — их расхождение и есть то, что агент должен увидеть."""
-        out = [x for x in scored[:top_k]]
+        out = list(scored[:top_k])
         revs: dict[int, list[dict]] = {}
         for _, i, _ in out:
             it = self.items[i]

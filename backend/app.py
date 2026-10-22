@@ -255,6 +255,27 @@ def company_events(cid: str, limit: int = 10, role: str = ""):
             for e, m in ranked]
 
 
+MACRO_MIN = 3  # меньше отобранных событий — лента дополняется главным в экономике
+
+
+@app.get("/api/companies/{cid}/macro")
+def company_macro(cid: str):
+    """«Значимых событий за сутки нет — главное в экономике» (docs/product.md, «Нет важных событий»): когда отбор
+    дал меньше MACRO_MIN событий, — до трёх новостей о ставке, курсе и инфляции за последние дни, по важности.
+    Без модели. needed — лента тонкая; items в формате /events (без признаков компании) плюс macro (тема) и why."""
+    from agent.matching import macro_events
+
+    _company(cid)
+    ranked = pipe.ranked(cid, 1000)
+    needed = len(ranked) < MACRO_MIN
+    have = {c["id"] for c, _ in store.cards(cid)}
+    items = macro_events(pipe.events, TODAY, exclude={e["id"] for e, _ in ranked}) if needed else []
+    return {"needed": needed, "selected": len(ranked),
+            "items": [{"id": e["id"], "title": e["title"], "published": e["published"], "source": e["source"],
+                       "url": e["url"], "topics": e["topics"], "also": len(e.get("also", [])), "macro": kind,
+                       "why": why, "analyzed": f"{e['id']}-{cid}" in have} for e, kind, why in items]}
+
+
 @app.get("/api/metrics")
 def metrics():
     """Метрики качества (критерий 12): обратная связь, доля карточек, прошедших проверку, расход."""
@@ -368,11 +389,13 @@ def _news_event(body: NewsIn) -> dict:
     """Новость пользователя: текст, или ссылка (статья, пост Telegram, PDF), или и то и другое."""
     title, text = body.title.strip(), body.text.strip()
     if body.url and len(text) < 200:
-        from agent.ingest.article import fetch_article
+        from agent.ingest.article import NotArticle, fetch_article
         a = _ARTICLES.get(body.url)
         if a is None:
             try:
                 a = fetch_article(body.url)
+            except NotArticle as e:  # раздел или главная сайта: просим ссылку на саму новость
+                raise HTTPException(422, str(e)) from e
             except ValueError as e:  # UnsafeURL — тоже ValueError: сообщение понятное, без деталей сервера
                 raise HTTPException(422, f"Не удалось прочитать ссылку: {e}") from e
             if len(_ARTICLES) >= ARTICLE_CACHE_MAX:
