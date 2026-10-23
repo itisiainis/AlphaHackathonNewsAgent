@@ -91,3 +91,80 @@ def test_analyze_by_link_only(tmp_path, monkeypatch):
     monkeypatch.setattr(article, "fetch_article", lambda url, client=None: (_ for _ in ()).throw(UnsafeURL("внутренняя сеть")))
     r = c.post("/api/analyze", json={"company_id": "U_25835", "url": "http://127.0.0.1/"})
     assert r.status_code == 422 and "внутренняя" in r.json()["detail"]
+
+
+# ---------- не статья: раздел сайта, главная, страница без текста ----------
+FIXTURES = __import__("pathlib").Path(__file__).parent / "fixtures"
+
+
+def test_section_page_is_not_an_article(monkeypatch):
+    """interfax.ru/business/ становился карточкой «возможность, высокое влияние» по ленте заголовков."""
+    monkeypatch.setattr(article, "check_url", lambda u: u)
+    page = (FIXTURES / "interfax_business.html").read_bytes()
+    c = _client({"interfax.ru/business": (200, {"content-type": "text/html; charset=utf-8"}, page)})
+    with pytest.raises(article.NotArticle) as e:
+        fetch_article("https://www.interfax.ru/business/", c)
+    assert str(e.value) == "Это не статья — пришлите ссылку на новость"
+
+
+def test_short_page_without_article_mark_is_not_an_article(monkeypatch):
+    monkeypatch.setattr(article, "check_url", lambda u: u)
+    stub = f"<html><head><title>Вход</title></head><body><div><p>{PARA}</p><p>{PARA}</p></div></body></html>".encode()
+    note = stub.replace(b"<head>", b'<head><meta property="og:type" content="article">')
+    c = _client({"login.example": (200, {"content-type": "text/html"}, stub),
+                 "flash.example": (200, {"content-type": "text/html"}, note)})
+    with pytest.raises(article.NotArticle):
+        fetch_article("https://login.example/", c)
+    # короткая заметка агентства (около 200 знаков) помечена как статья — это материал
+    assert "ключевую ставку" in fetch_article("https://flash.example/news/1", c).text
+
+
+def test_jsonld_marks_the_page_itself_not_items_of_a_headline_list(monkeypatch):
+    """rbc.ru/economics/: NewsArticle внутри ItemList (лента раздела) — не пометка статьи; у самой страницы — пометка."""
+    monkeypatch.setattr(article, "check_url", lambda u: u)
+    body = f"<body><div><p>{PARA}</p><p>{PARA}</p></div></body>"
+    ld = lambda obj: f'<script type="application/ld+json">{__import__("json").dumps(obj)}</script>'  # noqa: E731
+    section = ld({"@type": "ItemList", "itemListElement": [{"@type": "NewsArticle", "headline": "ЦБ сохранил ставку"}]})
+    own = ld({"@context": "https://schema.org", "@graph": [{"@type": "WebPage"}, {"@type": "NewsArticle", "headline": "x"}]})
+    c = _client({"section.example": (200, {"content-type": "text/html"}, f"<html><head>{section}</head>{body}</html>".encode()),
+                 "story.example": (200, {"content-type": "text/html"}, f"<html><head>{own}</head>{body}</html>".encode())})
+    with pytest.raises(article.NotArticle):
+        fetch_article("https://section.example/economics/", c)
+    assert "ключевую ставку" in fetch_article("https://story.example/news/1", c).text
+
+
+def test_short_official_announcement_is_a_material(monkeypatch):
+    """Анонс Банка России на cbr.ru — 500 знаков без og:type: материал, а не «Это не статья»."""
+    monkeypatch.setattr(article, "check_url", lambda u: u)
+    page = f"<html><head><title>Банк России</title></head><body><div><p>{PARA}</p><p>{PARA}</p></div></body></html>".encode()
+    c = _client({"cbr.ru": (200, {"content-type": "text/html"}, page),
+                 "cbr.ru.evil.example": (200, {"content-type": "text/html"}, page)})
+    assert "ключевую ставку" in fetch_article("https://www.cbr.ru/press/event/?id=32923", c).text
+    with pytest.raises(article.NotArticle):  # имя, лишь похожее на официальное, — не официальный сайт
+        fetch_article("https://cbr.ru.evil.example/press/", c)
+
+
+def test_article_with_long_related_list_is_still_an_article():
+    related = "".join(f'<li><a href="/n/{k}">Читайте также: другая новость номер {k} про экономику и рынки</a></li>'
+                      for k in range(30))
+    page = ARTICLE_PAGE.replace('<div class="related"><ul>', f'<div class="related"><ul>{related}')
+    _, text, _, kind = article._extract(page)
+    article.check_article(text, kind)  # не бросает NotArticle
+    assert kind["page_links"] >= 15 and kind["article"]
+
+
+def test_section_page_by_link_gives_clear_error(tmp_path, monkeypatch):
+    import importlib
+    import os
+
+    from fastapi.testclient import TestClient
+    os.environ.update(APP_CACHE_DIR=str(tmp_path), APP_TODAY="2026-10-21", RATE_LIMIT_PER_MIN="100")
+    os.environ.pop("LLM_API_KEY", None)
+    import backend.app as m
+    m = importlib.reload(m)
+    page = (FIXTURES / "interfax_business.html").read_bytes()
+    monkeypatch.setattr(article, "fetch_article", lambda url, client=None: fetch_article(
+        url, _client({"interfax.ru": (200, {"content-type": "text/html; charset=utf-8"}, page)})))
+    monkeypatch.setattr(article, "check_url", lambda u: u)
+    r = TestClient(m.app).post("/api/brief", json={"company_id": "U_25835", "url": "https://www.interfax.ru/business/"})
+    assert r.status_code == 422 and r.json()["detail"] == "Это не статья — пришлите ссылку на новость"
