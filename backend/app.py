@@ -26,9 +26,14 @@ from agent.chat import FOLLOW_UPS, answer, card_answer
 from agent.contract import validate_card
 from agent.learning import Learner
 from agent.llm import LLM, LLMUnavailable
+from agent.loop import refresh_saved
+from agent.offline import CHANNELS_STEP
 from agent.offline import UNAVAILABLE as OFFLINE_NOTICE
 from agent.okved import short_name
 from agent.pipeline import Pipeline, event_from_text
+from agent.sensitivity import diverse as diverse_events
+from agent.sensitivity import factors as factors_of
+from agent.sensitivity import hits as factor_hits_of
 from agent.slices import SUGGESTED, data_answer
 
 from .store import Store
@@ -93,21 +98,64 @@ _seed()
 
 def _load_precomputed() -> None:
     """Разборы агента, посчитанные заранее (scripts/run_agent.py --save → data/cards/<компания>/<id>.json).
-    Экономит бюджет: готовую карточку не нужно пересчитывать при каждом запуске."""
+    Экономит бюджет: готовую карточку не нужно пересчитывать при каждом запуске. Кеш (APP_CACHE_DIR) переживает
+    перезапуск, поэтому проверка идёт и по уже сохранённой карточке: разбор агентом на сервере новее файла — берём его,
+    файл новее (пересчитали) — берём файл."""
     for f in sorted((ROOT / "data" / "cards").glob("*/*.json")):
         cid = f.parent.name
-        if profiles.get(cid) is None or store.card(cid, f.stem):
+        if profiles.get(cid) is None:
+            continue
+        meta = store.card_meta(cid, f.stem)
+        stored = store.card(cid, f.stem) if meta and meta[0] == "agent" else None
+        if stored and meta[1] >= f.stat().st_mtime:
+            card = stored
+        else:
+            try:
+                card = json.loads(f.read_text(encoding="utf-8"))
+            except ValueError:
+                log.warning("не читается %s", f)
+                continue
+        rep = validate_card(card, today=TODAY, check_revised=True)
+        if rep.ok:
+            # по правилам нынешнего кода: итог трассы — из её же шагов (разборы до правки итога писали «Все проверки
+            # пройдены» после замечаний), без кодов отраслей в выводах ИИ
+            card = refresh_saved(card)
+            if card != stored:
+                store.put_card(cid, card, "agent")
+        else:
+            # разбор, посчитанный до пересмотра прогноза банка (или не прошедший проверку), не показываем:
+            # неверная позиция банка хуже, чем краткий разбор того же события; пересчитать — scripts/run_agent.py
+            SKIPPED_PRECOMPUTED[f"{cid}/{f.stem}"] = rep.errors[:3]
+            log.warning("готовый разбор %s/%s не загружен: %s", cid, f.stem, "; ".join(rep.errors[:2]))
+            if stored:
+                store.drop_card(cid, f.stem)  # сохранён прошлым запуском, до проверки — убираем из ленты
+
+
+SKIPPED_PRECOMPUTED: dict[str, list[str]] = {}  # в панели управления: что пересчитать
+_load_precomputed()
+
+
+def _refresh_rules() -> None:
+    """Краткие разборы из кеша прошлого запуска, собранные до каналов влияния (вывод-ярлык вместо вывода), пересобираются
+    по тому же событию: из потока новостей или из новостей, которые прислал клиент. Событие выпало из потока — разбор
+    остаётся как был."""
+    for cid, card, _, _ in store.all_cards("rules"):
+        if any(st.get("title") == CHANNELS_STEP for st in card.get("trace", [])):
+            continue
+        eid = card["id"][: -len(cid) - 1] if card["id"].endswith("-" + cid) else card["id"]
+        ev = next((e for e in pipe.events if e["id"] == eid), None) or store.user_event(cid, eid)
+        if not ev or profiles.get(cid) is None:
             continue
         try:
-            card = json.loads(f.read_text(encoding="utf-8"))
-        except ValueError:
-            log.warning("не читается %s", f)
+            fresh, _, _ = pipe.rules(ev, cid, fetch=False)
+        except Exception:  # пересборка одного разбора не должна мешать запуску
+            log.exception("пересборка краткого разбора %s", card["id"])
             continue
-        if validate_card(card, today=TODAY).ok:
-            store.put_card(cid, card, "agent")
+        if fresh:
+            store.put_card(cid, fresh, "rules")
 
 
-_load_precomputed()
+_refresh_rules()
 
 
 COLLECT_EVERY_MIN = int(os.environ.get("COLLECT_EVERY_MIN", "60"))
@@ -157,7 +205,13 @@ def _company(cid: str) -> dict:
     v = profiles.view(p)
     if mock:
         v["display"] = mock["display"]  # подписи демо-компаний команда сформулировала вручную
+    v["factors"] = factors_of(p)  # факторы чувствительности по данным банка (agent/sensitivity.py) — блок на главной
     return v
+
+
+def _factor_hits(company: dict, cards: list[dict]) -> dict[str, list[str]]:
+    """Какие факторы чувствительности затрагивает каждая карточка — для блока «Чувствительность бизнеса» и метки карточки."""
+    return {c["id"]: h for c in cards if (h := factor_hits_of(c, company["factors"]))}
 
 
 def _status() -> dict:
@@ -187,19 +241,22 @@ def _visible(cid: str) -> list[tuple[dict, str]]:
 @app.get("/api/bootstrap")
 def bootstrap():
     ids = list(dict.fromkeys(DEMO_IDS + store.companies_with_cards()))
-    insights, origins = {}, {}
+    insights, origins, user_cards = {}, {}, {}
     for cid in ids:
         _ensure_briefs(cid)
         rows = _visible(cid)
         insights[cid] = [c for c, _ in rows]
         origins[cid] = {c["id"]: o for c, o in rows}
+        user_cards[cid] = store.user_card_ids(cid)  # прислал сам клиент: не в «Важном» на главной, отдельной группой
     all_c = sorted(({"id": i, "display": profiles.short_industry(profiles.get(i)), "region": profiles.get(i)["region"],
                      "sector": short_name(profiles.get(i)["okved2"]),
                      "revenue_bn": round(profiles.get(i)["revenue_rub"] / 1e9, 1)} for i in profiles.all_ids()),
                    key=lambda x: -x["revenue_bn"])
+    companies = [_company(i) for i in ids]
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
-            "companies": [_company(i) for i in ids], "all_companies": all_c,
-            "insights": insights, "origins": origins, "status": _status(), "chat_suggestions": SUGGESTED,
+            "companies": companies, "all_companies": all_c,
+            "factor_hits": {c["id"]: _factor_hits(c, insights[c["id"]]) for c in companies},
+            "insights": insights, "origins": origins, "user_cards": user_cards, "status": _status(), "chat_suggestions": SUGGESTED,
             "follow_ups": FOLLOW_UPS, "learned": learner.topic_weights()}
 
 
@@ -210,7 +267,7 @@ def _ensure_briefs(cid: str) -> None:
     """У каждой компании в ленте сразу есть разборы: для лучших по отбору событий — краткий разбор без модели
     (бесплатно, миллисекунды). Полный разбор ИИ — по кнопке. Свежие события важнее примеров команды."""
     have = {c["id"] for c, o in store.cards(cid) if o != "seed"}
-    for ev, _ in pipe.ranked(cid, BRIEFS):
+    for ev, _ in diverse_events(pipe.ranked(cid, 12), BRIEFS):  # лучшие события по разным факторам чувствительности
         if f"{ev['id']}-{cid}" in have:
             continue
         try:
@@ -227,7 +284,9 @@ def company(cid: str):
     _company(cid)
     _ensure_briefs(cid)
     rows = _visible(cid)
-    return {"company": _company(cid), "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows}}
+    comp = _company(cid)
+    return {"company": comp, "insights": [c for c, _ in rows], "origins": {c["id"]: o for c, o in rows},
+            "user_cards": store.user_card_ids(cid), "factor_hits": _factor_hits(comp, [c for c, _ in rows])}
 
 
 def _role_weights(role: str) -> dict:
@@ -251,6 +310,27 @@ def company_events(cid: str, limit: int = 10, role: str = ""):
              "topics": e["topics"], "also": len(e.get("also", [])), "score": m.score, "matched": m.matched,
              "reasons": m.reasons, "analyzed": f"{e['id']}-{cid}" in have}
             for e, m in ranked]
+
+
+MACRO_MIN = 3  # меньше отобранных событий — лента дополняется главным в экономике
+
+
+@app.get("/api/companies/{cid}/macro")
+def company_macro(cid: str):
+    """«Значимых событий за сутки нет — главное в экономике» (docs/product.md, «Нет важных событий»): когда отбор
+    дал меньше MACRO_MIN событий, — до трёх новостей о ставке, курсе и инфляции за последние дни, по важности.
+    Без модели. needed — лента тонкая; items в формате /events (без признаков компании) плюс macro (тема) и why."""
+    from agent.matching import macro_events
+
+    _company(cid)
+    ranked = pipe.ranked(cid, 1000)
+    needed = len(ranked) < MACRO_MIN
+    have = {c["id"] for c, _ in store.cards(cid)}
+    items = macro_events(pipe.events, TODAY, exclude={e["id"] for e, _ in ranked}) if needed else []
+    return {"needed": needed, "selected": len(ranked),
+            "items": [{"id": e["id"], "title": e["title"], "published": e["published"], "source": e["source"],
+                       "url": e["url"], "topics": e["topics"], "also": len(e.get("also", [])), "macro": kind,
+                       "why": why, "analyzed": f"{e['id']}-{cid}" in have} for e, kind, why in items]}
 
 
 @app.get("/api/metrics")
@@ -334,9 +414,10 @@ def _stream(event: dict, cid: str) -> StreamingResponse:
 
 def _event(cid: str, eid: str) -> dict:
     _company(cid)
-    ev = next((e for e in pipe.events if e["id"] == eid), None)
+    # событие из потока или новость, которую клиент прислал сам (её полный разбор запускают позже)
+    ev = next((e for e in pipe.events if e["id"] == eid), None) or store.user_event(cid, eid)
     if not ev:
-        raise HTTPException(404, "событие не найдено")
+        raise HTTPException(404, "событие не найдено: возможно, оно выпало из потока новостей — пришлите ссылку ещё раз")
     return ev
 
 
@@ -365,11 +446,13 @@ def _news_event(body: NewsIn) -> dict:
     """Новость пользователя: текст, или ссылка (статья, пост Telegram, PDF), или и то и другое."""
     title, text = body.title.strip(), body.text.strip()
     if body.url and len(text) < 200:
-        from agent.ingest.article import fetch_article
+        from agent.ingest.article import NotArticle, fetch_article
         a = _ARTICLES.get(body.url)
         if a is None:
             try:
                 a = fetch_article(body.url)
+            except NotArticle as e:  # раздел или главная сайта: просим ссылку на саму новость
+                raise HTTPException(422, str(e)) from e
             except ValueError as e:  # UnsafeURL — тоже ValueError: сообщение понятное, без деталей сервера
                 raise HTTPException(422, f"Не удалось прочитать ссылку: {e}") from e
             if len(_ARTICLES) >= ARTICLE_CACHE_MAX:
@@ -400,11 +483,20 @@ def _brief(ev: dict, cid: str) -> dict:
     return {"card": card, "origin": "rules", "llm_online": llm.online}
 
 
+def _user_event(body: NewsIn) -> dict:
+    """Новость клиента запоминается: полный разбор ИИ по ней можно запустить и после перезагрузки страницы."""
+    _company(body.company_id)
+    ev = _news_event(body)
+    store.put_user_event(body.company_id, ev)
+    return ev
+
+
 @app.post("/api/brief")
 def brief_news(body: NewsIn):
-    """Своя новость: краткий разбор сразу; полный разбор ИИ клиент запускает следом (/api/analyze/stream)."""
-    _company(body.company_id)
-    return _brief(_news_event(body), body.company_id)
+    """Своя новость: краткий разбор сразу; полный разбор ИИ клиент запускает следом
+    (/api/companies/{cid}/events/{event_id}/analyze/stream — event_id приходит в ответе)."""
+    ev = _user_event(body)
+    return _brief(ev, body.company_id) | {"event_id": ev["id"], "user": True}
 
 
 @app.post("/api/companies/{cid}/events/{eid}/brief")
@@ -415,15 +507,13 @@ def brief_event(cid: str, eid: str):
 @app.post("/api/analyze")
 def analyze_news(body: NewsIn):
     """Разбор новости, которой нет в базе (критерий 04: ранее не показанные новости)."""
-    _company(body.company_id)
-    return _run(_news_event(body), body.company_id)
+    return _run(_user_event(body), body.company_id)
 
 
 @app.post("/api/analyze/stream")
 def analyze_news_stream(body: NewsIn):
     """То же, что /api/analyze, но шаги агента приходят потоком SSE."""
-    _company(body.company_id)
-    return _stream(_news_event(body), body.company_id)
+    return _stream(_user_event(body), body.company_id)
 
 
 class ChatIn(BaseModel):
@@ -449,7 +539,7 @@ def chat(card_id: str, body: ChatIn):
 
 class FeedbackIn(BaseModel):
     company_id: str
-    role: str = Field(pattern="^(cfo|ceo|treasurer)$")
+    role: str = Field(pattern="^(cfo|ceo|treasurer|accountant)$")
     vote: str = Field(pattern="^(up|down)$")
 
 
@@ -461,7 +551,7 @@ def feedback(card_id: str, body: FeedbackIn):
 
 class RequestIn(BaseModel):
     company_id: str
-    role: str = Field(pattern="^(cfo|ceo|treasurer)$")
+    role: str = Field(pattern="^(cfo|ceo|treasurer|accountant)$")
     kind: str = Field(pattern="^(manager|product)$")
     label: str = Field(max_length=120)
     comment: str = Field(default="", max_length=1000)

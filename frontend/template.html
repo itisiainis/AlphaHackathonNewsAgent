@@ -13,6 +13,7 @@
   --fact:#5b6472; --fact-bg:#eef0f3;
   --bank:#e3262f; --bank-bg:#fdecec;
   --ai:#6b4fd8; --ai-bg:#efebfc;
+  --rule:#0f7b8a; --rule-bg:#e7f4f5;
   --new:#1a73e8; --new-bg:#e8f0fe;
   --risk:#d23b3b; --opp:#1f9d60; --info:#6b7280;
   --r:14px;
@@ -60,6 +61,16 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .widget-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
 .w-item{display:flex;gap:10px;align-items:flex-start;text-decoration:none;padding:12px 0;border-top:1px solid var(--line)}
 .w-item:first-of-type{border-top:0}
+/* «Чувствительность бизнеса»: факторы по данным банка и свежее событие по каждому */
+.factors{margin-top:16px}
+.factor{display:grid;grid-template-columns:10px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.factor:first-of-type{border-top:0}
+.factor .lv{width:10px;height:10px;border-radius:50%;margin-top:5px;background:#cdd1d8}
+.factor .lv.high{background:var(--bank)}.factor .lv.medium{background:#e8a33a}
+.factor b{font-size:14px}.factor .pd{font-size:12px;color:var(--muted)}
+.factor .ps{font-size:13px;margin-top:3px}.factor .ps a{text-decoration:none}
+.factor .ps.risk a{color:var(--bank)}.factor .ps.opportunity a{color:#1d8a4b}.factor .ps.calm{color:var(--muted)}
+.factor-tag{font-size:11px;color:var(--rule);border:1px solid #bfe0e3;border-radius:999px;padding:1px 8px;white-space:nowrap}
 .w-item:hover .w-take{color:var(--brand)}
 .w-take{font-weight:600;font-size:15px}
 .w-ev{font-size:13px;color:var(--ink-3)}
@@ -74,6 +85,14 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .chip{font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-2)}
 .forwho{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0 14px}
 .dq{background:#fff7e0;border:1px solid #f1dc9c;color:#6b4d00;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+/* модель недоступна или лимит исчерпан: лента из кратких разборов — честно сказано над лентой */
+.ai-off{background:var(--ai-bg);border:1px solid #d9d2f7;color:#3d2a8c;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:600}
+.an-err{color:var(--risk);font-size:13px;margin:0 0 8px}.an-err:empty{display:none}
+/* оговорка под разбором и под виджетом — как в каждом материале банка */
+.disclaimer{font-size:11.5px;color:var(--ink-3);margin-top:14px}
+.w-sub{font-size:13px;color:var(--ink-2);margin:-2px 0 4px}
+.w-quiet{padding:12px 0 2px;font-size:14px;color:var(--ink-2)}.w-quiet a{color:var(--ink);font-weight:600;text-decoration:none}.w-quiet a:hover{color:var(--brand)}
+.q-more{margin-left:6px;font-style:normal;font-size:13px}
 /* карточка-аккордеон */
 .ic{background:#fff;border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;transition:box-shadow .2s,border-color .2s;scroll-margin-top:70px}
 .ic.is-new{border-color:#c6dafc;box-shadow:0 0 0 3px var(--new-bg)}
@@ -88,7 +107,8 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 /* короткий слой: вывод, главные числа, позиция банка; событие и источник — мелко внизу */
 .nchips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
 .nchip{font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 9px;color:var(--ink)}
-.kp-bank{border-left:3px solid var(--bank);background:var(--bank-bg);padding:5px 10px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:13.5px;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kp-bank{border-left:3px solid var(--bank);background:var(--bank-bg);padding:5px 10px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:13.5px;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.kp-bank.kp-note{border-left-color:#c79200;background:#fff7e0;color:#6b4d00}
 .kp-bank sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .ic-ev{font-size:12.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .jobchip{font-size:11px;color:var(--ai);font-weight:600}
@@ -101,7 +121,7 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .ic.row .ic-head{display:flex;gap:10px;align-items:center;padding:10px 16px}
 .ic.row .dot-new,.ic.row .dot-read{margin-top:0}
 .row-main{flex:1;min-width:0;display:flex;flex-direction:column}
-.row-take{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-take{font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ic.row .ic-date{margin-left:0;flex:0 0 auto}
 .ic-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;font-size:12px;color:var(--ink-3)}
 .ic-foot .more{flex:0 0 auto}
@@ -117,6 +137,7 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .stmt.fact{border-color:#cdd1d8;background:transparent}
 .stmt.bank{border-color:var(--bank);background:var(--bank-bg)}
 .stmt.ai{border-color:var(--ai);background:var(--ai-bg)}
+.stmt.rule{border-color:var(--rule);background:var(--rule-bg)}
 .stmt sup a,.kp sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .str{font-size:11px;color:var(--ink-3);margin-left:6px}
 /* расчёт эффекта кодом: формула видна, сумма пересчитывается под пользователя */
@@ -136,7 +157,6 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .two h4{margin:0 0 2px;font-size:13px}
 .h-risk{color:var(--risk)}.h-opp{color:var(--opp)}
 .quote{border-left:3px solid var(--bank);background:var(--bank-bg);padding:10px 12px;border-radius:0 8px 8px 0;font-style:italic}
-.quote.stale{border-color:#c79200;background:#fff7e0}
 .stmt.plain{font-style:normal}
 details.sec-d{margin-top:16px}
 details.sec-d>summary{cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
@@ -153,7 +173,7 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .tools .sp{flex:1}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:12px}
 .legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
-.legend .l-fact::before{background:#cdd1d8}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}
+.legend .l-fact::before{background:#cdd1d8}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}.legend .l-rule::before{background:var(--rule)}
 /* чат */
 .chat{display:none;margin-top:12px;background:var(--bg);border-radius:12px;padding:12px}
 .chat.on{display:block}
@@ -175,8 +195,8 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .hb-b.unk{opacity:.3}
 .hb-v{font-variant-numeric:tabular-nums;color:var(--ink)}
 /* панель трассы */
-.drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.08);transform:translateX(100%);visibility:hidden;transition:transform .25s,visibility .25s;z-index:40;display:flex;flex-direction:column}
-.drawer.open{transform:none;visibility:visible}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.08);transform:translateX(100%);visibility:hidden;transition:transform .25s,visibility 0s .25s;z-index:40;display:flex;flex-direction:column}
+.drawer.open{transform:none;visibility:visible;transition:transform .25s,visibility 0s}
 .drawer header{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
 .drawer .body{padding:16px 18px;overflow:auto;flex:1}
 .step{position:relative;padding:0 0 16px 26px;opacity:.25;transition:opacity .3s}
@@ -220,6 +240,8 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
   nav.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 10px}
   nav.side a{white-space:nowrap}
   nav.side .nav-foot{display:none}
+  .top{position:static}
+  .ic{scroll-margin-top:8px}
   .grid3,.two{grid-template-columns:1fr}
   main{padding:16px}
   .ic-take{font-size:16px}
@@ -269,8 +291,8 @@ body.adm main{max-width:1120px}
   <main id="app"></main>
 </div>
 <div class="overlay" id="overlay"></div>
-<aside class="drawer" id="drawer" aria-label="Шаги агента">
-  <header><b>Как получен вывод</b><button class="btn" id="drawer-close">Закрыть</button></header>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+  <header><b id="drawer-title">Как получен вывод</b><button class="btn" id="drawer-close">Закрыть</button></header>
   <div class="body" id="drawer-body"></div>
   <div class="totals" id="drawer-totals"></div>
 </aside>
@@ -295,7 +317,7 @@ function loadRead() { try { return new Set(JSON.parse(localStorage.getItem(READ_
 function saveRead() { try { localStorage.setItem(READ_KEY, JSON.stringify([...state.read].slice(-500))); } catch (e) { /* без хранилища — до перезагрузки */ } }
 const state = {company: null, role: null, open: null,
   read: loadRead(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {},
-  jobs: {}, order: {}, drawer: null, ticker: null};
+  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}};
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   const data = await r.json().catch(() => ({}));
@@ -308,7 +330,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 const IMPACT = {high: 3, medium: 2, low: 1};
 const IMPACT_RU = {high: 'высокое влияние', medium: 'среднее влияние', low: 'низкое влияние'};
 const TYPE_RU = {risk: 'риск', opportunity: 'возможность', info: 'к сведению'};
-const P_FULL = {fact: 'факт', bank: 'позиция банка', ai: 'вывод ИИ'};
+const P_FULL = {fact: 'факт', bank: 'позиция банка', ai: 'вывод ИИ', rule: 'вывод по правилам: собран кодом из новости, данных банка, расчёта и взгляда банка, без ИИ'};
 const STR_RU = {high: 'сильное влияние', medium: 'умеренное влияние', low: 'слабое влияние'};
 const fmtDate = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'});
 const fmtDateY = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'});
@@ -320,7 +342,8 @@ const today = () => new Date(((DATA.status && DATA.status.today) || (DATA.genera
 const ageDays = i => Math.max(0, (today() - new Date(i.published + 'T00:00:00')) / 864e5);
 const NEW_DAYS = 14;
 const isNew = i => i.is_new && ageDays(i) <= NEW_DAYS && !state.read.has(state.company + ':' + i.id);
-const takeaway = i => (i.takeaway && (i.takeaway[state.role] || Object.values(i.takeaway)[0])) || i.why_short;
+// у разборов, собранных до роли главбуха, его вывода нет — показываем вывод финансового директора
+const takeaway = i => (i.takeaway && (i.takeaway[state.role] || i.takeaway.cfo || Object.values(i.takeaway)[0])) || i.why_short;
 // Вес темы для роли: правила + чему научили оценки клиентов (для роли и для этой компании) — backend agent/learning.py
 function topicWeight(t) {
   const L = DATA.learned || {}, r = (L.roles || {})[state.role] || {}, c = ((L.companies || {})[state.company] || {})[state.role] || {};
@@ -332,8 +355,10 @@ function scored() {
     .map(i => ({...i, score: IMPACT[i.impact] * 10 + i.topics.reduce((s, t) => s + topicWeight(t), 0) - Math.max(0, ageDays(i) - 7) * 0.35}));
 }
 // Группы ленты: на что тратить время в первую очередь
-const PRIORITY = [['act', 'Требует решения'], ['watch', 'Следить'], ['info', 'К сведению'], ['old', 'Ранее']];
-const PR_IDX = {act: 0, watch: 1, info: 2, old: 3};
+const PRIORITY = [['mine', 'Вы прислали'], ['act', 'Требует решения'], ['watch', 'Следить'], ['info', 'К сведению'], ['old', 'Ранее']];
+const PR_IDX = {mine: 0, act: 1, watch: 2, info: 3, old: 4};
+// новость, которую клиент прислал сам (ссылка или текст): отдельная группа, в «Важное» на главной не попадает
+const isMine = i => ((DATA.user_cards || {})[state.company] || []).includes(i.id);
 const OLD_DAYS = 30;  // событие старше месяца решения уже не требует — оно уходит в «Ранее»
 // Более свежая карточка на ту же тему (та же главная тема, на 3+ дня новее) заменяет старую: две карточки про одну ставку не нужны
 function supersededIds(items) {
@@ -342,7 +367,7 @@ function supersededIds(items) {
     if (a !== b && (a.topics || [])[0] && (a.topics || [])[0] === (b.topics || [])[0] && ageDays(a) - ageDays(b) >= 3) out.add(a.id);
   return out;
 }
-const priority = (i, old) => old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old' : i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
+const priority = (i, old) => isMine(i) ? 'mine' : old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old' : i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
 /* Порядок фиксируется при открытии ленты (компания × роль) и не меняется до перезагрузки: готовый разбор
    обновляет карточку на её месте, новая карточка встаёт первой в своей группе.
    При расчёте: группа → новые выше прочитанных → score. */
@@ -379,14 +404,18 @@ function companyOptions() {
 async function loadCompany(id) {
   if (!API || DATA.companies.some(c => c.id === id)) return;
   const r = await api('/api/companies/' + id);
+  if (DATA.companies.some(c => c.id === id)) return;  // две параллельные загрузки одной компании
   DATA.companies.push(r.company); DATA.insights[id] = r.insights; (DATA.origins = DATA.origins || {})[id] = r.origins;
+  (DATA.user_cards = DATA.user_cards || {})[id] = r.user_cards || [];
+  (DATA.factor_hits = DATA.factor_hits || {})[id] = r.factor_hits || {};
 }
 function initSwitchers() {
   $('#sel-company').innerHTML = companyOptions();
   $('#sel-role').innerHTML = DATA.roles.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
   $('#sel-company').value = state.company;
-  $('#sel-company').onchange = async e => { const id = e.target.value;
+  $('#sel-company').onchange = async e => { const id = e.target.value, ticket = state.switchTo = id;
     try { await loadCompany(id); } catch (err) { showModal('Не удалось загрузить компанию', err.message); return; }
+    if (state.switchTo !== ticket) return;  // пока грузилась эта компания, выбрали другую
     state.company = id; state.open = null; state.firstPaint = true;
     if (location.hash.startsWith('#feed/')) location.hash = '#feed'; else render(); };
   $('#sel-role').onchange = e => { state.role = e.target.value; state.events = {}; render(); };
@@ -398,14 +427,36 @@ function renderNav(route) {
     <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>
     ${API ? `<div class="nav-foot">Для сотрудников банка<a href="#admin" class="${route === 'admin' ? 'on' : ''}">Панель управления</a></div>` : ''}`;
 }
-function renderStatus() {
-  // состояние модели и расход — служебная информация: только в панели управления, не в шапке
+/* Модель: подключена и лимит дня не исчерпан. Расход и состояние модели — служебные (панель управления);
+   клиенту говорим только последствие — разборы сейчас краткие, без выводов ИИ. Выключенный фоновый сбор новостей
+   к модели отношения не имеет и плашку не включает. */
+const aiReady = () => !!(DATA.status && DATA.status.llm_online && !(DATA.status.spent_today_rub >= DATA.status.budget_rub));
+const aiBanner = () => API && DATA.status && !aiReady()
+  ? '<div class="ai-off" role="status">ИИ-аналитик недоступен — краткие разборы: факты, позиция банка, расчёт и выводы по правилам, без ИИ</div>' : '';
+/* Диалог и панель шагов: Esc закрывает, фокус возвращается на кнопку, которая их открыла
+   (если её перерисовали — на такую же кнопку с теми же data-атрибутами) */
+let opener = null;
+let lastPressed = null;  // Safari не переводит фокус на кнопку при щелчке — запоминаем, что нажали
+document.addEventListener('click', e => { lastPressed = e.target.closest('button, a, select, input'); }, true);
+function rememberOpener() {
+  const a = document.activeElement && document.activeElement !== document.body ? document.activeElement : lastPressed;
+  if (!a || a === document.body || a.closest('#modal, #drawer')) return;  // повторный диалог из диалога — прежний источник
+  const d = [...a.attributes].find(x => x.name.startsWith('data-'));
+  opener = {el: a, sel: a.id ? '#' + CSS.escape(a.id) : d ? `[${d.name}="${CSS.escape(d.value)}"]` : ''};
 }
+function restoreFocus() {
+  const o = opener; opener = null;
+  const el = o && (o.el.isConnected ? o.el : o.sel && document.querySelector(o.sel));
+  if (el) el.focus();
+}
+function openDrawer() { rememberOpener(); $('#drawer').classList.add('open'); $('#overlay').classList.add('on'); $('#drawer-close').focus(); }
 function showModal(title, text, form = false, submit = 'Отправить менеджеру', placeholder = 'Что обсудить (необязательно)') {
+  rememberOpener();
   $('#modal-title').textContent = title; $('#modal-text').textContent = text;
   $('#modal-form').hidden = !form; $('#modal-ok').hidden = form; if (form) $('#modal-form').reset();
   $('#modal-submit').textContent = submit; $('#modal-form').comment.placeholder = placeholder;
-  $('#modal').classList.add('on'); $('#overlay').classList.add('on'); }
+  $('#modal').classList.add('on'); $('#overlay').classList.add('on');
+  (form ? $('#modal-form').comment : $('#modal-ok')).focus(); }
 
 /* ---------- фрагменты ---------- */
 // источник без адреса (например, новость, вставленная пользователем) — подпись без ссылки, а не мёртвый href
@@ -423,9 +474,33 @@ function rubFmt(x, signed = true) {
   const f = (v, d) => v.toLocaleString('ru-RU', {maximumFractionDigits: d});
   return sg + (a >= 1e9 ? f(a / 1e9, 1) + ' млрд ₽' : a >= 1e6 ? f(a / 1e6, a >= 1e7 ? 0 : 1) + ' млн ₽' : f(a / 1e3, 0) + ' тыс. ₽');
 }
+/* Знак суммы — словами, по смыслу расчёта и знаку числа, а не по метке карточки: «−20 млн ₽» у стоимости долга —
+   экономия, у выручки — потери. Расходы — как в agent/impact.py COST_TITLES (сценарий «Если …, стоимость долга» — тоже) */
+const COST_RX = /стоимость долга|закупк|утильсбор|пошлин|налог|валютные расчёты/i, INCOME_RX = /выручк|доход|маржа/i;
+const famOf = t => COST_RX.test(t) ? 'cost' : INCOME_RX.test(t) ? 'income' : '';
+const MONEY_WORD = {cost: ['экономия', 'доп. расходы'], income: ['потери', 'доп. доход']};
+const moneyWord = (fam, neg) => MONEY_WORD[fam] ? MONEY_WORD[fam][neg ? 0 : 1] : '';
+const SIGNED = /^(до )?([+−-])\s?(.+)$/;
+function moneyValue(c) {
+  const m = SIGNED.exec(c.value);
+  if (!m) return c.value;
+  // «до» — один раз и после слова: «потери до 1,6 млрд ₽», а не «до до −1,6 млрд ₽»
+  const upper = !!m[1] || / — верхняя оценка/.test(m[3]), rest = m[3].replace(' — верхняя оценка', '');
+  const w = moneyWord(famOf(c.title), m[2] !== '+');
+  return w ? `${w} ${upper ? 'до ' : ''}${rest}` : `${upper ? 'до ' : ''}${m[2]}${rest}`;
+}
+// риск или возможность по экономике расчёта; сценарий («Если …») — без знака
+function calcSign(c) {
+  const m = SIGNED.exec(c.value), fam = famOf(c.title);
+  if (c.sign === 'neutral' || !m || !fam) return c.sign;
+  return (m[2] === '+') === (fam === 'cost') ? 'risk' : 'opportunity';
+}
+// риск не открывается выигрышем, возможность — потерей: подходящие по знаку расчёты идут первыми
+const calcFits = (c, i) => i.type === 'info' || [i.type, 'neutral'].includes(calcSign(c));
+const calcsOf = i => [...(i.blocks.calc || [])].sort((a, b) => calcFits(b, i) - calcFits(a, i));
 function calcHtml(c, i) {
-  const sc = c.scale ? `<label class="calc-s">${esc(c.scale.label)} <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="напр. 5" data-per="${c.scale.per_bn}" data-signed="${c.sign !== 'neutral'}" data-period="${esc(c.scale.period)}"> <output>→ введите сумму, чтобы пересчитать</output></label>` : '';
-  return `<div class="calc ${c.sign}"><div class="calc-h"><span>${esc(c.title)}</span><span class="calc-v">${esc(c.value)}</span></div>
+  const sc = c.scale ? `<label class="calc-s">${esc(c.scale.label)} <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="напр. 5" data-per="${c.scale.per_bn}" data-signed="${c.sign !== 'neutral'}" data-fam="${famOf(c.title)}" data-period="${esc(c.scale.period)}"> <output>→ введите сумму, чтобы пересчитать</output></label>` : '';
+  return `<div class="calc ${calcSign(c)}"><div class="calc-h"><span>${esc(c.title)}</span><span class="calc-v">${esc(moneyValue(c))}</span></div>
     <div class="calc-f">Формула: <code>${esc(c.formula)}</code>${c.strength ? ' · надёжность оценки: ' + CALC_STR[c.strength] : ''}</div>${sc}
     <details><summary>Данные и допущения</summary>${c.inputs.map(s => stmtHtml(s, i)).join('')}<ul>${c.assumptions.map(a => `<li>${esc(a)}</li>`).join('')}</ul></details></div>`;
 }
@@ -449,8 +524,8 @@ const numsOf = s => s.match(/\d+(?:[.,]\d+)?/g) || [];
 /* Главные числа карточки — чипами, их проще пробежать глазами, чем предложения: расчёт в рублях и доли
    платежей, на которые сработал отбор. Число, которое уже есть в главном выводе, не повторяем. */
 function numChips(i, take) {
-  const calc = (i.blocks.calc || []).slice(0, 1).map(c => `${c.title.split(/: | — /)[0]}: ${/верхняя оценка/.test(c.value) ? 'до ' : ''}${c.value
-    .replace(' на каждый ', ' на ').replace(/ с плавающей ставкой| — верхняя оценка| \((?:дороже|дешевле) в рублях\)/g, '')}`);
+  const calc = calcsOf(i).filter(c => calcFits(c, i)).slice(0, 1).map(c => `${c.title.split(/: | — /)[0]}: ${moneyValue(c)
+    .replace(' на каждый ', ' на ').replace(/ с плавающей ставкой| \((?:дороже|дешевле) в рублях\)/g, '')}`);
   const flows = (i.matched || []).filter(m => /\d+%/.test(m)).map(plainFeat);
   return [...calc, ...flows].filter(c => !numsOf(c).every(n => take.includes(n))).slice(0, 3);
 }
@@ -458,16 +533,67 @@ const evId = i => i.id.slice(0, -(state.company.length + 1));
 const cardJob = i => state.jobs[state.company + ':' + evId(i)];
 const jobMark = (j, prefix) => `<span class="jobchip" data-jobkey="${esc(j.key)}" data-prefix="${prefix}">${prefix}${Math.round(j.progress)}%</span>`;
 
+/* ---------- позиция банка ---------- */
+const STALE_DAYS = 365;  // аналитика банка старше 12 месяцев — устаревшая, в выводе не используется
+const staleDoc = s => !!s && !!s.date && (today() - new Date(s.date + 'T00:00:00')) / 864e5 > STALE_DAYS;
+// пометка команды или агента «свежей оценки нет, последняя — 2021» — это не позиция банка, а честная плашка
+const NOTICE_RX = /^«?\s*(?:Последняя доступная|Свежей (?:позиции|оценки))/;
+const bankNotice = b => !!b.stale || NOTICE_RX.test(b.quote || '');
+const kpNote = (s, i) => NOTICE_RX.test(s.t) || (s.src !== undefined && staleDoc(i.sources[s.src]));
+/* Цитата — в «ёлочках» один раз: внешние кавычки самой цитаты снимаются («««…»»» не бывает). Если кавычки,
+   открытые в начале, закрываются посередине («…13,5%», при этом…), текст показан как есть, без своих кавычек */
+function quoteParts(q) {
+  q = String(q || '').trim();
+  for (;;) {
+    const pair = q[0] === '«' ? '»' : q[0] === '"' ? '"' : '';
+    if (!pair) break;
+    let d = 0, end = -1;
+    for (let k = 0; k < q.length; k++) {
+      if (pair === '"') { if (k > 0 && q[k] === '"') { end = k; break; } continue; }
+      if (q[k] === '«') d++; else if (q[k] === '»' && --d === 0) { end = k; break; }
+    }
+    if (end === q.length - 1) q = q.slice(1, -1).trim();
+    else if (end < 0) q = q.slice(1).trim();
+    else return {text: q, wrap: false};
+  }
+  if (q.endsWith('»') && (q.match(/«/g) || []).length < (q.match(/»/g) || []).length) q = q.slice(0, -1).trim();
+  return {text: q, wrap: true};
+}
+const QUOTE_MAX = 280;
+const cutWords = (t, n) => t.length <= n ? t : t.slice(0, n).replace(/[\s,;:—–-]+\S*$/, '') + '…';
+function quoteHtml(i) {
+  const {text, wrap} = quoteParts(i.blocks.bank.quote), full = state.quoteFull[i.id] || text.length <= QUOTE_MAX;
+  const w = t => wrap ? `«${esc(t)}»` : esc(t);
+  return `<div class="quote">${full ? w(text) : `${w(cutWords(text, QUOTE_MAX))}<button class="linkbtn q-more" data-qfull>Читать полностью</button>`}</div>`;
+}
+function bankHtml(i) {
+  const b = i.blocks.bank, notice = bankNotice(b), src = `<div class="src-line">${esc(b.doc)}${b.date ? ' · ' + fmtDateY(b.date) : ''}</div>`;
+  if (!b.quote) return `<div class="dq">${esc(b.doc)}</div>${b.stale && !/не используется/.test(b.doc) ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}`;
+  if (notice) return `<div class="dq">${esc(quoteParts(b.quote).text)}</div>${src}${b.stale && !/не используется/.test(b.quote) ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}`;
+  return quoteHtml(i) + src + (b.plain ? `<div class="stmt ai plain" title="${P_FULL.ai}">Проще говоря: ${esc(b.plain)}</div>` : '');
+}
+/* Оговорка под разбором и под виджетом — как в каждом материале банка. Центр макроэкономического анализа назван,
+   только если все использованные материалы банка — его обзоры (макростатистика, ставка, инфляция, потребление):
+   обзоры долгового рынка, отраслей и золота готовят другие подразделения, им чужая подпись не нужна */
+const CMA_RX = /«(?:Макростатистика|Ключевая ставка ЦБ|Инфляция|Потребление на пике)/;
+const NOT_ADVICE = 'Не является индивидуальной инвестиционной рекомендацией.';
+const bankUsed = i => !bankNotice(i.blocks.bank) && (!!i.blocks.bank.quote || (i.key_points || []).some(s => s.p === 'bank' && !kpNote(s, i)));
+function disclaimerHtml(cards) {
+  const used = cards.filter(bankUsed), docs = used.flatMap(i => i.sources.filter(s => s.kind === 'bank' && !staleDoc(s)));
+  const who = !used.length ? '' : docs.length && docs.every(s => CMA_RX.test(s.name)) ? 'Центр макроэкономического анализа Альфа-Банка' : 'Альфа-Банк';
+  return `<div class="disclaimer">${who ? `Аналитика — ${who}. ` : ''}${NOT_ADVICE}</div>`;
+}
+
 /* ---------- карточка-аккордеон ---------- */
 function cardHtml(i) {
   const open = state.open === i.id, nw = isNew(i), job = cardJob(i), take = takeaway(i);
   const chips = numChips(i, take), bank = (i.key_points || []).find(s => s.p === 'bank');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка и расчёт — без выводов ИИ">краткий разбор</span>' : ''}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка, расчёт и выводы по правилам — без ИИ">краткий разбор</span>' : ''}${factorTag(i)}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
       <div class="ic-take">${esc(take)}</div>
       ${chips.length ? `<div class="nchips">${chips.map(c => `<span class="nchip">${esc(c)}</span>`).join('')}</div>` : ''}
-      ${bank ? `<div class="kp-bank" title="Позиция банка">${esc(bank.t)}${ref(bank, i)}</div>` : ''}
+      ${bank ? kpNote(bank, i) ? `<div class="kp-bank kp-note">${esc(bank.t)}${ref(bank, i)}</div>` : `<div class="kp-bank" title="Позиция банка">${esc(bank.t)}${ref(bank, i)}</div>` : ''}
       <div class="ic-foot"><span class="ic-ev" title="${esc(i.title)}">${esc(i.title)} · ${srcShort(i)}</span><span class="more">${open ? 'Свернуть' : 'Подробнее'} <span class="chev">▾</span></span></div>
     </button>
     ${open ? bodyHtml(i) : ''}
@@ -487,22 +613,19 @@ function bodyHtml(i) {
   const chatLog = (state.chats[i.id] || []).join('');
   const srcNames = [...new Set(i.sources.map(s => s.name))].slice(0, 3).join(', ');
   return `<div class="ic-body">
-    <div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span><span class="l-ai">вывод ИИ</span></div>
+    ${legendHtml(i)}
     ${b.actions.length ? `<div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>` : ''}
-    ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${b.calc.map(c => calcHtml(c, i)).join('')}</div>` : ''}
+    ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${calcsOf(i).map(c => calcHtml(c, i)).join('')}</div>` : ''}
     ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
     ${b.risks.length || b.opportunities.length ? `<div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>` : ''}
-    <div class="sec"><h3>Как оценивает банк</h3>${b.bank.quote ? `<div class="quote ${b.bank.stale ? 'stale' : ''}">«${esc(b.bank.quote)}»</div>
-      <div class="src-line">${esc(b.bank.doc)} · ${fmtDateY(b.bank.date)}</div>` : `<div class="dq">${esc(b.bank.doc)}</div>`}
-      ${b.bank.plain ? `<div class="stmt ai plain" title="${P_FULL.ai}">Проще говоря: ${esc(b.bank.plain)}</div>` : ''}
-      ${b.bank.stale ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}</div>
+    <div class="sec"><h3>Как оценивает банк</h3>${bankHtml(i)}</div>
     <details class="sec-d"><summary>Что произошло</summary>${list(b.what, i)}</details>
     <details class="sec-d"><summary>На чём основан вывод <span class="muted">· ${esc(srcNames)}</span></summary><div class="two">
       <div><h4>Источники</h4><ol class="srcs">${i.sources.map(s => `<li><span class="kind ${s.kind}">${s.kind === 'bank' ? 'банк' : s.kind === 'stat' ? 'статистика' : 'новость'}</span>${srcLink(s, esc(s.name))} <span class="muted">· ${fmtDateY(s.date)}</span></li>`).join('')}</ol></div>
       <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(plainFeat(f))}</span>`).join('')}
         ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></details>
     <div class="tools">
-      ${origin(i) === 'rules' && API && DATA.status && DATA.status.llm_online ? `<button class="btn pri" data-upgrade ${running ? 'disabled' : ''}>${running ? jobMark(job, 'Разбор идёт · ') : 'Полный разбор ИИ'}</button>` : ''}
+      ${origin(i) === 'rules' && API && aiReady() ? `<button class="btn pri" data-upgrade ${running ? 'disabled' : ''}>${running ? jobMark(job, 'Разбор идёт · ') : 'Полный разбор ИИ'}</button>` : ''}
       <button class="btn" data-share>Переслать</button>
       <button class="btn" data-trace="${i.id}">Как получен вывод</button>
       <button class="btn ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}">Задать вопрос</button>
@@ -516,6 +639,7 @@ function bodyHtml(i) {
       <div class="chat-log">${chatLog}</div>
       <form class="chat-in"><input placeholder="Вопрос по этому событию" autocomplete="off"><button class="btn pri">Спросить</button></form>
     </div>
+    ${disclaimerHtml([i])}
   </div>`;
 }
 
@@ -526,17 +650,79 @@ function topDistinct(items, k) {
   for (const i of items) { const key = (i.topics || [])[0] + '|' + i.type; if (!seen.has(key)) { seen.add(key); out.push(i); } if (out.length === k) return out; }
   return out.concat(items.filter(i => !out.includes(i))).slice(0, k);
 }
+/* На главную — только то, что стоит времени руководителя: разборы ИИ и аналитиков; краткий разбор правилами —
+   если в нём есть расчёт, доля поступлений или платежей или влияние выше низкого. Вывод-ярлык («Касается вас: …»,
+   «Событие в отрасли …») ничего не объясняет — такое событие идёт на главную, только если влияние высокое, и главной
+   строкой тогда стоит само событие, а ярлык — под ним. Одинаковые выводы и заголовки — один раз */
+const LABEL_TAKE = /^(?:Касается вас:|Событие в (?:вашей )?отрасли)/;
+const labelTake = i => LABEL_TAKE.test(takeaway(i) || '');
+const homeLine = i => labelTake(i) ? i.title : takeaway(i);  // главная строка пункта на главной
+function homeWorthy(i) {
+  if (labelTake(i)) return i.impact === 'high';
+  if (origin(i) !== 'rules') return true;  // agent, seed (и примеры команды в статической сборке)
+  return !!(i.blocks.calc || []).length || (i.matched || []).some(m => /\d%/.test(m)) || i.impact !== 'low';
+}
+function homeItems(items) {
+  const seen = new Set(), norm = t => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  return items.filter(homeWorthy).filter(i => {
+    const keys = ['t:' + norm(homeLine(i)), 'e:' + norm(i.title)];  // ярлык у разных событий одинаковый — не повтор
+    if (keys.some(k => seen.has(k))) return false;
+    keys.forEach(k => seen.add(k)); return true;
+  });
+}
 function viewHome() {
-  const all = ranked(), fresh = all.filter(i => i.group !== 'old');
-  const c = company(), top = topDistinct(fresh.length >= 3 ? fresh : [...fresh, ...all.filter(i => i.group === 'old')], 3), n = newCount();
+  const ok = homeItems(ranked().filter(i => i.group !== 'mine')), fresh = ok.filter(i => i.group !== 'old');
+  const c = company(), top = topDistinct(fresh, 3), n = newCount();
+  // тихий день: свежего важного нет — так и говорим и даём последнее важное из прошлых событий
+  const last = top.length ? null : ok.filter(i => i.group === 'old').sort((a, b) => b.published.localeCompare(a.published))[0];
+  const item = i => `<a class="w-item" href="#feed/${i.id}"><span class="${isNew(i) ? 'dot-new' : 'dot-read'}"></span>
+        <span><span class="tag ${i.type}">${TYPE_RU[i.type]}</span><div class="w-take" style="margin-top:4px">${esc(homeLine(i))}</div><div class="w-ev">${esc(labelTake(i) ? takeaway(i) : i.title)}</div></span></a>`;
+  const body = top.length ? (top.length < 3 ? `<div class="w-sub">Сегодня по-настоящему важно ${top.length} ${top.length === 1 ? 'событие' : 'события'}</div>` : '') + top.map(item).join('')
+    : last ? `<div class="w-quiet">Сегодня ничего, что требует решения. <a href="#feed/${last.id}">Последнее важное: ${esc(homeLine(last))} →</a></div>`
+    : `<div class="empty">Значимых событий за сутки нет${API ? ' · <a class="linkbtn" href="#feed">Новости по вашему профилю →</a>' : ''}</div>`;
   return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
     <div class="card widget">
       <div class="widget-head"><h2>Важное для вашего бизнеса ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
-      ${top.length ? top.map(i => `<a class="w-item" href="#feed/${i.id}"><span class="${isNew(i) ? 'dot-new' : 'dot-read'}"></span>
-        <span><span class="tag ${i.type}">${TYPE_RU[i.type]}</span><div class="w-take" style="margin-top:4px">${esc(takeaway(i))}</div><div class="w-ev">${esc(i.title)}</div></span></a>`).join('')
-        : `<div class="empty">${API ? 'Разобранных событий пока нет. <a class="linkbtn" href="#feed">Посмотреть отобранные новости →</a>' : 'Значимых событий за сутки нет'}</div>`}
+      ${body}
+      ${disclaimerHtml(top.length ? top : last ? [last] : [])}
     </div>
+    ${factorsHtml(c)}
     ${companySummary(c)}`;
+}
+/* Чувствительность бизнеса (backend agent/sensitivity.py): факторы, через которые внешние события влияют на компанию, по данным
+   банка, и свежее событие по каждому. Сначала факторы с риском или возможностью, потом важные для выбранной роли */
+const TYPE_STATUS = {risk: 'Риск', opportunity: 'Возможность', info: 'Мониторинг'};
+const TOPIC_FACTOR = {'ставка': 'rate', 'долг': 'rate', 'курс': 'fx', 'налоги': 'taxes', 'контрагенты': 'buyers',
+                    'ликвидность': 'concentration', 'спрос': 'market', 'отрасль': 'market'};
+function factorIds(i) {
+  const hits = ((DATA.factor_hits || {})[state.company] || {})[i.id];
+  if (hits) return hits;
+  const have = new Set((company().factors || []).map(p => p.id));  // новый разбор, пока сервер его не разметил
+  return [...new Set((i.topics || []).map(t => TOPIC_FACTOR[t]).filter(id => have.has(id)))];
+}
+function factorTag(i) {
+  const id = factorIds(i)[0], p = id && (company().factors || []).find(x => x.id === id);
+  return p ? `<span class="factor-tag" title="Фактор чувствительности бизнеса, на который влияет событие">${esc(p.title)}</span>` : '';
+}
+function factorsHtml(c) {
+  if (!(c.factors || []).length) return '';
+  const items = ranked().filter(i => i.group !== 'old' && i.group !== 'mine');
+  const LV = {high: 0, medium: 1, low: 2}, rank = r => (r || []).indexOf(state.role) < 0 ? 9 : r.indexOf(state.role);
+  const pressure = x => !x.top ? 0 : x.top.type === 'info' ? 1 : 2;  // сначала факторы, по которым есть риск или возможность
+  const rows = c.factors.map(p => {
+    const hit = items.filter(i => factorIds(i).includes(p.id));
+    const top = hit.find(i => i.type !== 'info') || hit[0];
+    return {p, top, n: hit.length};
+  }).sort((a, b) => pressure(b) - pressure(a) || rank(a.p.roles) - rank(b.p.roles) || LV[a.p.level] - LV[b.p.level]).slice(0, 5);
+  const row = ({p, top, n}) => `<div class="factor"><span class="lv ${p.level}" title="${{high: 'высокая чувствительность', medium: 'средняя чувствительность', low: 'низкая чувствительность'}[p.level]}"></span>
+    <div><b>${esc(p.title)}</b><div class="pd">${esc(p.detail)}</div>
+      ${top ? `<div class="ps ${top.type}">${TYPE_STATUS[top.type]}: <a href="#feed/${top.id}">${esc(homeLine(top))} →</a>${n > 1 ? ` <span class="muted">+${n - 1}</span>` : ''}</div>`
+        : `<div class="ps calm">Значимых событий нет · отслеживаем: ${esc(p.watch)}</div>`}</div></div>`;
+  return `<div class="card factors"><h2>Чувствительность бизнеса</h2><div class="muted" style="margin-bottom:4px">Факторы, через которые внешние события влияют на компанию, — по данным Альфа-Банка</div>${rows.map(row).join('')}</div>`;
+}
+function legendHtml(i) {
+  const ps = new Set([...i.key_points, ...['what', 'why', 'risks', 'opportunities', 'actions'].flatMap(k => i.blocks[k] || [])].map(s => s.p));
+  return `<div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span>${ps.has('ai') || origin(i) !== 'rules' ? '<span class="l-ai">вывод ИИ</span>' : ''}${ps.has('rule') ? `<span class="l-rule" title="${P_FULL.rule}">вывод по правилам</span>` : ''}</div>`;
 }
 // Сводка «ваш бизнес в данных банка»: то, от чего зависит влияние новостей на компанию
 function flowCard(title, s, who) {
@@ -563,7 +749,7 @@ function viewFeed() {
   const c = company();
   const items = ranked();
   const groups = PRIORITY.map(([id, name]) => [id, name, items.filter(i => i.group === id)]).filter(g => g[2].length);
-  return `<h1>Новости для бизнеса</h1>${forWho(c)}
+  return `<h1>Новости для бизнеса</h1>${forWho(c)}${aiBanner()}
     ${c.data_quality.length ? `<div class="dq"><b>Данные о компании неполные — выводы ориентировочные.</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
     ${API ? quickForm() : ''}
     ${items.length ? groups.map(([id, name, its]) => `<section class="grp"><h2 class="grp-h">${name}<span class="n">${its.length}</span></h2>
@@ -572,8 +758,8 @@ function viewFeed() {
     ${API ? `<div class="sec"><h3>Ещё новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
 }
 function quickForm() {
-  return `<form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость">
-      <button class="btn pri">Оценить</button></form>
+  return `<form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость" aria-describedby="an-err">
+      <button class="btn pri">Оценить</button></form><div class="an-err" id="an-err" role="alert"></div>
     <details class="quick-more"><summary class="linkbtn">Нет ссылки — вставить текст новости</summary>
       <textarea id="quick-text" rows="5" maxlength="20000" placeholder="Текст новости"></textarea>
       <button class="btn" id="quick-text-go">Оценить текст</button> <span id="an-msg" class="muted" role="status"></span></details>`;
@@ -687,11 +873,13 @@ function updateJobMarks() {
     find('data-jobkey', j.key).forEach(el => { el.textContent = el.dataset.prefix + Math.round(j.progress) + '%'; });
   }
 }
+// Ссылка на разбор несёт компанию и роль: у коллеги откроется та же карточка, а не первая компания списка
+const cardLink = i => `${location.origin}${location.pathname}?c=${encodeURIComponent(state.company)}&r=${encodeURIComponent(state.role)}#feed/${i.id}`;
 // «Переслать»: короткая выжимка для коллеги — вывод под роль, обоснования с источниками, ссылка на разбор
 async function shareCard(i) {
   const src = st => st.src !== undefined && i.sources[st.src] ? ` (${i.sources[st.src].name})` : '';
   const text = [i.title, '', takeaway(i), ...(i.key_points || []).map(st => `— ${st.t}${src(st)}`), '',
-    `Разбор: ${location.origin}${location.pathname}#feed/${i.id}`].join('\n');
+    `Разбор: ${cardLink(i)}`].join('\n');
   try {
     if (navigator.share) { await navigator.share({title: i.title, text}); return; }
     await navigator.clipboard.writeText(text); toast('Выжимка скопирована — вставьте в мессенджер или письмо', 3500);
@@ -710,20 +898,30 @@ function refreshView() {
 }
 // Деловой человек не ждёт: краткий разбор (факты, позиция банка, расчёт, что это затрагивает) приходит
 // за секунды и сразу открывается; полный разбор ИИ идёт фоновой задачей и заменяет его на месте.
-async function analyzeNow(key, label, briefPath, path, body) {
+// onError — ошибка краткого разбора (например, ссылку не прочитали): по умолчанию уведомление в углу
+async function analyzeNow(key, label, briefPath, path, body, onError = e => toast(e.message, 6000)) {
   const old = state.jobs[key];
-  if (old && old.status === 'running') { toast('Этот разбор уже идёт — следите за ним в углу экрана'); return; }
+  if (old && old.status === 'running') { toast('Этот разбор уже идёт — следите за ним в углу экрана'); return false; }
+  const before = new Set((DATA.user_cards || {})[state.company] || []);  // что клиент уже присылал
   let r;
-  try { r = await api(briefPath, body); } catch (e) { toast(e.message, 6000); return; }
+  try { r = await api(briefPath, body); } catch (e) { onError(e); return false; }
   const cid = state.company, list = DATA.insights[cid] || [];
   DATA.insights[cid] = list.some(c => c.id === r.card.id) ? list.map(c => c.id === r.card.id ? r.card : c) : [r.card, ...list];
   ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.origin;
+  if (r.user) { const mine = (DATA.user_cards = DATA.user_cards || {})[cid] = DATA.user_cards[cid] || [];
+    if (!mine.includes(r.card.id)) mine.unshift(r.card.id);
+    key = cid + ':' + r.event_id; path = `/api/companies/${cid}/events/${r.event_id}/analyze`; body = {}; }
   delete state.events[cid];
   if (location.hash === '#feed/' + r.card.id) { state.open = null; render(true); } else location.hash = '#feed/' + r.card.id;
-  if (r.reused) { toast('Этот сюжет уже разбирали для вашей компании — полный разбор открыт сразу', 5000); return; }
-  if (r.origin === 'agent') return;  // полный разбор этого события уже есть
-  if (!r.llm_online) { toast('Краткий разбор готов. Полный разбор ИИ можно будет запустить, когда модель станет доступна.', 6000); return; }
+  if (r.user && before.has(r.card.id)) { toast('Этот материал уже разобран — открыли готовый разбор', 5000); return true; }
+  if (r.reused) { toast('Этот сюжет уже разбирали для вашей компании — полный разбор открыт сразу', 5000); return true; }
+  if (r.origin === 'agent') return true;  // полный разбор этого события уже есть
+  // связи с профилем нет — платный разбор ИИ сам не запускаем; кнопка «Полный разбор ИИ» в карточке остаётся
+  if (!(r.card.matched || []).length || /^Прямой связи/.test(takeaway(r.card) || '')) {
+    toast('Связи с вашей компанией не нашли — полный разбор ИИ не запускали', 6000); return true; }
+  if (!r.llm_online) { toast('Краткий разбор готов. Полный разбор ИИ можно будет запустить, когда модель станет доступна.', 6000); return true; }
   startJob(key, label, path, body, true);
+  return true;
 }
 function startJob(key, label, path, body, afterBrief = false) {
   const old = state.jobs[key];
@@ -769,7 +967,7 @@ function openJobTrace(j) {
   state.drawer = 'job:' + j.key;
   liveTrace(j.trace, j.status === 'running' ? j.pending : '');
   if (j.status === 'failed') $('#drawer-totals').textContent = 'Разбор не получился: ' + j.error;
-  $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
+  openDrawer();
 }
 $('#jobs').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -808,7 +1006,7 @@ const pct = x => x === null || x === undefined ? '—' : Math.round(x * 100) + '
 const sec = ms => ms ? (ms / 1000).toFixed(1).replace('.', ',') + ' с' : '—';
 const num = x => (+x || 0).toLocaleString('ru-RU', {maximumFractionDigits: 2});
 const dt = ts => new Date(ts * 1000).toLocaleString('ru-RU', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
-const ROLE_RU = {cfo: 'Фин. директор', ceo: 'Ген. директор', treasurer: 'Казначей'};
+const ROLE_RU = {cfo: 'Фин. директор', ceo: 'Ген. директор', treasurer: 'Казначей', accountant: 'Главбух'};
 const REQ_RU = {new: 'Новый', in_work: 'В работе', done: 'Закрыт'};
 const TASK_RU = {triage: 'Разметка новостей при сборе', agent: 'Выбор следующего шага агента', draft: 'Черновик разбора',
   check: 'Проверка черновика', chat: 'Ответы на вопросы клиента', vision: 'Сканы и графики'};
@@ -956,7 +1154,7 @@ function bindAdminTab() {
     try { const full = await aapi(`/cards/${c.company_id}/${c.id}`);
       $('#drawer-body').innerHTML = `<div class="adm-card"><b>${esc(full.title)}</b><p>${esc((full.takeaway || {}).cfo || full.why_short || '')}</p></div>` + (full.trace || []).map(s => stepHtml(s, true)).join('');
       $('#drawer-totals').textContent = (full.trace || []).length ? totalsText(full.trace) : 'Шагов нет: разбор подготовлен заранее';
-      state.drawer = 'admin'; $('#drawer').classList.add('open'); $('#overlay').classList.add('on'); } catch (e) { toast(e.message, 5000); } });
+      state.drawer = 'admin'; openDrawer(); } catch (e) { toast(e.message, 5000); } });
   const lt = document.querySelector('[data-learning]');
   if (lt) lt.onchange = async () => { try { await aapi('/settings', 'PUT', {learning: lt.checked}); toast(lt.checked ? 'Опыт применяется' : 'Опыт не применяется — копится', 3000); } catch (e) { toast(e.message, 5000); lt.checked = !lt.checked; } };
   const f = $('#adm-settings');
@@ -1014,11 +1212,16 @@ function openTrace(i) {
   const body = $('#drawer-body');
   body.innerHTML = i.trace.map(s => stepHtml(s, false)).join('');
   $('#drawer-totals').textContent = origin(i) === 'seed' ? 'Разбор подготовлен аналитиками по материалам банка' : totalsText(i.trace);
-  $('#drawer').classList.add('open'); $('#overlay').classList.add('on');
+  openDrawer();
   let t = 150;
   [...body.querySelectorAll('.step')].forEach((el, k) => { traceTimers.push(setTimeout(() => el.classList.add('shown'), t)); t += Math.min(900, 250 + i.trace[k].ms / 6); });
 }
-function closeOverlays() { state.drawer = null; $('#drawer').classList.remove('open'); $('#overlay').classList.remove('on'); $('#modal').classList.remove('on'); }
+// restore — закрыл сам пользователь (Esc, «Закрыть», фон): фокус возвращается туда, откуда открыли
+function closeOverlays(restore = false) {
+  const was = $('#drawer').classList.contains('open') || $('#modal').classList.contains('on');
+  state.drawer = null; $('#drawer').classList.remove('open'); $('#overlay').classList.remove('on'); $('#modal').classList.remove('on');
+  if (was && restore) restoreFocus(); else if (was) opener = null;
+}
 
 /* ---------- роутинг и события ---------- */
 // keep — перерисовка по готовому разбору: открытые панель шагов и диалог не закрываем
@@ -1027,7 +1230,7 @@ function render(scrollToOpen = false, keep = false) {
   const r = route === 'insight' ? 'feed' : route === 'quality' ? 'admin' : route;   // старые ссылки #insight/id и #quality
   if (r === 'feed' && arg && state.open !== arg) { state.open = arg; markRead(arg); scrollToOpen = true; }
   if (!keep) closeOverlays();
-  renderNav(r); renderStatus();
+  renderNav(r);
   if (r === 'analyze') { location.replace('#feed'); return; }  // старые ссылки на отдельную страницу
   const views = {feed: viewFeed, admin: viewAdmin};
   document.body.classList.toggle('adm', r === 'admin' && API);
@@ -1037,12 +1240,23 @@ function render(scrollToOpen = false, keep = false) {
   if (r === 'feed') { loadEvents(); bindEvents(); }
   if (r === 'admin' && API) bindAdmin();
   if (r === 'feed' && API && $('#quick-an')) {
-    $('#quick-an').onsubmit = e => { e.preventDefault(); const url = e.target.url.value.trim(); if (!url) return;
-      e.target.reset(); analyzeNow(state.company + ':url:' + url, hostOf(url), '/api/brief', '/api/analyze', {company_id: state.company, url}); };
-    $('#quick-text-go').onclick = () => { const text = $('#quick-text').value.trim();
+    /* Ссылку не прочитали — она остаётся в поле, ошибка видна под ним, а поле для текста открыто: можно вставить
+       текст новости. Удачный разбор перерисовывает ленту — форма снова пустая */
+    $('#quick-an').onsubmit = async e => { e.preventDefault(); const f = e.target, url = f.url.value.trim(), btn = f.querySelector('button');
+      if (!url || btn.disabled) return;
+      $('#an-err').textContent = ''; btn.disabled = true; btn.textContent = 'Читаем ссылку…';
+      await analyzeNow(state.company + ':url:' + url, hostOf(url), '/api/brief', '/api/analyze', {company_id: state.company, url}, err => {
+        if (!f.isConnected) { toast(err.message, 6000); return; }
+        $('#an-err').textContent = `${cap(err.message.replace(/[.\s]+$/, ''))}. Можно вставить текст новости ниже.`;
+        document.querySelector('.quick-more').open = true; });
+      if (btn.isConnected) { btn.disabled = false; btn.textContent = 'Оценить'; } };
+    $('#quick-text-go').onclick = async () => { const text = $('#quick-text').value.trim();
       if (text.length < 40) { $('#an-msg').textContent = 'Вставьте текст новости — хотя бы пару предложений'; return; }
       const title = text.split(/[.!?\n]/)[0].slice(0, 200);
-      $('#quick-text').value = ''; analyzeNow(state.company + ':text:' + title, title, '/api/brief', '/api/analyze', {company_id: state.company, title, text}); };
+      $('#an-msg').textContent = '';
+      const ok = await analyzeNow(state.company + ':text:' + title, title, '/api/brief', '/api/analyze', {company_id: state.company, title, text},
+        err => { if ($('#an-msg')) $('#an-msg').textContent = err.message; else toast(err.message, 6000); });
+      if (ok && $('#quick-text')) $('#quick-text').value = ''; };
   }
   if (scrollToOpen && state.open) { const el = document.getElementById('card-' + state.open); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
   else if (!arg) window.scrollTo(0, 0);
@@ -1060,6 +1274,8 @@ function bind() {
   const i = ranked().find(x => x.id === state.open); if (!i) return;
   const card = document.getElementById('card-' + i.id); if (!card) return;
   card.querySelector('[data-trace]').onclick = () => openTrace(i);
+  const qf = card.querySelector('[data-qfull]');  // длинная цитата банка: полный текст — по нажатию, на месте
+  if (qf) qf.onclick = () => { state.quoteFull[i.id] = true; qf.closest('.quote').outerHTML = quoteHtml(i); };
   card.querySelector('[data-share]').onclick = () => shareCard(i);
   const up = card.querySelector('[data-upgrade]');  // краткий разбор → полный разбор агентом по тому же событию
   if (up) up.onclick = () => startJob(state.company + ':' + evId(i), i.title, `/api/companies/${state.company}/events/${evId(i)}/analyze`, {});
@@ -1067,8 +1283,9 @@ function bind() {
   card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render();
     if (API) api(`/api/cards/${i.id}/feedback`, {company_id: state.company, role: state.role, vote: b.dataset.fb}).catch(() => {}); });
   card.querySelectorAll('[data-per]').forEach(inp => inp.oninput = () => {
-    const v = parseFloat(inp.value.replace(',', '.')), out = inp.parentElement.querySelector('output');
-    out.textContent = v > 0 ? '→ ' + rubFmt(v * +inp.dataset.per, inp.dataset.signed === 'true') + ' ' + inp.dataset.period : '→ введите сумму, чтобы пересчитать';
+    const v = parseFloat(inp.value.replace(',', '.')), out = inp.parentElement.querySelector('output'), x = v * +inp.dataset.per;
+    const w = x ? moneyWord(inp.dataset.fam, x < 0) : '';  // как в заголовке расчёта: «экономия 100 млн ₽ в год»
+    out.textContent = v > 0 ? '→ ' + (w ? w + ' ' + rubFmt(Math.abs(x), false) : rubFmt(x, inp.dataset.signed === 'true')) + ' ' + inp.dataset.period : '→ введите сумму, чтобы пересчитать';
   });
   card.querySelectorAll('[data-cta]').forEach(b => b.onclick = () => {
     if (!API) { showModal(b.dataset.label, 'Обратитесь к вашему персональному менеджеру — разбор события он увидит в карточке клиента.'); return; }
@@ -1091,7 +1308,11 @@ function bind() {
     } catch (err) { (state.chats[i.id] = state.chats[i.id] || []).push(`<div class="msg u">${esc(q)}</div>`, `<div class="msg a muted">${esc(err.message)}</div>`); }
     log.innerHTML = state.chats[i.id].join(''); };
 }
-$('#overlay').onclick = closeOverlays; $('#drawer-close').onclick = closeOverlays; $('#modal-ok').onclick = closeOverlays; $('#modal [data-close]').onclick = closeOverlays;
+const closeByUser = () => closeOverlays(true);
+$('#overlay').onclick = closeByUser; $('#drawer-close').onclick = closeByUser; $('#modal-ok').onclick = closeByUser; $('#modal [data-close]').onclick = closeByUser;
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && ($('#drawer').classList.contains('open') || $('#modal').classList.contains('on'))) { e.preventDefault(); closeByUser(); }
+});
 window.addEventListener('hashchange', () => render());
 (async function boot() {
   if (API) {
@@ -1099,7 +1320,14 @@ window.addEventListener('hashchange', () => render());
     catch (e) { $('#app').innerHTML = `<div class="card empty">Сервис недоступен: ${esc(e.message)}</div>`; return; }
   }
   state.company = DATA.companies[0].id; state.role = DATA.roles[0].id;
-  initSwitchers();
+  const q = new URLSearchParams(location.search), card = (location.hash.match(/^#feed\/(.+)$/) || [])[1];
+  const owner = q.get('c') || (card && (Object.keys(DATA.insights).find(c => DATA.insights[c].some(i => i.id === card))
+    || (card.match(/-(U_\d+)$/) || [])[1]));
+  if (owner && owner !== state.company && (DATA.all_companies || []).some(c => c.id === owner)) {
+    try { await loadCompany(owner); state.company = owner; } catch (e) { /* остаёмся на первой компании */ }
+  }
+  if (DATA.roles.some(r => r.id === q.get('r'))) state.role = q.get('r');
+  initSwitchers(); $('#sel-role').value = state.role;
   render();
 })();
 </script>

@@ -18,13 +18,15 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from . import profiles
+from . import channels, house_view, profiles, sensitivity
 from .contract import Report, validate_card
 from .contract.validator import numbers_in
-from .kb import BM25Index
+from .ingest.bank_docs import strip_artefacts
+from .kb import BM25Index, no_industry_view
 from .llm import LLM, NO_REASONING, ROUTING, LLMUnavailable, extract_json
 from .matching import Match
-from .prompts import AGENT_SYSTEM, CHECK_SYSTEM, DRAFT_SYSTEM, ROLES_RU, tools_block
+from .offline import NO_BANK_VIEW, _bank_quote, _stems
+from .prompts import AGENT_SYSTEM, CHECK_SYSTEM, DRAFT_SYSTEM, ROLES_RU, house_view_block, tools_block
 from .tools import ToolSession
 
 MAX_TOOL_STEPS = 5
@@ -39,7 +41,9 @@ BANK_VIEW = re.compile(r"прогноз|ожида|считае|полагае|�
 
 
 def quote_matches(quote: str, source: str, share: float = 0.6) -> bool:
-    """Цитата банка должна опираться на текст документа: не меньше 60% её слов (по основе из 5 букв) есть в источнике."""
+    """Утверждение опирается на текст документа: не меньше 60% его слов (по основе из 5 букв) есть в источнике.
+    Мягкая проверка пересказа («Проще говоря» рядом с цитатой, позиция банка в коротком слое);
+    цитата blocks.bank.quote — только verbatim()."""
     words = {w[:5] for w in re.findall(r"[а-яёa-z]{5,}", quote.lower())}
     if not words:
         return True
@@ -47,12 +51,70 @@ def quote_matches(quote: str, source: str, share: float = 0.6) -> bool:
     return len(words & src) / len(words) >= share
 
 
-CODE_RE = re.compile(r"\s*\((?:ОКВЭД\s*)?\d{2}(?:\.\d+)*\)")
+QUOTE_MIN = 20  # короче — не цитата, а пара слов из документа
+
+
+def norm_quote(text: str) -> str:
+    """Текст для сверки дословности. Различия, которых читатель не видит или которые внёс OCR, не считаются:
+    регистр, ё/е, пробелы, мягкий перенос и перенос слова по строкам («ожи-\\nдаем»), вид кавычек и тире,
+    ссылки на рисунки («(cm Рис.7)»); точку, запятую и точку с запятой OCR путает — для сверки это один знак."""
+    t = strip_artefacts(text).replace("\xad", "").lower().replace("ё", "е")
+    t = re.sub(r"[‐‑‒–—―−]", "-", t)
+    t = re.sub(r"(?<=[а-яa-z])-\s+(?=[а-яa-z])", "", t)
+    t = re.sub(r"[«»„“”‟\"'‘’‚]", '"', t)
+    t = re.sub(r"[.,;]", ",", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def verbatim(quote: str, source: str) -> bool:
+    """Цитата банка — непрерывный кусок текста документа после norm_quote: от границы слова до границы слова и
+    без отрезанного отрицания («ожидаем снижения» из «не ожидаем снижения» — не цитата). Внешние кавычки и
+    многоточия по краям не мешают; многоточие внутри — пропуск текста, такая «цитата» не дословна."""
+    q = norm_quote(quote).strip(' "…,')
+    if len(q) < QUOTE_MIN:
+        return False
+    src = norm_quote(source)
+    at = src.find(q)
+    while at >= 0:
+        end = at + len(q)
+        if ((at == 0 or not src[at - 1].isalnum()) and (end == len(src) or not src[end].isalnum())
+                and not re.search(r"(?:^|\s)н[еи]\s*$", src[max(0, at - 4):at])):
+            return True
+        at = src.find(q, at + 1)
+    return False
+
+
+CODE_RE = re.compile(r"\s*\((?:ОКВЭД\s*)?\d{2}(?:\.\d+)*\)|\s+(?:по\s+)?ОКВЭД\s*\d{2}(?:\.\d+)*")
 
 
 def no_codes(text: str) -> str:
-    """«Автодилеры (45)» → «Автодилеры»: коды отраслей в выводе руководителю не нужны — убирает код, а не модель."""
+    """«Автодилеры (45)» → «Автодилеры», «оценка банка по ОКВЭД 47.71 недоступна» → «оценка банка недоступна»:
+    коды отраслей в выводе руководителю не нужны — убирает код, а не модель."""
     return CODE_RE.sub("", text)
+
+
+OLD_NO_VIEW = re.compile(r"Отраслевой оценки банка по ОКВЭД (\d{2}[\d.]*|—) нет — вывод опирается на макроаналитику банка\.")
+
+
+def refresh_saved(card: dict) -> dict:
+    """Готовый разбор (data/cards) — по правилам нынешнего кода, без модели и без изменения смысла выводов:
+    итог трассы — по её же шагам, коды отраслей убраны из выводов ИИ и из пометки об отраслевой оценке."""
+    def plain(s):
+        return {**s, "t": no_codes(s["t"])} if isinstance(s, dict) and s.get("p") == "ai" and isinstance(s.get("t"), str) else s
+
+    blocks = dict(card.get("blocks") or {})
+    for k in ("what", "why", "risks", "opportunities", "actions"):
+        if isinstance(blocks.get(k), list):
+            blocks[k] = [plain(s) for s in blocks[k]]
+    bank, basis = blocks.get("bank"), blocks.get("basis")
+    if isinstance(bank, dict) and isinstance(bank.get("plain"), str):
+        blocks["bank"] = {**bank, "plain": no_codes(bank["plain"])}
+    if isinstance(basis, dict) and isinstance(basis.get("coverage"), str):
+        blocks["basis"] = {**basis, "coverage": OLD_NO_VIEW.sub(
+            lambda m: no_industry_view(None if m.group(1) == "—" else m.group(1)), basis["coverage"])}
+    return {**card, "takeaway": {r: no_codes(str(t)) for r, t in (card.get("takeaway") or {}).items()},
+            "why_short": no_codes(str(card.get("why_short", ""))), "key_points": [plain(s) for s in card.get("key_points") or []],
+            "blocks": blocks, "trace": restate_final(card.get("trace") or [])}
 
 
 def _count(result) -> int:
@@ -71,6 +133,46 @@ class Result:
     tool_log: list[dict] = field(default_factory=list)
     error: str = ""
     unavailable: bool = False  # модель недоступна (нет ключа, бюджет, сбой) — можно показать разбор правилами
+
+
+def final_note(code: str, verdict: dict | None) -> str:
+    """Итог трассы — как было на самом деле: код (сводка проверки), проверяющая модель, правка."""
+    parts = ["Проверка кодом пройдена" if code == "Все проверки пройдены" else f"Проверка кодом: {code}"]
+    if verdict is not None:
+        if verdict.get("ok") is None:
+            parts.append("проверка второй моделью не выполнена")
+        elif verdict.get("ok") is False:
+            parts.append("проверяющая модель оставила замечания: " + "; ".join(map(str, verdict.get("issues", [])))[:400])
+        else:
+            parts.append("вторая модель замечаний не нашла")
+    return " · ".join(p for p in parts if p)
+
+
+def restate_final(trace: list[dict]) -> list[dict]:
+    """Итог готового разбора — заново из его же шагов. Разборы, посчитанные до правки итога, писали «Все проверки
+    пройдены» и тогда, когда замечания проверяющей модели никто повторно не проверил; шаги трассы при этом верны."""
+    if not trace or trace[-1].get("kind") != "done" or trace[-1].get("title") != "Карточка готова":
+        return trace
+    code, verdict, revised = "", None, False
+    kept = (code, verdict)  # что было до правки: правку, не прошедшую проверку кодом, цикл откатывает
+    for st in trace[:-1]:
+        title, detail = str(st.get("title") or ""), str(st.get("detail") or "")
+        if st.get("kind") == "check" and "(код)" in title:
+            code = detail.split(" Исправлено до проверки:")[0].strip()
+        elif st.get("kind") == "check" and "(модель)" in title:
+            revised = False
+            verdict = ({"ok": None} if detail.startswith("не выполнена") else
+                       {"ok": True} if detail.strip() in ("", "замечаний нет") else {"ok": False, "issues": [detail]})
+        elif st.get("kind") == "check" and title == "Правка черновика":
+            if revised:  # в карточке — прежний черновик, к нему и относятся замечания
+                code, verdict = kept
+            revised = False
+        elif st.get("kind") == "draft":
+            kept, revised = (code, verdict), verdict is not None
+    note = final_note(code or "Все проверки пройдены", verdict)
+    if revised and verdict and verdict.get("ok") is False:
+        note += " · черновик исправлен по замечаниям, повторно моделью не проверен"
+    return trace[:-1] + [{**trace[-1], "detail": note}]
 
 
 class Agent:
@@ -111,7 +213,8 @@ class Agent:
 
     @staticmethod
     def _sources_block(ses: ToolSession) -> str:
-        return "\n\n".join(f"[{s.label}] {s.kind} · {s.name} · {s.date}{' · УСТАРЕЛО' if s.stale else ''}\n{s.text[:1200]}"
+        return "\n\n".join(f"[{s.label}] {s.kind} · {s.name} · {s.date}{' · УСТАРЕЛО' if s.stale else ''}"
+                           f"{' · ' + s.revised if s.revised else ''}\n{s.text[:1200]}"
                            for s in ses.sources)
 
     # ---------- основной сценарий ----------
@@ -124,19 +227,21 @@ class Agent:
             self._calculate(ses, observations, trace)
             draft = self._draft(ses, match, observations, trace, issues=[])
             card, rep = self._assemble(draft, ses, event, company_id, match, trace)
+            verdict = self._check(card, ses, trace) if rep.ok else {"ok": False, "issues": [], "research_query": ""}
             for _ in range(MAX_REVISIONS):
-                verdict = self._check(card, ses, trace) if rep.ok else {"ok": False, "issues": [], "research_query": ""}
                 # замечания по понятности (жаргон, коды отраслей, повтор заголовка) — тоже повод для правки
                 issues = rep.errors + rep.style + list(verdict.get("issues") or [])
-                if rep.ok and verdict.get("ok", True) and not rep.style:
+                if rep.ok and verdict.get("ok") is not False and not rep.style:
                     break
                 q = (verdict.get("research_query") or "").strip()
                 if q:
-                    res, entry = ses.call("search_bank_analytics", {"query": q})
-                    trace.append({"kind": "research", "title": f"search_bank_analytics(\"{q}\")",
-                                  "detail": f"повторный поиск по замечанию проверки: {_count(res)} фрагм.",
+                    # где искать — решает проверка: позиция банка — в аналитике банка, факт события — в новостях
+                    tool = "search_news" if verdict.get("research_in") == "news" else "search_bank_analytics"
+                    res, entry = ses.call(tool, {"query": q})
+                    trace.append({"kind": "research", "title": f"{tool}(\"{q}\")",
+                                  "detail": f"повторный поиск по замечанию проверки: {_count(res)} объект(ов)" + ses.note(res),
                                   "ms": entry["ms"], "cost": 0})
-                    observations.append({"tool": "search_bank_analytics", "args": {"query": q}, "result": res})
+                    observations.append({"tool": tool, "args": {"query": q}, "result": res})
                 good = (card, rep) if rep.ok else None
                 try:
                     draft = self._draft(ses, match, observations, trace, issues=issues)
@@ -152,15 +257,17 @@ class Agent:
                     card, rep = good
                     trace.append({"kind": "check", "title": "Правка черновика", "ms": 0, "cost": 0,
                                   "detail": "правка не прошла проверку кодом — оставлен прежний черновик, прошедший проверку"})
+                elif rep.ok:
+                    verdict = self._check(card, ses, trace, again=True)  # правку проверяет та же модель ещё раз
         except LLMUnavailable as e:
             return Result(None, Report(errors=[str(e)]), trace, ses.log, error=str(e), unavailable=True)
         except (ValueError, KeyError, TypeError) as e:
             return Result(None, Report(errors=[f"ответ модели не разобран: {e}"]), trace, ses.log, error=str(e))
 
         trace.append({"kind": "done", "title": "Карточка готова" if rep.ok else "Карточка не прошла проверку",
-                      "detail": rep.summary(), "ms": 0, "cost": 0})
+                      "detail": final_note(rep.summary(), verdict if rep.ok else None), "ms": 0, "cost": 0})
         self._emit(trace)
-        card["trace"] = [{k: v for k, v in t.items() if not k.startswith("_")} for t in trace]
+        card["trace"] = [self._public_step(t) for t in trace]
         return Result(card if rep.ok else None, rep, trace, ses.log)
 
     def _explore(self, ses: ToolSession, match: Match, trace: list) -> list[dict]:
@@ -175,7 +282,13 @@ class Agent:
                      "В первом ответе добавь поле \"plan\" — список шагов анализа."}]
         observations = []
         for step in range(MAX_TOOL_STEPS + 1):
-            act = self._ask("agent", messages, trace, "plan", "План" if step == 0 else "Шаг")
+            try:
+                act = self._ask("agent", messages, trace, "plan", "План" if step == 0 else "Шаг")
+            except ValueError as e:
+                # модель дважды ответила не JSON — идём дальше с тем, что уже найдено (банк и расчёт код добавит сам)
+                trace.append({"kind": "plan", "title": "План" if step == 0 else "Шаг", "ms": 0, "cost": 0,
+                              "detail": f"ответ модели не разобран ({e}) — исследование завершено досрочно"})
+                break
             if step == 0:
                 trace[-1]["detail"] = "; ".join(map(str, act.get("plan") or [])) or str(act.get("thought", ""))
                 think = {"ms": 0, "cost": 0}
@@ -193,7 +306,7 @@ class Agent:
             args = ", ".join(f"{k}={json.dumps(v, ensure_ascii=False)}" for k, v in (act.get("args") or {}).items())
             trace.append({"kind": "tool", "title": f"{name}({args})", "ms": entry["ms"] + think["ms"], "cost": think["cost"],
                           "detail": (act.get("thought") or "")[:200] + (" · ошибка: " + result["error"] if not entry["ok"] else
-                                     f" · результат: {_count(result)} объект(ов)")})
+                                     f" · результат: {_count(result)} объект(ов)" + ses.note(result))})
             observations.append({"tool": name, "args": act.get("args"), "result": result})
             self._emit(trace, "Модель выбирает следующий шаг…")
             messages += [{"role": "assistant", "content": json.dumps(act, ensure_ascii=False)},
@@ -209,7 +322,7 @@ class Agent:
         res, entry = ses.call("search_bank_analytics", {"query": q})
         observations.append({"tool": "search_bank_analytics", "args": {"query": q}, "result": res})
         trace.append({"kind": "tool", "title": f"search_bank_analytics(\"{q[:60]}\")", "ms": entry["ms"], "cost": 0,
-                      "detail": f"обязательный шаг (модель не искала позицию банка): {_count(res)} фрагм."})
+                      "detail": f"обязательный шаг (модель не искала позицию банка): {_count(res)} фрагм." + ses.note(res)})
         self._emit(trace)
 
     def _calculate(self, ses: ToolSession, observations: list[dict], trace: list) -> None:
@@ -233,6 +346,12 @@ class Agent:
         if ses.calcs:
             user += "\n\nРасчёты эффекта (код):\n" + "\n".join(
                 f"- {c['title']}: {c['value']} ({c['formula']}); допущения: {'; '.join(c['assumptions'])}" for c in ses.calcs)
+        p = profiles.get(ses.company_id)
+        chs = channels.build(ses.event, match, p, ses.calcs, self.today, channels.meetings_for(self.bank, self.news))
+        if chs:
+            user += "\n\nКаналы влияния (код, по данным банка — каркас вывода):\n" + channels.as_text(chs)
+        user += "\n\nФакторы чувствительности компании (код, по данным банка):\n" + "\n".join(
+            f"- {x['title']}: {x['detail']}" for x in sensitivity.factors(p))
         if self.precedents:
             user += ("\n\nПрошлые разборы для этой компании (контекст, не источник — цифры из них не бери): "
                      "если тема та же, скажи, что изменилось с тех пор.\n" + "\n".join(
@@ -241,7 +360,8 @@ class Agent:
             user += "\n\nУроки прошлых разборов (частые замечания проверки — не повторяй):\n- " + "\n- ".join(self.lessons)
         if issues:
             user += "\n\nЗамечания проверки, которые нужно исправить:\n- " + "\n- ".join(issues[:10])
-        system = DRAFT_SYSTEM.format(roles=", ".join(f"{k} — {v}" for k, v in ROLES_RU.items()))
+        system = (DRAFT_SYSTEM.format(roles=", ".join(f"{k} — {v}" for k, v in ROLES_RU.items()))
+                  + house_view_block(self.today, ses.sources))  # действующие прогнозы банка (agent/house_view.py)
         draft = self._ask("draft", [{"role": "system", "content": system}, {"role": "user", "content": user}],
                           trace, "draft", "Черновик карточки" if not issues else "Правка черновика", max_tokens=10000, think=not issues)
         n = sum(len(draft.get("blocks", {}).get(b, [])) for b in ("what", "why", "risks", "opportunities", "actions"))
@@ -249,24 +369,49 @@ class Agent:
         self._emit(trace, "Код проверяет происхождение, ссылки и цифры…")
         return draft
 
-    def _check(self, card: dict, ses: ToolSession, trace: list) -> dict:
-        user = f"Черновик:\n{json.dumps(card, ensure_ascii=False)}\n\nИсточники:\n{self._sources_block(ses)}"
+    def _labelled(self, card: dict) -> dict:
+        """Карточка для проверяющей модели: src — метки S…, как в списке источников, а не индексы sources[].
+        Раньше проверка видела «src=1» рядом с «[S2]» и половину замечаний писала о несуществующей путанице."""
+        labels = getattr(self, "_cited", [])
+
+        def walk(x):
+            if isinstance(x, dict):
+                return {k: (labels[v] if k == "src" and isinstance(v, int) and 0 <= v < len(labels) else walk(v))
+                        for k, v in x.items() if k not in ("trace", "sources")}
+            return [walk(i) for i in x] if isinstance(x, list) else x
+        return walk(card)
+
+    def _check(self, card: dict, ses: ToolSession, trace: list, again: bool = False) -> dict:
+        user = f"Черновик:\n{json.dumps(self._labelled(card), ensure_ascii=False)}\n\nИсточники:\n{self._sources_block(ses)}"
+        title = "Повторная самопроверка (модель)" if again else "Самопроверка (модель)"
         try:
             verdict = self._ask("check", [{"role": "system", "content": CHECK_SYSTEM}, {"role": "user", "content": user}],
-                                trace, "check", "Самопроверка (модель)", max_tokens=6000)
+                                trace, "check", title, max_tokens=6000)
         except (LLMUnavailable, ValueError) as e:
-            # проверяющая модель не ответила — карточка, прошедшая проверку кодом, не теряется; в трассе это видно
-            trace.append({"kind": "check", "title": "Самопроверка (модель)", "detail": f"не выполнена: {e}", "ms": 0, "cost": 0})
+            # проверяющая модель не ответила — карточка, прошедшая проверку кодом, не теряется; в трассе и в итоге видно,
+            # что второй проверки не было (а не «все проверки пройдены»)
+            trace.append({"kind": "check", "title": title, "detail": f"не выполнена: {e}", "ms": 0, "cost": 0})
             self._emit(trace)
-            return {"ok": True, "issues": []}
-        trace[-1]["detail"] = "замечаний нет" if verdict.get("ok") else "; ".join(verdict.get("issues", [])[:3])
+            return {"ok": None, "issues": []}
+        trace[-1]["detail"] = "замечаний нет" if verdict.get("ok") else "; ".join(map(str, verdict.get("issues", [])))[:1500]
         self._emit(trace)
         return verdict
+
+    @staticmethod
+    def _public_step(t: dict) -> dict:
+        """Шаг трассы для карточки: служебные поля → модель и признак кеша (критерий 11)."""
+        step = {k: v for k, v in t.items() if not k.startswith("_")}
+        if t.get("_model"):
+            step["model"] = str(t["_model"])
+        if t.get("_cached"):
+            step["cached"] = True
+        return step
 
     def _assemble(self, draft: dict, ses: ToolSession, event: dict, company_id: str, match: Match, trace):
         """Черновик модели → карточка контракта. Метки S… → индексы sources[], детерминированные поля — кодом."""
         by_label = {s.label: s for s in ses.sources}
         cited: list[str] = ["S1"]
+        self._cited = cited  # порядок sources[] карточки — для перевода индексов обратно в метки при проверке
 
         def idx(label):
             if not label or label not in by_label:
@@ -332,28 +477,41 @@ class Agent:
         b = draft.get("blocks", {})
         blocks = {k: stmts(b.get(k)) for k in ("what", "why", "risks", "opportunities", "actions")}
         key_points = stmts(draft.get("key_points"))[:3]
-        bank_src = by_label.get((b.get("bank") or {}).get("src") or "")
-        quote = (b.get("bank") or {}).get("quote", "")
-        if bank_src and bank_src.kind == "bank" and quote and not quote_matches(quote, bank_src.text):
-            # «цитата» не похожа на текст документа (модель написала своими словами) — цитатой её не показываем
-            repairs.append("позиция банка не совпала с текстом документа → убрана")
+        bank_in = b.get("bank") if isinstance(b.get("bank"), dict) else {}
+        bank_src = by_label.get(bank_in.get("src") or "")
+        if bank_src and bank_src.kind != "bank":
+            bank_src = None
+        quote = str(bank_in.get("quote") or "").strip()
+        plain = no_codes(str(bank_in.get("plain") or "").strip())
+        if bank_src and not (quote and verbatim(quote, bank_src.text)):
+            # цитата — только дословно: пересказ или дописанный хвост («…», при этом инфляция …) цитатой не показываем
+            said, quote = quote, ""
             if not bank_src.stale:
-                bank_src = None
-            quote = ""
-        if bank_src and bank_src.kind == "bank" and bank_src.stale and not quote:
+                # дословное предложение-позицию берём из того же фрагмента, как в разборе без модели (agent/offline.py)
+                ev = ses.event
+                quote = _bank_quote(bank_src.text, _stems(" ".join([ev.get("title", ""), ev.get("text", "")[:1500], said])),
+                                    title=bank_src.doc, event=ev, today=self.today, doc_date=bank_src.date)
+            if quote:
+                repairs.append("цитата банка не дословная → дословное предложение того же документа" if said else
+                               "цитата банка → дословное предложение документа")
+                if said and not plain and quote_matches(said, quote) and not house_view.revisions_in(said, self.today):
+                    plain = no_codes(said)  # пересказ той же мысли — «проще говоря», вывод ИИ рядом с дословной цитатой
+            elif said:
+                repairs.append("позиция банка не совпала с текстом документа → убрана")
+            if not quote and not bank_src.stale:
+                bank_src = None  # дословной позиции банка во фрагменте нет — честная плашка
+        if bank_src and bank_src.stale and not quote:
             idx(bank_src.label)
             bank = {"quote": "", "doc": f"Свежей оценки банка нет. Последняя — «{bank_src.doc or bank_src.name}» "
                                        f"от {bank_src.date}: старше 12 месяцев, в выводе не используется",
                     "date": bank_src.date, "stale": True}
-        elif bank_src and bank_src.kind == "bank":
+        elif bank_src:
             idx(bank_src.label)
             bank = {"quote": quote, "doc": bank_src.doc or bank_src.name, "date": bank_src.date, "stale": bank_src.stale}
-            plain = no_codes(str((b.get("bank") or {}).get("plain") or "").strip())
             if quote and plain and not bank_src.stale:
                 bank["plain"] = plain  # «проще говоря» — вывод ИИ рядом с дословной цитатой
         else:
-            bank = {"quote": "", "doc": "Отраслевой оценки банка по этому событию нет — вывод на основе данных компании и новости",
-                    "date": self.today.isoformat(), "stale": False}
+            bank = {"quote": "", "doc": NO_BANK_VIEW, "date": self.today.isoformat(), "stale": False}
 
         # расчёты — после текста и позиции банка, чтобы источники карточки шли в порядке чтения
         calc = [c | {"inputs": [{**i, "src": idx(i["src"])} for i in c["inputs"]]} for c in ses.calcs]

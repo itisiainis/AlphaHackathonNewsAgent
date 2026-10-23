@@ -16,11 +16,21 @@
 проходит документ, пропускает служебные блоки (script, style, nav, header, footer, aside, form),
 собирает абзацы <p>, заголовки и пункты списков. Если на странице есть <article>, берутся абзацы
 только из него. Короткие абзацы (меню, подписи, кнопки) отбрасываются порогом длины.
+
+Не статья (NotArticle, «Это не статья — пришлите ссылку на новость»): раздел или главная сайта, где
+основной блок — лента заголовков-ссылок (от INDEX_LINKS абзацев-ссылок, и текст ссылок — больше половины
+текста), или такая же лента по всей странице, когда страница не помечена как статья (og:type = article,
+article:published_time, NewsArticle в JSON-LD); или страница без пометки, где связного текста меньше
+ARTICLE_MIN знаков. Иначе раздел становился «карточкой» по случайному набору заголовков
+(interfax.ru/business/ → «возможность, высокое влияние» с расчётом налога). Короткая заметка с пометкой
+статьи (молния агентства, 400 знаков) и короткое сообщение официального сайта (cbr.ru, minfin.gov.ru…) — материал,
+их разбираем. NewsArticle в JSON-LD засчитывается только у самой страницы, не у элементов списка заголовков.
 """
 from __future__ import annotations
 
 import html as html_lib
 import ipaddress
+import json
 import re
 import socket
 from dataclasses import dataclass
@@ -42,6 +52,20 @@ TEXT_TAGS = {"p", "h1", "h2", "h3", "li", "blockquote"}
 
 class UnsafeURL(ValueError):
     """Ссылка ведёт во внутреннюю сеть или использует недопустимую схему."""
+
+
+NOT_ARTICLE = "Это не статья — пришлите ссылку на новость"
+ARTICLE_MIN = 600      # связного текста меньше — это не статья (если страница не помечена как статья)
+INDEX_LINKS = 15       # столько заголовков-ссылок в основном блоке — это лента раздела, а не материал
+INDEX_LINK_SHARE = 0.5
+LINK_WEIGHT = 0.1      # вес абзаца-ссылки при выборе основного блока: длинная лента «читайте также» не перебивает статью
+
+
+class NotArticle(ValueError):
+    """По ссылке раздел, главная или служебная страница сайта, а не материал."""
+
+    def __init__(self, msg: str = NOT_ARTICLE):
+        super().__init__(msg)
 
 
 @dataclass
@@ -112,16 +136,21 @@ class _MainText(HTMLParser):
         self.n = 0
         self.cur: list[str] | None = None
         self.paras: list[tuple[tuple, str]] = []   # (цепочка предков, текст)
+        self.links: dict[str, int] = {}            # текст абзаца → сколько его знаков внутри ссылок <a>
         self.title = ""
         self.meta: dict[str, str] = {}
         self._in_title = False
+        self._in_a = 0
+        self._link_chars = 0
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
         if tag == "meta":
             key = a.get("property") or a.get("name") or ""
-            if key in ("og:title", "article:published_time", "og:description", "description"):
+            if key in ("og:title", "article:published_time", "og:description", "description", "og:type"):
                 self.meta[key] = a.get("content", "") or ""
+        if tag == "a":
+            self._in_a += 1
         if tag == "title":
             self._in_title = True
         if tag in SKIP:
@@ -132,18 +161,22 @@ class _MainText(HTMLParser):
             self.tags.append(tag)
         if tag in TEXT_TAGS and not self.skip:
             self.cur = []
+            self._link_chars = 0
         if tag == "br" and self.cur is not None:
             self.cur.append(" ")
 
     def handle_endtag(self, tag):
         if tag == "title":
             self._in_title = False
+        if tag == "a" and self._in_a:
+            self._in_a -= 1
         if tag in SKIP and self.skip:
             self.skip -= 1
         if tag in TEXT_TAGS and self.cur is not None:
             t = re.sub(r"\s+", " ", "".join(self.cur)).strip()
             if len(t) >= MIN_PARAGRAPH or (tag in ("h1", "h2") and len(t) > 10):
                 self.paras.append((tuple(self.stack), t))
+                self.links[t] = max(self.links.get(t, 0), min(self._link_chars, len(t)))
             self.cur = None
         if tag in CONTAINERS and tag in self.tags:
             # закрываем до ближайшего блока с этим тегом (HTML бывает невалидным)
@@ -157,6 +190,8 @@ class _MainText(HTMLParser):
             self.title += data
         if self.cur is not None and not self.skip:
             self.cur.append(data)
+            if self._in_a:
+                self._link_chars += len(re.sub(r"\s+", " ", data).strip())
 
 
 JSON_STR_RE = re.compile(r'"((?:[^"\\]|\\.){200,})"')
@@ -211,7 +246,22 @@ def _decode(r: httpx.Response) -> str:
 
 
 def extract_html(page: str) -> tuple[str, str, str]:
-    """(заголовок, основной текст, дата публикации) из HTML-страницы.
+    """(заголовок, основной текст, дата публикации) из HTML-страницы."""
+    title, text, published, _ = _extract(page)
+    return title, text, published
+
+
+def _link_stats(texts: list[str], links: dict[str, int]) -> tuple[int, float]:
+    """(сколько абзацев — в основном ссылка, доля текста внутри ссылок)."""
+    total = sum(len(t) for t in texts)
+    return (sum(1 for t in texts if links.get(t, 0) >= len(t) / 2),
+            sum(links.get(t, 0) for t in texts) / total if total else 0.0)
+
+
+def _extract(page: str) -> tuple[str, str, str, dict]:
+    """(заголовок, основной текст, дата публикации, признаки страницы) из HTML-страницы.
+    Признаки: block_links, block_share — абзацы-ссылки и доля текста ссылок в основном блоке; page_links,
+    page_share — то же по всей странице; article — страница помечена как статья.
 
     Выбор основного блока (по мотивам Readability): длина каждого абзаца добавляется его блоку-
     родителю целиком и «деду» наполовину — так текст, где каждый абзац обёрнут в свой <div>,
@@ -222,6 +272,8 @@ def extract_html(page: str) -> tuple[str, str, str]:
     score: dict[int, float] = {}
     for chain, t in p.paras:
         bonus = len(t) + (t.count(",") * 10)  # в связном тексте больше запятых, чем в заголовках-ссылках
+        if p.links.get(t, 0) >= len(t) / 2:
+            bonus *= LINK_WEIGHT  # абзац-ссылка («читайте также», лента раздела) почти не тянет блок на себя
         if chain:
             score[chain[-1]] = score.get(chain[-1], 0) + bonus
         if len(chain) > 1:
@@ -234,12 +286,64 @@ def extract_html(page: str) -> tuple[str, str, str]:
             seen.add(t)
             uniq.append(t)
     text = "\n\n".join(uniq)[:MAX_CHARS]
+    block_links, block_share = _link_stats(uniq, p.links)
+    page_links, page_share = _link_stats(list(dict.fromkeys(t for _, t in p.paras)), p.links)
+    page_kind = {"block_links": block_links, "block_share": block_share, "page_links": page_links,
+                 "page_share": page_share,
+                 "article": p.meta.get("og:type", "").lower() == "article" or bool(p.meta.get("article:published_time"))
+                 or _ld_article(page)}
     if len(text) < 300:  # страница собирается скриптом — текст лежит в JSON внутри страницы
         text = _script_text(page) or text
     if len(text) < 200:
         text = p.meta.get("og:description") or p.meta.get("description") or text
     title = (p.meta.get("og:title") or p.title).strip()
-    return html_lib.unescape(title), html_lib.unescape(text), p.meta.get("article:published_time", "")[:10]
+    return (html_lib.unescape(title), html_lib.unescape(text), p.meta.get("article:published_time", "")[:10],
+            page_kind)
+
+
+LD_RE = re.compile(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', re.S | re.I)
+LD_ARTICLE = {"NewsArticle", "Article", "ReportageNewsArticle", "AnalysisNewsArticle", "BlogPosting"}
+
+
+def _ld_article(page: str) -> bool:
+    """Страница помечена в JSON-LD как материал: сам объект, его @graph или mainEntity — NewsArticle. Элементы
+    списка (ItemList → itemListElement) не в счёт: так размечены ленты разделов (rbc.ru/economics/)."""
+    for m in LD_RE.finditer(page):
+        try:
+            data = json.loads(m.group(1).strip(), strict=False)
+        except ValueError:
+            continue
+        top = [d for d in (data if isinstance(data, list) else [data]) if isinstance(d, dict)]
+        nodes = [x for d in top for x in [d, *(d.get("@graph") or []), d.get("mainEntity")] if isinstance(x, dict)]
+        for d in nodes:
+            types = d.get("@type") if isinstance(d.get("@type"), list) else [d.get("@type")]
+            if LD_ARTICLE & set(map(str, types)):
+                return True
+    return False
+
+
+# Официальные сайты: короткое сообщение (анонс заседания ЦБ, 500 знаков, без og:type) — материал, а не служебная страница
+OFFICIAL = ("cbr.ru", "minfin.gov.ru", "economy.gov.ru", "government.ru", "kremlin.ru", "nalog.gov.ru", "rosstat.gov.ru",
+            "customs.gov.ru", "fas.gov.ru", "duma.gov.ru")
+
+
+def official(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return any(host == d or host.endswith("." + d) for d in OFFICIAL)
+
+
+def check_article(text: str, page_kind: dict) -> None:
+    """NotArticle, если по ссылке лента раздела или страница без связного текста, а не материал."""
+    k = page_kind
+    if k["block_links"] >= INDEX_LINKS and k["block_share"] > INDEX_LINK_SHARE:
+        raise NotArticle()
+    # у статьи лента «читайте также» бывает длинной, поэтому вся страница проверяется, только если она не статья
+    if not k["article"] and k["page_links"] >= INDEX_LINKS and k["page_share"] > INDEX_LINK_SHARE:
+        raise NotArticle()
+    # короткая заметка с пометкой «статья» (молния агентства) или сообщение официального сайта — материал;
+    # без пометки — служебная страница
+    if len(text) < ARTICLE_MIN and not k["article"] and not k.get("official"):
+        raise NotArticle()
 
 
 TG_POST_RE = re.compile(r"^https?://t\.me/(?:s/)?([A-Za-z0-9_]{4,})/(\d+)")
@@ -282,7 +386,8 @@ def fetch_article(url: str, client: httpx.Client | None = None) -> Article:
         if not text:
             raise ValueError("в PDF нет текстового слоя (скан) — вставьте текст вручную")
         return Article(url, text.split("\n", 1)[0][:200], text[:MAX_CHARS], "", "pdf")
-    title, text, published = extract_html(_decode(r))
+    title, text, published, page_kind = _extract(_decode(r))
     if len(text) < 80:
         raise ValueError("не удалось извлечь текст со страницы — вставьте текст вручную")
+    check_article(text, page_kind | {"official": official(url)})
     return Article(url, title, text, published, "html")

@@ -77,7 +77,9 @@ def test_rate_limit_on_costly_endpoints(client):
 
 def test_any_company_gets_briefs_without_model(client):
     """Открыл компанию — в ленте сразу разборы лучших событий (без модели, с пометкой), а не пустой экран."""
-    d = client.get("/api/companies/U_200890").json()
+    # опт топливом: у опта металлами U_200890 единственное значимое событие уже разобрано ИИ (data/cards), а
+    # «запас золота ЦБ» и «цифровое золото», дававшие ему краткие разборы, отбор больше не пропускает
+    d = client.get("/api/companies/U_57706").json()
     rules = [c for c in d["insights"] if d["origins"][c["id"]] == "rules"]
     assert rules, "для компании с отобранными событиями должен быть краткий разбор"
     c = rules[0]
@@ -100,3 +102,27 @@ def test_events_order_depends_on_role(client):
     cfo = [e["id"] for e in client.get("/api/companies/U_25835/events?role=cfo").json()]
     ceo = [e["id"] for e in client.get("/api/companies/U_25835/events?role=ceo").json()]
     assert sorted(cfo) == sorted(ceo), "тот же отбор, другой порядок под роль"
+
+
+def test_pasted_news_can_be_upgraded_and_is_marked_as_users(client):
+    """Аудит: «Полный разбор ИИ» по вставленной новости падал с «событие не найдено» (404)."""
+    import backend.app as app_module
+    app_module._hits.clear()  # лимит платных запросов в фикстуре — 3 в минуту, его тратят соседние тесты
+    body = {"company_id": "U_177581", "title": "Минстрой продлил льготную ипотеку",
+            "text": "Минстрой продлил программу льготной ипотеки на новостройки до конца 2027 года, ставка 8% сохранится."}
+    b = client.post("/api/brief", json=body).json()
+    assert b["user"] is True and b["event_id"]
+    r = client.post(f"/api/companies/U_177581/events/{b['event_id']}/analyze")
+    assert r.status_code == 200 and r.json()["card"]["id"] == b["card"]["id"]   # без ключа — краткий разбор, но не 404
+    assert b["card"]["id"] in client.get("/api/companies/U_177581").json()["user_cards"]
+    assert b["card"]["id"] in client.get("/api/bootstrap").json()["user_cards"]["U_177581"]
+
+
+def test_company_has_sensitivity_factors_and_hits(client):
+    d = client.get("/api/companies/U_25835").json()
+    ids = [f["id"] for f in d["company"]["factors"]]
+    assert ids[0] == "rate" and "buyers" in ids
+    assert d["factor_hits"] and all(set(h) <= set(ids) for h in d["factor_hits"].values())
+    assert set(client.get("/api/bootstrap").json()["factor_hits"]) >= {"U_25835", "U_177581", "U_200890"}
+    r = client.post("/api/cards/i-rate-auto/feedback", json={"company_id": "U_25835", "role": "accountant", "vote": "up"})
+    assert r.status_code == 200, "главный бухгалтер — допустимая роль"
