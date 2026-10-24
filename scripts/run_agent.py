@@ -31,6 +31,7 @@ def main() -> int:
     ap.add_argument("company")
     ap.add_argument("--top", type=int, default=1)
     ap.add_argument("--title")
+    ap.add_argument("--event", help="id события из ленты (ev-…): пересчитать именно его")
     ap.add_argument("--text", default="")
     ap.add_argument("--today")
     ap.add_argument("--save", action="store_true", help="сохранить прошедшие проверку карточки в data/cards")
@@ -47,6 +48,11 @@ def main() -> int:
     pipe = Pipeline(llm, today=date.fromisoformat(a.today) if a.today else None)
     if a.title:
         events = [event_from_text(a.title, a.text)]
+    elif a.event:
+        events = [e for e in pipe.events if e["id"] == a.event]
+        if not events:
+            print(f"Событие {a.event} не найдено в ленте")
+            return 2
     else:
         events = [e for e, _ in pipe.ranked(a.company, a.top)]
     for ev in events:

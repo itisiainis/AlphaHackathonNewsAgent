@@ -43,7 +43,8 @@
 ## Структура
 - `frontend/` — сайт: `template.html` (отдаётся бэкендом и берёт данные из API; `build.py` → статический `prototype.html` на моках).
 - `backend/` — FastAPI + SQLite. `agent/` — сбор, отбор, агентный цикл, промпты, инструменты; контракт — `agent/contract/card.schema.json`.
-- `data/` — профили, источники новостей, аналитика банка после OCR (`data/bank/docs.json`).
+- `data/` — профили, источники новостей, аналитика банка после OCR (`data/bank/docs.json`), роли и зоны ответственности (`data/roles.json` — единый конфиг ролей).
+- Качество готовых разборов: `python -m scripts.eval_cards` — в выводе есть данные именно этой компании, позиция банка с датой, действие; вывод не копируется другой компании.
 - Проверки перед PR: `pytest -q tests` и `ruff check .`. Запуск: `docker compose up --build`.
 - Исходные CSV лежат локально в `data/raw/`, в git не коммитятся.
 
