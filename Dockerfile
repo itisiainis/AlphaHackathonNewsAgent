@@ -14,7 +14,7 @@ COPY agent ./agent
 COPY backend ./backend
 COPY frontend ./frontend
 COPY scripts ./scripts
-COPY data/company_profiles.json data/sources.json ./data/
+COPY data/company_profiles.json data/sources.json data/roles.json ./data/
 COPY data/bank ./data/bank
 COPY data/news/events.sample.json ./data/news/
 COPY data/cards ./data/cards
