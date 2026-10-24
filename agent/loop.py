@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from . import channels, house_view, profiles, sensitivity
+from . import channels, house_view, profiles, quality, sensitivity
 from .contract import Report, validate_card
 from .contract.validator import numbers_in
 from .ingest.bank_docs import strip_artefacts
@@ -541,6 +541,8 @@ class Agent:
         }
         texts = {i: by_label[lbl].text for i, lbl in enumerate(cited)}
         rep = validate_card(card, today=self.today, source_texts=texts)
+        if rep.ok and (copy := quality.style_issue(card, company_id)):
+            rep.style.append(copy)  # шаблонный вывод, который подошёл бы любой компании, — на правку
         detail = rep.summary() + (f" Исправлено до проверки: {'; '.join(repairs[:4])}." if repairs else "")
         trace.append({"kind": "check", "title": "Самопроверка (код)", "detail": detail, "ms": 0, "cost": 0})
         self._emit(trace)

@@ -23,6 +23,7 @@
   "telegram": [
     {"name": "Банк России", "channel": "centralbank_russia", "kind": "news", "official": true, "topic": "регулятор"},
     {"name": "Минфин России", "channel": "minfin", "kind": "news", "official": true, "topic": "регулятор"},
+    {"name": "ФНС России", "channel": "nalog_gov_ru", "kind": "news", "official": true, "topic": "налоги"},
     {"name": "Интерфакс", "channel": "interfaxonline", "kind": "news", "topic": "общие"},
     {"name": "MarketTwits", "channel": "markettwits", "kind": "news", "topic": "рынки"},
     {"name": "Банкста", "channel": "banksta", "kind": "news", "topic": "финансы"},

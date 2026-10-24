@@ -220,6 +220,13 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:22px;width:min(380px,92%);z-index:50;display:none}
 .modal.on{display:block}
 .empty{padding:30px;text-align:center;color:var(--ink-3)}
+/* зоны ответственности роли (data/roles.json): сводка на главной и фильтр ленты */
+.zones{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.zone{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;text-decoration:none;color:var(--ink-2);background:#fff}
+.zone b{color:var(--ink);font-weight:600}.zone.risk{border-color:#f3c4c4;background:#fff7f7}
+.zfs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.zf{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 12px;font-size:13px;color:var(--ink-2)}
+.zf.on{background:var(--ink);color:#fff;border-color:var(--ink)}.zf .n{opacity:.65}
 /* фоновые разборы ИИ: индикатор в углу, можно уйти и вернуться */
 .dock{position:fixed;right:16px;bottom:16px;z-index:35;display:flex;flex-direction:column;gap:8px;width:min(340px,calc(100vw - 32px));pointer-events:none}
 .dock>div{display:flex;flex-direction:column;gap:8px}
@@ -317,7 +324,7 @@ function loadRead() { try { return new Set(JSON.parse(localStorage.getItem(READ_
 function saveRead() { try { localStorage.setItem(READ_KEY, JSON.stringify([...state.read].slice(-500))); } catch (e) { /* без хранилища — до перезагрузки */ } }
 const state = {company: null, role: null, open: null,
   read: loadRead(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {},
-  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}};
+  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}, zone: ''};
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   const data = await r.json().catch(() => ({}));
@@ -387,6 +394,31 @@ function ranked() {
   return o.ids.filter(id => by[id]).map(id => ({...by[id], group: o.group[id]}));
 }
 const newCount = () => ranked().filter(isNew).length;
+// Зоны ответственности (data/roles.json): карточка попадает в зоны по своим темам, у роли — свои зоны
+const ZONES = () => DATA.zones || [];
+const zoneName = id => (ZONES().find(z => z.id === id) || {}).name || id;
+const zonesOf = i => ZONES().filter(z => z.topics.some(t => (i.topics || []).includes(t))).map(z => z.id);
+const myZones = () => role().zones || [];
+const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? b : c;
+const inZone = (i, z) => !z || (z === 'mine' ? zonesOf(i).some(x => myZones().includes(x)) : zonesOf(i).includes(z));
+// «Долг и финансирование: 1 риск, 1 новое» — что происходит в зонах выбранной роли, по свежим событиям
+function zoneSummary(items) {
+  const row = id => {
+    const its = items.filter(i => zonesOf(i).includes(id)), risk = its.filter(i => i.type === 'risk').length;
+    const opp = its.filter(i => i.type === 'opportunity').length, nw = its.filter(isNew).length;
+    const st = [risk ? `${risk} ${plural(risk, 'риск', 'риска', 'рисков')}` : '', opp ? `${opp} ${plural(opp, 'возможность', 'возможности', 'возможностей')}` : '',
+      nw ? `${nw} ${plural(nw, 'новое', 'новых', 'новых')}` : ''].filter(Boolean).join(', ') || 'спокойно';
+    return `<a class="zone ${risk ? 'risk' : ''}" href="#feed" data-zone="${id}"><b>${esc(zoneName(id))}</b>: ${st}</a>`;
+  };
+  return myZones().length ? `<div class="zones" aria-label="Ваши зоны ответственности">${myZones().map(row).join('')}</div>` : '';
+}
+function zoneFilter(items) {
+  const mine = myZones(), rest = ZONES().map(z => z.id).filter(id => !mine.includes(id));
+  const btn = (id, name, n) => `<button class="zf ${state.zone === id ? 'on' : ''}" data-zf="${id}" aria-pressed="${state.zone === id}">${esc(name)}${n === null ? '' : ` <span class="n">${n}</span>`}</button>`;
+  const count = id => items.filter(i => inZone(i, id)).length;
+  return `<div class="zfs" role="group" aria-label="Фильтр по зонам ответственности">${btn('', 'Все', null)}${mine.length ? btn('mine', 'Мои зоны', count('mine')) : ''}`
+    + [...mine, ...rest].map(id => count(id) ? btn(id, zoneName(id), count(id)) : '').join('') + '</div>';
+}
 
 function companyOptions() {
   const label = c => `${c.display} · ${c.revenue_bn.toLocaleString('ru-RU')} млрд ₽${c.region ? ' · ' + c.region : ''}`;
@@ -683,6 +715,7 @@ function viewHome() {
   return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
     <div class="card widget">
       <div class="widget-head"><h2>Важное для вашего бизнеса ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
+      ${zoneSummary(fresh)}
       ${body}
       ${disclaimerHtml(top.length ? top : last ? [last] : [])}
     </div>
@@ -747,14 +780,16 @@ function companySummary(c) {
 }
 function viewFeed() {
   const c = company();
-  const items = ranked();
+  const all = ranked(), items = all.filter(i => i.group === 'mine' || inZone(i, state.zone));
   const groups = PRIORITY.map(([id, name]) => [id, name, items.filter(i => i.group === id)]).filter(g => g[2].length);
   return `<h1>Новости для бизнеса</h1>${forWho(c)}${aiBanner()}
     ${c.data_quality.length ? `<div class="dq"><b>Данные о компании неполные — выводы ориентировочные.</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
     ${API ? quickForm() : ''}
+    ${all.length ? zoneFilter(all.filter(i => i.group !== 'mine')) : ''}
+    ${all.length && !items.length ? `<div class="card empty">В зоне «${esc(state.zone === 'mine' ? 'Мои зоны' : zoneName(state.zone))}» событий нет</div>` : ''}
     ${items.length ? groups.map(([id, name, its]) => `<section class="grp"><h2 class="grp-h">${name}<span class="n">${its.length}</span></h2>
       ${its.map(i => (id === 'info' || id === 'old') && state.open !== i.id ? rowHtml(i) : cardHtml(i)).join('')}</section>`).join('')
-      : '<div class="card empty">Разобранных событий пока нет — выберите новость ниже или вставьте ссылку</div>'}
+      : all.length ? '' : '<div class="card empty">Разобранных событий пока нет — выберите новость ниже или вставьте ссылку</div>'}
     ${API ? `<div class="sec"><h3>Ещё новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
 }
 function quickForm() {
@@ -1270,6 +1305,8 @@ function toggle(id) {
 }
 function bind() {
   document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => toggle(b.dataset.toggle));
+  document.querySelectorAll('[data-zone]').forEach(a => a.onclick = () => { state.zone = a.dataset.zone; });
+  document.querySelectorAll('[data-zf]').forEach(b => b.onclick = () => { state.zone = b.dataset.zf; render(); });
   if (!state.open) return;
   const i = ranked().find(x => x.id === state.open); if (!i) return;
   const card = document.getElementById('card-' + i.id); if (!card) return;

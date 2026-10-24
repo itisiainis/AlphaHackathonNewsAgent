@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from . import house_view, impact
+from . import house_view, impact, roles
 from .matching import Match, cb_decision
 from .okved import country_name, plain, who
 
@@ -31,10 +31,7 @@ DONE = {"hold": re.compile(r"(?:сохранил|оставил)[аи]?(?![а-я
         "cut": re.compile(r"(?:снизил|понизил)[аи]?(?![а-яё])", re.I),
         "hike": re.compile(r"(?:повысил|поднял)[аи]?(?![а-яё])", re.I)}
 # Каналы по важности для роли: главный вывод роли — из первого канала, где для неё есть вывод
-ORDER = {"cfo": ("rate", "tax", "suppliers", "fx", "sanctions", "buyers", "deposits", "market", "macro", "group"),
-         "ceo": ("buyers", "market", "sanctions", "tax", "suppliers", "rate", "fx", "deposits", "macro", "group"),
-         "treasurer": ("fx", "rate", "deposits", "buyers", "sanctions", "tax", "suppliers", "market", "macro", "group"),
-         "accountant": ("tax", "fx", "sanctions", "buyers", "rate", "suppliers", "deposits", "market", "macro", "group")}
+ORDER = {r["id"]: tuple(r["channels"]) for r in roles.roles()}  # из data/roles.json
 ROLES = tuple(ORDER)
 RISK_MIN_SHARE = 0.2   # доля поступлений от отрасли покупателей, начиная с которой их проблемы — риск неплатежей для вас
 NO_FIGURE = "количественной оценки в новости нет"

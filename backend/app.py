@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from agent import impact, profiles
+from agent import impact, profiles, roles
 from agent.chat import FOLLOW_UPS, answer, card_answer
 from agent.contract import validate_card
 from agent.learning import Learner
@@ -253,7 +253,7 @@ def bootstrap():
                      "revenue_bn": round(profiles.get(i)["revenue_rub"] / 1e9, 1)} for i in profiles.all_ids()),
                    key=lambda x: -x["revenue_bn"])
     companies = [_company(i) for i in ids]
-    return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": MOCK["roles"],
+    return {"generated_at": datetime.now(timezone.utc).isoformat(), "roles": roles.public(), "zones": roles.zones(),
             "companies": companies, "all_companies": all_c,
             "factor_hits": {c["id"]: _factor_hits(c, insights[c["id"]]) for c in companies},
             "insights": insights, "origins": origins, "user_cards": user_cards, "status": _status(), "chat_suggestions": SUGGESTED,
@@ -290,7 +290,7 @@ def company(cid: str):
 
 
 def _role_weights(role: str) -> dict:
-    return next((r["weights"] for r in MOCK["roles"] if r["id"] == role), {})
+    return (roles.get(role) or {}).get("weights", {})
 
 
 @app.get("/api/companies/{cid}/events")
