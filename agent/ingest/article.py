@@ -89,10 +89,23 @@ def check_url(url: str) -> str:
     except socket.gaierror as e:
         raise UnsafeURL("сайт не найден") from e
     for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+        if not public_ip(info[4][0]):
             raise UnsafeURL("ссылка ведёт во внутреннюю сеть")
     return u.geturl()
+
+
+NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
+def public_ip(addr: str) -> bool:
+    """Только адреса интернета: не частные, не служебные (100.64/10 — сети провайдера и облака, 169.254 — метаданные
+    облака), не IPv4 внутри IPv6 (::ffff:10.0.0.1, 64:ff9b::a00:1)."""
+    ip = ipaddress.ip_address(addr.split("%")[0])
+    if ip.version == 6:
+        inner = ip.ipv4_mapped or (ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF) if ip in NAT64 else None)
+        if inner is not None:
+            ip = inner
+    return ip.is_global and not ip.is_multicast
 
 
 def safe_get(url: str, client: httpx.Client | None = None) -> httpx.Response:

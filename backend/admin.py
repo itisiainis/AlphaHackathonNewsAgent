@@ -37,7 +37,11 @@ def admin(request: Request, x_admin_token: str = Header(default=""), x_admin_nam
     if not token:
         raise HTTPException(503, "панель управления выключена: задайте ADMIN_TOKEN в .env")
     ip = request.client.host if request.client else "?"
-    q, now = _fails[ip], time.monotonic()
+    now = time.monotonic()
+    if len(_fails) > 10_000:  # адреса с давними ошибками забываем: словарь не растёт без предела
+        for k in [k for k, v in _fails.items() if not v or now - v[-1] > 60]:
+            del _fails[k]
+    q = _fails[ip]
     while q and now - q[0] > 60:
         q.popleft()
     if len(q) >= FAIL_LIMIT:
