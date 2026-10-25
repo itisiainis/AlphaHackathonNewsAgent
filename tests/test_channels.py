@@ -165,3 +165,23 @@ def test_hits_and_diverse_briefs():
                    key=lambda x: -x[1].score)
     picked = sensitivity.diverse(pairs, 3)
     assert len({sensitivity.main_factor(m.reasons) for _, m in picked}) >= 2
+
+
+def test_foreign_script_in_a_conclusion_is_an_error_not_a_style_note():
+    """GLM иногда вставляет иероглифы в русский текст: такой вывод клиенту не показываем, агент его переписывает."""
+    from agent.contract.validator import script_issues
+    card = {"takeaway": {"cfo": "Ставка остаётся 14%：долг不 дешевеет", "ceo": "x", "treasurer": "x"}, "why_short": "x",
+            "title": "t", "key_points": [], "blocks": {"what": [], "why": [], "risks": [], "opportunities": [], "actions": [],
+                                                       "bank": {"quote": "", "doc": "", "date": "2026-10-21", "stale": False}}}
+    assert script_issues(card) and script_issues(card)[0].startswith("takeaway.cfo")
+    card["takeaway"]["cfo"] = "Ставка остаётся 14%: LME, ВВП и 12,0% — всё по-русски"
+    assert script_issues(card) == []
+
+
+def test_brief_carries_its_deadline(world):
+    events, bank, news = world
+    p = profiles.get(AUTO)
+    card, _ = rules_card(HOLD, AUTO, match(HOLD, profiles.features(p), p["bank_products"]), bank, news, TODAY)
+    assert card["until"] == "следующее решение ЦБ — 18 декабря"
+    card, _ = rules_card(VAT, METALS, match(VAT, profiles.features(profiles.get(METALS)), []), bank, news, TODAY)
+    assert card["until"] == "с 1 января 2027"

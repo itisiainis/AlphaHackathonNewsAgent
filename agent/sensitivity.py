@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from . import profiles
+from . import impact, profiles
 from .matching import FLOW_MIN_N
 from .okved import country_name, plain, related_sectors
 
@@ -128,7 +128,7 @@ def hits(card: dict, company_factors: list[dict], reasons: list[dict] | None = N
     for m in card.get("matched", []):
         found += [pid for rx, pid in MATCHED_FACTOR if re.search(rx, m)]
     for c in card.get("blocks", {}).get("calc", []):
-        title = re.sub(r"^Если [^,]+, ", "", c["title"])
+        title = impact.base_title(c["title"])
         found += [next((pid for t, pid in CALC_FACTOR if title.lower().startswith(t.lower())), "market")]
     if not found:
         found = [TOPIC_FACTOR[t] for t in card.get("topics", []) if t in TOPIC_FACTOR]

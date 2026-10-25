@@ -387,6 +387,7 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
         "impact": "high" if match.score >= 6 else "medium" if match.score >= 3.5 else "low",
         "topics": [t for t in event.get("topics", []) if t in TOPICS] or ["отрасль"],
         "is_new": True, "published": event.get("published") or today.isoformat(),
+        **({"until": until} if (until := next((ch.when for ch in chs if ch.when), "")) else {}),
         "title": event.get("title", "")[:200],
         # главный вывод под роль — из каналов влияния; каналов нет — из расчёта или признаков отбора
         "takeaway": {role: takes[role] or pick(*FALLBACK[role]) for role in FALLBACK},

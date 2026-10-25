@@ -112,8 +112,18 @@ def test_exposure_without_percent_in_news():
     assert c["sign"] == "neutral" and "не прогноз потерь" in c["assumptions"][0]
 
 
-def test_hold_rate_gives_no_calc():
-    assert calcs("Банк России сохранил ключевую ставку на уровне 14% годовых.", AUTO) == []
+def test_hold_rate_gives_sensitivity_not_effect():
+    """Ставка без изменения: эффекта нет, но есть масштаб — сколько стоит 1 п.п. ставки для долга (±, без знака)."""
+    out = calcs("Банк России сохранил ключевую ставку на уровне 14% годовых.", AUTO)
+    assert titles(out) == [impact.SENS_RATE] and out[0]["sign"] == "neutral"
+    assert out[0]["value"].startswith("±10 млн ₽ в год") and out[0]["scale"]["per_bn"] == 10_000_000
+    assert calcs("Банк России сохранил ключевую ставку на уровне 14% годовых.", METALS) == [], "без долга — без расчёта"
+
+
+def test_fx_news_without_move_gives_sensitivity_for_foreign_trade():
+    out = calcs("Курс юаня на бирже: рубль колеблется около 11,5 за юань.", AUTO)
+    assert titles(out) == [impact.SENS_FX] and out[0]["value"].startswith("±10 млн ₽")
+    assert calcs("Курс юаня на бирже: рубль колеблется около 11,5 за юань.", DEVEL) == [], "без внешней торговли — без расчёта"
 
 
 # ---------- экономика, а не совпадение слов (случаи аудита: scratchpad/audit/insight-quality/calc_test.py) ----------
@@ -366,7 +376,8 @@ def test_other_rate_in_the_same_sentence_is_not_the_key_rate_change():
     """«…до 15%, ставки по ипотеке снизятся на 2 п.п.» — 2 п.п. про ипотеку; изменение ключевой ставки не названо."""
     r = impact.rate_shock("Банк России снизил ключевую ставку до 15%, ставки по ипотеке снизятся на 2 п.п.")
     assert r["level"] == 15 and "delta" not in r
-    assert calcs("Банк России снизил ключевую ставку до 15%, ставки по ипотеке снизятся на 2 п.п.", AUTO) == []
+    assert titles(calcs("Банк России снизил ключевую ставку до 15%, ставки по ипотеке снизятся на 2 п.п.", AUTO)) == [
+        impact.SENS_RATE], "изменение ключевой не названо — только масштаб, без −2 п.п. ипотеки"
     r = impact.rate_shock("Банк России, как и ожидалось, снизил ключевую ставку на 50 б.п., до 16,5%.")
     assert r["delta"] == pytest.approx(-0.5) and r["level"] == 16.5 and not r["modal"]
 
