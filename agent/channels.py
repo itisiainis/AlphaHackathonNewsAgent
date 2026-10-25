@@ -229,7 +229,8 @@ def _rate(text: str, by: dict, p: dict, calcs: list[dict], today: date, meeting:
                            [_rule("Оценить долю долга с плавающей ставкой; новые кредиты рассматривать с фиксированной ставкой")],
                            when)
         # решения в новости нет: анонс заседания, прогноз, обсуждение ставки
-        scen = money(c_debt) if c_debt else ""
+        # сценарий прогноза («Если ставку снизят на 0,5 п.п., …») — в выводе; чувствительность «±» — только в расчёте и чипе
+        scen = money(c_debt) if c_debt and not c_debt["value"].startswith("±") else ""
         take = {"cfo": (f"Решение по ставке — {_day(meeting)}" if meeting else "Решения по ставке в новости нет")
                        + (f"; прогноз Альфа-Банка — {near}" if near else "") + f": в плане платежей по {dat} закладывайте текущую ставку"
                        + (f"; {scen}" if scen else ""),

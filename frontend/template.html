@@ -47,10 +47,13 @@ h2{font-size:16px;margin:0}
 .card h3.card-h{font-size:13px;margin:0 0 6px;color:var(--ink)}
 .foot-note{font-size:12px;color:var(--ink-3);margin-top:6px}
 .quick{display:flex;gap:8px;margin:0 0 6px}.quick input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
-.quick-more{font-size:13px;margin:0 0 14px}.quick-more textarea{width:100%;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;margin-top:6px}
+.quick-more{font-size:13px;margin:0 0 6px}.quick-more textarea{width:100%;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;margin-top:6px}
+.quick-box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:4px 0 6px}
+.quick-box>summary{cursor:pointer;font-weight:600;color:var(--ink);list-style:none}.quick-box>summary::-webkit-details-marker{display:none}
+.quick-box>summary::before{content:"+";display:inline-block;width:18px;color:var(--brand);font-weight:700}.quick-box[open]>summary::before{content:"−"}
+.quick-box[open]>summary{margin-bottom:8px}.quick-box .or{font-size:12px;color:var(--ink-3);margin:8px 0 0}
 .ctx{font-size:13px;color:var(--ink-2);margin:6px 0 14px}.ctx b{color:var(--ink);font-weight:600}
-nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
-.modal textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px}
+nav.side .modal textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px}
 .ev-why{font-size:12px;color:var(--ink-2);margin-top:6px}
 .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px}
 .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
@@ -61,21 +64,22 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .widget-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
 .w-item{display:flex;gap:10px;align-items:flex-start;text-decoration:none;padding:12px 0;border-top:1px solid var(--line)}
 .w-item:first-of-type{border-top:0}
-/* «Чувствительность бизнеса»: факторы по данным банка и свежее событие по каждому */
+/* «Риски и чувствительность бизнеса»: факторы по данным банка и свежее событие по каждому */
 .factors{margin-top:16px}
 .factor{display:grid;grid-template-columns:10px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .factor:first-of-type{border-top:0}
 .factor .lv{width:10px;height:10px;border-radius:50%;margin-top:5px;background:#cdd1d8}
 .factor .lv.high{background:var(--bank)}.factor .lv.medium{background:#e8a33a}
 .factor b{font-size:14px}.factor .pd{font-size:12px;color:var(--muted)}
-.factor .ps{font-size:13px;margin-top:3px}.factor .ps a{text-decoration:none}
+.factor .ps{font-size:13px;margin-top:3px;display:flex;gap:6px;min-width:0;align-items:baseline}.factor .ps a{text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.factor .ps>span{white-space:nowrap;flex:0 0 auto}
+.factor>div{min-width:0}
 .factor .ps.risk a{color:var(--bank)}.factor .ps.opportunity a{color:#1d8a4b}.factor .ps.calm{color:var(--muted)}
 .factor-tag{font-size:11px;color:var(--rule);border:1px solid #bfe0e3;border-radius:999px;padding:1px 8px;white-space:nowrap}
 .w-item:hover .w-take{color:var(--brand)}
 .w-take{font-weight:600;font-size:15px}
 .w-ev{font-size:13px;color:var(--ink-3)}
 /* метки */
-.tag{font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+.tag{font-size:12px;font-weight:600;border-radius:6px;padding:2px 8px;white-space:nowrap}
 .tag.risk{background:#fdeaea;color:var(--risk)}.tag.opportunity{background:#e6f6ee;color:var(--opp)}.tag.info{background:#eef0f3;color:var(--info)}
 .imp{font-size:11px;color:var(--ink-3)}
 .newmark{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--new);text-transform:uppercase;letter-spacing:.03em}
@@ -86,7 +90,7 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .forwho{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0 14px}
 .dq{background:#fff7e0;border:1px solid #f1dc9c;color:#6b4d00;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}
 /* модель недоступна или лимит исчерпан: лента из кратких разборов — честно сказано над лентой */
-.ai-off{background:var(--ai-bg);border:1px solid #d9d2f7;color:#3d2a8c;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:600}
+.ai-off{display:inline-block;background:var(--ai-bg);border:1px solid #d9d2f7;color:#3d2a8c;border-radius:999px;padding:3px 12px;margin:0 0 10px;font-size:12.5px;font-weight:600}
 .an-err{color:var(--risk);font-size:13px;margin:0 0 8px}.an-err:empty{display:none}
 /* оговорка под разбором и под виджетом — как в каждом материале банка */
 .disclaimer{font-size:11.5px;color:var(--ink-3);margin-top:14px}
@@ -107,9 +111,9 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 /* короткий слой: вывод, главные числа, позиция банка; событие и источник — мелко внизу */
 .nchips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
 .nchip{font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 9px;color:var(--ink)}
-.kp-bank{border-left:3px solid var(--bank);background:var(--bank-bg);padding:5px 10px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:13.5px;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.kp-bank{border-left:3px solid var(--bank);background:var(--bank-bg);padding:5px 10px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:13.5px;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .kp-bank.kp-note{border-left-color:#c79200;background:#fff7e0;color:#6b4d00}
-.kp-bank sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
+.kp-bank sup{vertical-align:baseline}.kp-bank sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .ic-ev{font-size:12.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .jobchip{font-size:11px;color:var(--ai);font-weight:600}
 .btn .jobchip{color:inherit;font-size:inherit}
@@ -170,7 +174,7 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .chip.f{background:#fff;border-color:#d9d2f7;color:var(--ai);display:inline-block;margin:2px 4px 2px 0}
 .actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);align-items:center}
-.tools .sp{flex:1}
+.tools .fbk{margin-left:auto;display:flex;gap:8px;align-items:center;white-space:nowrap}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:12px}
 .legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
 .legend .l-fact::before{background:#cdd1d8}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}.legend .l-rule::before{background:var(--rule)}
@@ -220,12 +224,9 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:22px;width:min(380px,92%);z-index:50;display:none}
 .modal.on{display:block}
 .empty{padding:30px;text-align:center;color:var(--ink-3)}
-/* зоны ответственности роли (data/roles.json): сводка на главной и фильтр ленты */
-.zones{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
-.zone{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;text-decoration:none;color:var(--ink-2);background:#fff}
-.zone b{color:var(--ink);font-weight:600}.zone.risk{border-color:#f3c4c4;background:#fff7f7}
-.zfs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
-.zf{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 12px;font-size:13px;color:var(--ink-2)}
+/* зоны ответственности роли (data/roles.json): фильтр ленты */
+.zfs{display:flex;gap:6px;margin:10px 0 4px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.zfs::-webkit-scrollbar{display:none}
+.zf{flex:0 0 auto;white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 12px;font-size:13px;color:var(--ink-2)}
 .zf.on{background:var(--ink);color:#fff;border-color:var(--ink)}.zf .n{opacity:.65}
 /* фоновые разборы ИИ: индикатор в углу, можно уйти и вернуться */
 .dock{position:fixed;right:16px;bottom:16px;z-index:35;display:flex;flex-direction:column;gap:8px;width:min(340px,calc(100vw - 32px));pointer-events:none}
@@ -242,16 +243,37 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .toast{background:var(--ink);color:#fff;border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:0 6px 24px rgba(20,24,32,.18)}
 @media (prefers-reduced-motion:reduce){.bar span{transition:none}}
 footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
+/* итог дня на главной, справочные данные — свёрнуты, служебная ссылка — в подвале */
+.day-line{font-size:15px;color:var(--ink);margin:12px 0 0;line-height:1.45}.day-line .muted{font-size:14px}
+.widget-head .all{white-space:nowrap;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+details.profile{margin-top:16px;padding:0;background:transparent;border:0}
+details.profile>summary{cursor:pointer;font-weight:600;color:var(--ink-2);padding:6px 0}
+details.profile[open]>summary{margin-bottom:8px}
+details.profile .grid3{margin-top:0}
+.app-foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.app-foot a{color:var(--ink-2)}
+/* карточка: ключевая дата, повторы темы, источник краткого разбора */
+.ic-until{font-size:13px;color:var(--ink-2);margin:0 0 8px}.ic-until b{font-weight:600;color:var(--ink)}
+.dup{flex:0 0 auto;font-size:12px;color:var(--ink-3)}
+.origin-note{font-size:12px;color:var(--rule);margin-left:auto;font-style:normal}
+.why-more{margin-top:2px;font-size:13px}
+.no-act{font-size:14px;color:var(--ink-2);background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-top:14px}
+.calm-line{font-size:13px;color:var(--ink-3);padding:4px 0}
+details.dq>summary{cursor:pointer;font-weight:600}details.dq[open]>summary{margin-bottom:4px}
 @media (max-width:860px){
   .layout{grid-template-columns:minmax(0,1fr)}
   nav.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 10px}
-  nav.side a{white-space:nowrap}
-  nav.side .nav-foot{display:none}
-  .top{position:static}
+  nav.side a{white-space:nowrap;min-height:44px;gap:6px}
+  .top{position:static;padding:8px 16px;gap:8px}
+  .switch{margin-left:0;width:100%;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px;flex-wrap:nowrap}
+  .switch label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .switch select{max-width:none;width:100%;min-width:0;padding:8px 8px}
+  .widget-head h2{font-size:15px}
   .ic{scroll-margin-top:8px}
   .grid3,.two{grid-template-columns:1fr}
   main{padding:16px}
   .ic-take{font-size:16px}
+  .ic-foot{flex-wrap:wrap;row-gap:4px}.ic-foot .ic-ev{flex:1 1 100%}.ic-foot .more{margin-left:auto}
 }
 /* панель управления банка */
 body.adm .switch{display:none}
@@ -324,7 +346,7 @@ function loadRead() { try { return new Set(JSON.parse(localStorage.getItem(READ_
 function saveRead() { try { localStorage.setItem(READ_KEY, JSON.stringify([...state.read].slice(-500))); } catch (e) { /* без хранилища — до перезагрузки */ } }
 const state = {company: null, role: null, open: null,
   read: loadRead(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {},
-  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}, zone: ''};
+  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}, zone: '', whyAll: {}};
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   const data = await r.json().catch(() => ({}));
@@ -374,7 +396,28 @@ function supersededIds(items) {
     if (a !== b && (a.topics || [])[0] && (a.topics || [])[0] === (b.topics || [])[0] && ageDays(a) - ageDays(b) >= 3) out.add(a.id);
   return out;
 }
-const priority = (i, old) => isMine(i) ? 'mine' : old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old' : i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
+/* Группа — по влиянию на деньги и по действию, а не по одной метке важности:
+   «Требует решения» — риск или возможность с высоким влиянием, эффектом в рублях или обоснованным действием;
+   «Следить» — остальные риски и возможности, а также события со сроком или влиянием выше низкого */
+const realMoney = i => (i.blocks.calc || []).some(c => calcSign(c) !== 'neutral' && calcFits(c, i));
+const hasCta = i => (i.blocks.actions || []).some(a => a.cta);
+const priority = (i, old) => isMine(i) ? 'mine' : old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old'
+  : i.type !== 'info' && (i.impact === 'high' || realMoney(i) || hasCta(i)) ? 'act'
+  : i.type !== 'info' || i.impact !== 'low' || i.until ? 'watch' : 'info';
+/* Одна тема в один день — одна карточка: из нескольких сообщений про ставку, курс или налоги за день остаётся
+   лучшая (выше оценка, при равенстве — разбор ИИ), остальные доступны из неё («+1 сообщение по теме») */
+const DEDUP_TOPICS = ['ставка', 'курс', 'налоги'];
+function sameDayDups(items) {
+  const keep = {}, dupOf = {};
+  const best = [...items].sort((a, b) => b.score - a.score || (origin(b) !== 'rules') - (origin(a) !== 'rules'));
+  for (const i of best) {
+    const t = (i.topics || []).find(x => DEDUP_TOPICS.includes(x));  // «долг, ставка» — тоже про ставку
+    if (!t || isMine(i)) continue;
+    const k = t + '|' + i.published;
+    if (keep[k]) dupOf[i.id] = keep[k]; else keep[k] = i.id;
+  }
+  return dupOf;
+}
 /* Порядок фиксируется при открытии ленты (компания × роль) и не меняется до перезагрузки: готовый разбор
    обновляет карточку на её месте, новая карточка встаёт первой в своей группе.
    При расчёте: группа → новые выше прочитанных → score. */
@@ -391,9 +434,13 @@ function ranked() {
     const g = o.group[i.id] = pr(i), at = o.ids.findIndex(id => PR_IDX[o.group[id]] >= PR_IDX[g]);
     o.ids.splice(at < 0 ? o.ids.length : at, 0, i.id);
   }
-  return o.ids.filter(id => by[id]).map(id => ({...by[id], group: o.group[id]}));
+  const dupOf = sameDayDups(items), dups = {};
+  for (const [d, k] of Object.entries(dupOf)) (dups[k] = dups[k] || []).push(d);
+  return o.ids.filter(id => by[id]).map(id => ({...by[id], group: o.group[id], dupOf: dupOf[id] || '', dups: dups[id] || []}));
 }
-const newCount = () => ranked().filter(isNew).length;
+// в ленте и на главной — без повторов темы; повтор виден, только если его открыли по ссылке
+const shown = items => items.filter(i => !i.dupOf || state.open === i.id);
+const newCount = () => ranked().filter(i => !i.dupOf && isNew(i)).length;
 // Зоны ответственности (data/roles.json): карточка попадает в зоны по своим темам, у роли — свои зоны
 const ZONES = () => DATA.zones || [];
 const zoneName = id => (ZONES().find(z => z.id === id) || {}).name || id;
@@ -401,23 +448,12 @@ const zonesOf = i => ZONES().filter(z => z.topics.some(t => (i.topics || []).inc
 const myZones = () => role().zones || [];
 const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? b : c;
 const inZone = (i, z) => !z || (z === 'mine' ? zonesOf(i).some(x => myZones().includes(x)) : zonesOf(i).includes(z));
-// «Долг и финансирование: 1 риск, 1 новое» — что происходит в зонах выбранной роли, по свежим событиям
-function zoneSummary(items) {
-  const row = id => {
-    const its = items.filter(i => zonesOf(i).includes(id)), risk = its.filter(i => i.type === 'risk').length;
-    const opp = its.filter(i => i.type === 'opportunity').length, nw = its.filter(isNew).length;
-    const st = [risk ? `${risk} ${plural(risk, 'риск', 'риска', 'рисков')}` : '', opp ? `${opp} ${plural(opp, 'возможность', 'возможности', 'возможностей')}` : '',
-      nw ? `${nw} ${plural(nw, 'новое', 'новых', 'новых')}` : ''].filter(Boolean).join(', ') || 'спокойно';
-    return `<a class="zone ${risk ? 'risk' : ''}" href="#feed" data-zone="${id}"><b>${esc(zoneName(id))}</b>: ${st}</a>`;
-  };
-  return myZones().length ? `<div class="zones" aria-label="Ваши зоны ответственности">${myZones().map(row).join('')}</div>` : '';
-}
 function zoneFilter(items) {
   const mine = myZones(), rest = ZONES().map(z => z.id).filter(id => !mine.includes(id));
   const btn = (id, name, n) => `<button class="zf ${state.zone === id ? 'on' : ''}" data-zf="${id}" aria-pressed="${state.zone === id}">${esc(name)}${n === null ? '' : ` <span class="n">${n}</span>`}</button>`;
-  const count = id => items.filter(i => inZone(i, id)).length;
-  return `<div class="zfs" role="group" aria-label="Фильтр по зонам ответственности">${btn('', 'Все', null)}${mine.length ? btn('mine', 'Мои зоны', count('mine')) : ''}`
-    + [...mine, ...rest].map(id => count(id) ? btn(id, zoneName(id), count(id)) : '').join('') + '</div>';
+  const count = id => items.filter(i => inZone(i, id)).length;  // число — только у «Все» и «Мои зоны», остальные — без цифр
+  return `<div class="zfs" role="group" aria-label="Фильтр по зонам ответственности">${btn('', 'Все', items.length)}${mine.length ? btn('mine', 'Мои зоны', count('mine')) : ''}`
+    + [...mine, ...rest].map(id => count(id) ? btn(id, zoneName(id), null) : '').join('') + '</div>';
 }
 
 function companyOptions() {
@@ -456,15 +492,16 @@ function renderNav(route) {
   const n = newCount();
   $('#nav').innerHTML = `
     <a href="#home" class="${route === 'home' ? 'on' : ''}">Главная</a>
-    <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>
-    ${API ? `<div class="nav-foot">Для сотрудников банка<a href="#admin" class="${route === 'admin' ? 'on' : ''}">Панель управления</a></div>` : ''}`;
+    <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>`;
 }
+// служебная ссылка для сотрудников банка — в подвале, а не в меню клиента
+const appFoot = () => API ? '<footer class="app-foot">Для сотрудников банка: <a href="#admin">панель управления</a></footer>' : '';
 /* Модель: подключена и лимит дня не исчерпан. Расход и состояние модели — служебные (панель управления);
    клиенту говорим только последствие — разборы сейчас краткие, без выводов ИИ. Выключенный фоновый сбор новостей
    к модели отношения не имеет и плашку не включает. */
 const aiReady = () => !!(DATA.status && DATA.status.llm_online && !(DATA.status.spent_today_rub >= DATA.status.budget_rub));
 const aiBanner = () => API && DATA.status && !aiReady()
-  ? '<div class="ai-off" role="status">ИИ-аналитик недоступен — краткие разборы: факты, позиция банка, расчёт и выводы по правилам, без ИИ</div>' : '';
+  ? '<div class="ai-off" role="status" title="ИИ-аналитик недоступен — краткие разборы: факты, позиция банка, расчёт и выводы по правилам, без ИИ">ИИ-аналитик недоступен · краткие разборы без ИИ</div>' : '';
 /* Диалог и панель шагов: Esc закрывает, фокус возвращается на кнопку, которая их открыла
    (если её перерисовали — на такую же кнопку с теми же data-атрибутами) */
 let opener = null;
@@ -531,7 +568,7 @@ function calcSign(c) {
 const calcFits = (c, i) => i.type === 'info' || [i.type, 'neutral'].includes(calcSign(c));
 const calcsOf = i => [...(i.blocks.calc || [])].sort((a, b) => calcFits(b, i) - calcFits(a, i));
 function calcHtml(c, i) {
-  const sc = c.scale ? `<label class="calc-s">${esc(c.scale.label)} <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="напр. 5" data-per="${c.scale.per_bn}" data-signed="${c.sign !== 'neutral'}" data-fam="${famOf(c.title)}" data-period="${esc(c.scale.period)}"> <output>→ введите сумму, чтобы пересчитать</output></label>` : '';
+  const sc = c.scale ? `<label class="calc-s">${esc(c.scale.label)} <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="напр. 5" data-per="${c.scale.per_bn}" data-signed="${c.sign !== 'neutral'}" data-pm="${/^±/.test(c.value)}" data-fam="${famOf(c.title)}" data-period="${esc(c.scale.period)}"> <output>→ введите сумму, чтобы пересчитать</output></label>` : '';
   return `<div class="calc ${calcSign(c)}"><div class="calc-h"><span>${esc(c.title)}</span><span class="calc-v">${esc(moneyValue(c))}</span></div>
     <div class="calc-f">Формула: <code>${esc(c.formula)}</code>${c.strength ? ' · надёжность оценки: ' + CALC_STR[c.strength] : ''}</div>${sc}
     <details><summary>Данные и допущения</summary>${c.inputs.map(s => stmtHtml(s, i)).join('')}<ul>${c.assumptions.map(a => `<li>${esc(a)}</li>`).join('')}</ul></details></div>`;
@@ -555,9 +592,11 @@ const plainFeat = s => s.replace(/\s*\(\d{2}\)|\s*(?:из\s+)?ОКВЭД\s*\d+(?
 const numsOf = s => s.match(/\d+(?:[.,]\d+)?/g) || [];
 /* Главные числа карточки — чипами, их проще пробежать глазами, чем предложения: расчёт в рублях и доли
    платежей, на которые сработал отбор. Число, которое уже есть в главном выводе, не повторяем. */
+const PM_HEAD = {'Стоимость долга': 'Ставка ±1 п.п.', 'Валютные расчёты': 'Курс ±1%'};  // чувствительность — коротко
 function numChips(i, take) {
-  const calc = calcsOf(i).filter(c => calcFits(c, i)).slice(0, 1).map(c => `${c.title.split(/: | — /)[0]}: ${moneyValue(c)
-    .replace(' на каждый ', ' на ').replace(/ с плавающей ставкой| \((?:дороже|дешевле) в рублях\)/g, '')}`);
+  const short = v => v.replace(' на каждый ', ' на ').replace(/ с плавающей ставкой| \((?:дороже|дешевле) в рублях\)/g, '');
+  const head = c => /^±/.test(c.value) ? PM_HEAD[Object.keys(PM_HEAD).find(k => c.title.startsWith(k))] || c.title : c.title.split(/: | — /)[0];
+  const calc = calcsOf(i).filter(c => calcFits(c, i)).slice(0, 1).map(c => `${head(c)}: ${short(moneyValue(c))}`);
   const flows = (i.matched || []).filter(m => /\d+%/.test(m)).map(plainFeat);
   return [...calc, ...flows].filter(c => !numsOf(c).every(n => take.includes(n))).slice(0, 3);
 }
@@ -617,16 +656,28 @@ function disclaimerHtml(cards) {
 }
 
 /* ---------- карточка-аккордеон ---------- */
+// «вчера», «3 дня назад»; старше недели — дата
+function relDate(d) {
+  const n = Math.round((today() - new Date(d + 'T00:00:00')) / 864e5);
+  return n < 0 || n >= 7 ? fmtDate(d) : n === 0 ? 'сегодня' : n === 1 ? 'вчера' : `${n} ${plural(n, 'день', 'дня', 'дней')} назад`;
+}
+const dateHtml = i => `<span class="ic-date" title="${esc(fmtDateY(i.published))}">${relDate(i.published)}</span>`;
+// одна метка вместо трёх: тип и влияние вместе («Риск · высокое влияние»)
+const tagHtml = i => `<span class="tag ${i.type}">${i.type === 'info' ? cap(IMPACT_RU[i.impact]) : cap(TYPE_RU[i.type]) + ' · ' + IMPACT_RU[i.impact]}</span>`;
+const dupNote = i => i.dups.length ? `<span class="dup">+${i.dups.length} ${plural(i.dups.length, 'сообщение', 'сообщения', 'сообщений')} по теме</span>` : '';
+/* Свёрнутая карточка: метка и фактор, вывод под роль, главные числа, ключевая дата, позиция банка; событие и
+   источник — мелко внизу. В раскрытой цитата банка — в разделе «Как оценивает банк», здесь второй раз не повторяется */
 function cardHtml(i) {
   const open = state.open === i.id, nw = isNew(i), job = cardJob(i), take = takeaway(i);
-  const chips = numChips(i, take), bank = (i.key_points || []).find(s => s.p === 'bank');
+  const chips = numChips(i, take), bank = !open && (i.key_points || []).find(s => s.p === 'bank');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка, расчёт и выводы по правилам — без ИИ">краткий разбор</span>' : ''}${factorTag(i)}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}${tagHtml(i)}${factorTag(i)}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}${dateHtml(i)}</div>
       <div class="ic-take">${esc(take)}</div>
       ${chips.length ? `<div class="nchips">${chips.map(c => `<span class="nchip">${esc(c)}</span>`).join('')}</div>` : ''}
+      ${i.until ? `<div class="ic-until">Ключевая дата: <b>${esc(i.until)}</b></div>` : ''}
       ${bank ? kpNote(bank, i) ? `<div class="kp-bank kp-note">${esc(bank.t)}${ref(bank, i)}</div>` : `<div class="kp-bank" title="Позиция банка">${esc(bank.t)}${ref(bank, i)}</div>` : ''}
-      <div class="ic-foot"><span class="ic-ev" title="${esc(i.title)}">${esc(i.title)} · ${srcShort(i)}</span><span class="more">${open ? 'Свернуть' : 'Подробнее'} <span class="chev">▾</span></span></div>
+      <div class="ic-foot"><span class="ic-ev" title="${esc(i.title)}">${esc(i.title)} · ${srcShort(i)}</span>${dupNote(i)}<span class="more">${open ? 'Свернуть' : 'Подробнее'} <span class="chev">▾</span></span></div>
     </button>
     ${open ? bodyHtml(i) : ''}
   </article>`;
@@ -636,35 +687,48 @@ function rowHtml(i) {
   const nw = isNew(i);
   return `<article class="ic row ${nw ? 'is-new' : ''}" id="card-${i.id}"><button class="ic-head" data-toggle="${i.id}" aria-expanded="false">
     <span class="${nw ? 'dot-new' : 'dot-read'}"></span><span class="row-main"><span class="row-take">${esc(takeaway(i))}</span><span class="ic-ev">${esc(i.title)}</span></span>
-    <span class="ic-date">${fmtDate(i.published)}</span><span class="more"><span class="chev">▾</span></span></button></article>`;
+    ${dateHtml(i)}<span class="more"><span class="chev">▾</span></span></button></article>`;
 }
 /* Раскрытая карточка: сначала что делать и сколько это стоит, потом почему; пересказ события и основание — под катом */
+/* Одна главная кнопка у раскрытой карточки, рядом с «Что можно сделать»: обоснованное действие из разбора
+   (продукт банка, менеджер); если его нет — пересчёт эффекта под сумму клиента; если и расчёта нет — разговор
+   с менеджером, но только у риска или возможности: у события «к сведению» действия нет */
+function actionsRow(i) {
+  const btn = (pri, kind, label) => `<button class="btn ${pri ? 'pri' : ''}" data-cta="${kind}" data-label="${esc(label)}">${esc(label)}</button>`;
+  const ctas = i.blocks.actions.filter(a => a.cta).map((a, k) => btn(!k, a.cta.kind, a.cta.label));
+  const recalc = calcsOf(i).some(c => c.scale) ? `<button class="btn ${ctas.length ? '' : 'pri'}" data-recalc>Пересчитать под мою сумму</button>` : '';
+  const manager = !ctas.length && !recalc && i.type !== 'info' ? btn(true, 'manager', 'Обсудить с менеджером') : '';
+  const row = [...ctas, recalc, manager].filter(Boolean).join('');
+  return row ? `<div class="actions-row">${row}</div>` : '';
+}
+const WHY_SHOWN = 2;
 function bodyHtml(i) {
   const b = i.blocks, fb = state.feedback[i.id], job = cardJob(i), running = job && job.status === 'running';
-  const ctas = b.actions.filter(a => a.cta).map(a => `<button class="btn pri" data-cta="${a.cta.kind}" data-label="${esc(a.cta.label)}">${esc(a.cta.label)}</button>`).join('');
-  const chatLog = (state.chats[i.id] || []).join('');
+  const chatLog = (state.chats[i.id] || []).join(''), acts = actionsRow(i);
   const srcNames = [...new Set(i.sources.map(s => s.name))].slice(0, 3).join(', ');
+  const why = state.whyAll[i.id] ? b.why : b.why.slice(0, WHY_SHOWN), whyRest = b.why.length - why.length;
+  const dups = i.dups.map(id => ranked().find(x => x.id === id)).filter(Boolean);
   return `<div class="ic-body">
     ${legendHtml(i)}
-    ${b.actions.length ? `<div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>` : ''}
+    ${b.actions.length || acts ? `<div class="sec"><h3>Что можно сделать</h3>${b.actions.length ? list(b.actions, i) : ''}${acts}</div>` : ''}
     ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${calcsOf(i).map(c => calcHtml(c, i)).join('')}</div>` : ''}
-    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
+    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(why, i)}${whyRest ? `<button class="linkbtn why-more" data-why-all>Ещё ${whyRest} ${plural(whyRest, 'причина', 'причины', 'причин')}</button>` : ''}</div>` : ''}
     ${b.risks.length || b.opportunities.length ? `<div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>` : ''}
     <div class="sec"><h3>Как оценивает банк</h3>${bankHtml(i)}</div>
     <details class="sec-d"><summary>Что произошло</summary>${list(b.what, i)}</details>
+    ${dups.length ? `<details class="sec-d"><summary>Ещё по теме за этот день <span class="muted">· ${dups.length}</span></summary>${dups.map(d => `<div class="stmt fact"><a href="#feed/${d.id}">${esc(d.title)}</a> <span class="muted">· ${srcShort(d)}</span></div>`).join('')}</details>` : ''}
     <details class="sec-d"><summary>На чём основан вывод <span class="muted">· ${esc(srcNames)}</span></summary><div class="two">
       <div><h4>Источники</h4><ol class="srcs">${i.sources.map(s => `<li><span class="kind ${s.kind}">${s.kind === 'bank' ? 'банк' : s.kind === 'stat' ? 'статистика' : 'новость'}</span>${srcLink(s, esc(s.name))} <span class="muted">· ${fmtDateY(s.date)}</span></li>`).join('')}</ol></div>
       <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(plainFeat(f))}</span>`).join('')}
         ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></details>
     <div class="tools">
-      ${origin(i) === 'rules' && API && aiReady() ? `<button class="btn pri" data-upgrade ${running ? 'disabled' : ''}>${running ? jobMark(job, 'Разбор идёт · ') : 'Полный разбор ИИ'}</button>` : ''}
+      ${origin(i) === 'rules' && API && aiReady() ? `<button class="btn" data-upgrade ${running ? 'disabled' : ''}>${running ? jobMark(job, 'Разбор идёт · ') : 'Полный разбор ИИ'}</button>` : ''}
       <button class="btn" data-share>Переслать</button>
       <button class="btn" data-trace="${i.id}">Как получен вывод</button>
       <button class="btn ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}">Задать вопрос</button>
-      <span class="sp"></span>
-      <span class="muted">Оценка:</span>
-      <button class="btn ${fb === 'up' ? 'sel' : ''}" data-fb="up">Полезно</button>
-      <button class="btn ${fb === 'down' ? 'sel' : ''}" data-fb="down">Не про нас</button>
+      <span class="fbk"><span class="muted">Оценка:</span>
+        <button class="btn ${fb === 'up' ? 'sel' : ''}" data-fb="up">Полезно</button>
+        <button class="btn ${fb === 'down' ? 'sel' : ''}" data-fb="down">Не про нас</button></span>
     </div>
     <div class="chat ${state.chatOpen[i.id] ? 'on' : ''}">
       ${i.chat.length || API ? `<div class="sugg">${API ? (DATA.follow_ups || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}${i.chat.map((c, k) => `<button data-q="${k}">${esc(c.q)}</button>`).join('')}${API ? (DATA.chat_suggestions || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}</div>` : ''}
@@ -702,27 +766,38 @@ function homeItems(items) {
     keys.forEach(k => seen.add(k)); return true;
   });
 }
+/* Итог дня одной строкой: сколько событий требует решения и сколько — наблюдения, и по каким факторам
+   чувствительности бизнеса. Считается по ленте без повторов темы */
+function dayLine(items) {
+  const act = items.filter(i => i.group === 'act'), watch = items.filter(i => i.group === 'watch');
+  const fs = company().factors || [], names = [...new Set([...act, ...watch].flatMap(factorIds))]
+    .map(id => (fs.find(f => f.id === id) || {}).title).filter(Boolean).map(t => t.split(':')[0].toLowerCase()).slice(0, 3);
+  const ev = n => `${n} ${plural(n, 'событие', 'события', 'событий')}`;
+  const head = act.length ? `<b>${cap(ev(act.length))} ${act.length === 1 ? 'требует' : 'требуют'} решения</b>${watch.length ? `, ${ev(watch.length)} — под наблюдением` : ''}`
+    : watch.length ? `<b>Сегодня решений не требуется</b> · ${ev(watch.length)} под наблюдением` : '<b>Сегодня решений не требуется</b>';
+  return `<div class="day-line">${head}${names.length ? `<span class="muted"> · ${esc(names.join(', '))}</span>` : ''}</div>`;
+}
 function viewHome() {
-  const ok = homeItems(ranked().filter(i => i.group !== 'mine')), fresh = ok.filter(i => i.group !== 'old');
+  const all = ranked().filter(i => i.group !== 'mine' && !i.dupOf), ok = homeItems(all), fresh = ok.filter(i => i.group !== 'old');
   const c = company(), top = topDistinct(fresh, 3), n = newCount();
   // тихий день: свежего важного нет — так и говорим и даём последнее важное из прошлых событий
   const last = top.length ? null : ok.filter(i => i.group === 'old').sort((a, b) => b.published.localeCompare(a.published))[0];
   const item = i => `<a class="w-item" href="#feed/${i.id}"><span class="${isNew(i) ? 'dot-new' : 'dot-read'}"></span>
-        <span><span class="tag ${i.type}">${TYPE_RU[i.type]}</span><div class="w-take" style="margin-top:4px">${esc(homeLine(i))}</div><div class="w-ev">${esc(labelTake(i) ? takeaway(i) : i.title)}</div></span></a>`;
-  const body = top.length ? (top.length < 3 ? `<div class="w-sub">Сегодня по-настоящему важно ${top.length} ${top.length === 1 ? 'событие' : 'события'}</div>` : '') + top.map(item).join('')
+        <span><div class="w-take">${esc(homeLine(i))}</div><div class="w-ev">${esc(labelTake(i) ? takeaway(i) : i.title)} · ${relDate(i.published)}</div></span></a>`;
+  const body = top.length ? top.map(item).join('')
     : last ? `<div class="w-quiet">Сегодня ничего, что требует решения. <a href="#feed/${last.id}">Последнее важное: ${esc(homeLine(last))} →</a></div>`
     : `<div class="empty">Значимых событий за сутки нет${API ? ' · <a class="linkbtn" href="#feed">Новости по вашему профилю →</a>' : ''}</div>`;
-  return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
+  return `<h1>${esc(c.display)}</h1><div class="muted">${esc(role().name)} · ${fmtDateY(today())}</div>
+    ${dayLine(all.filter(i => i.group !== 'old'))}
     <div class="card widget">
-      <div class="widget-head"><h2>Важное для вашего бизнеса ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
-      ${zoneSummary(fresh)}
+      <div class="widget-head"><h2>Важное для вашего бизнеса</h2><a class="linkbtn all" href="#feed">Вся лента ${n ? `<span class="badge-new">${n} ${plural(n, 'новое', 'новых', 'новых')}</span>` : ''} →</a></div>
       ${body}
-      ${disclaimerHtml(top.length ? top : last ? [last] : [])}
     </div>
     ${factorsHtml(c)}
-    ${companySummary(c)}`;
+    <details class="profile"><summary>Данные банка о компании</summary>${companySummary(c)}</details>
+    ${disclaimerHtml(top.length ? top : last ? [last] : [])}`;
 }
-/* Чувствительность бизнеса (backend agent/sensitivity.py): факторы, через которые внешние события влияют на компанию, по данным
+/* Риски и чувствительность бизнеса (backend agent/sensitivity.py): факторы, через которые внешние события влияют на компанию, по данным
    банка, и свежее событие по каждому. Сначала факторы с риском или возможностью, потом важные для выбранной роли */
 const TYPE_STATUS = {risk: 'Риск', opportunity: 'Возможность', info: 'Мониторинг'};
 const TOPIC_FACTOR = {'ставка': 'rate', 'долг': 'rate', 'курс': 'fx', 'налоги': 'taxes', 'контрагенты': 'buyers',
@@ -739,7 +814,7 @@ function factorTag(i) {
 }
 function factorsHtml(c) {
   if (!(c.factors || []).length) return '';
-  const items = ranked().filter(i => i.group !== 'old' && i.group !== 'mine');
+  const items = ranked().filter(i => i.group !== 'old' && i.group !== 'mine' && !i.dupOf);
   const LV = {high: 0, medium: 1, low: 2}, rank = r => (r || []).indexOf(state.role) < 0 ? 9 : r.indexOf(state.role);
   const pressure = x => !x.top ? 0 : x.top.type === 'info' ? 1 : 2;  // сначала факторы, по которым есть риск или возможность
   const rows = c.factors.map(p => {
@@ -749,13 +824,13 @@ function factorsHtml(c) {
   }).sort((a, b) => pressure(b) - pressure(a) || rank(a.p.roles) - rank(b.p.roles) || LV[a.p.level] - LV[b.p.level]).slice(0, 5);
   const row = ({p, top, n}) => `<div class="factor"><span class="lv ${p.level}" title="${{high: 'высокая чувствительность', medium: 'средняя чувствительность', low: 'низкая чувствительность'}[p.level]}"></span>
     <div><b>${esc(p.title)}</b><div class="pd">${esc(p.detail)}</div>
-      ${top ? `<div class="ps ${top.type}">${TYPE_STATUS[top.type]}: <a href="#feed/${top.id}">${esc(homeLine(top))} →</a>${n > 1 ? ` <span class="muted">+${n - 1}</span>` : ''}</div>`
+      ${top ? `<div class="ps ${top.type}"><span>${TYPE_STATUS[top.type]}:</span><a href="#feed/${top.id}" title="${esc(top.title)}">${esc(top.title)}</a><span class="muted">${relDate(top.published)}${n > 1 ? ` · ещё ${n - 1}` : ''} →</span></div>`
         : `<div class="ps calm">Значимых событий нет · отслеживаем: ${esc(p.watch)}</div>`}</div></div>`;
-  return `<div class="card factors"><h2>Чувствительность бизнеса</h2><div class="muted" style="margin-bottom:4px">Факторы, через которые внешние события влияют на компанию, — по данным Альфа-Банка</div>${rows.map(row).join('')}</div>`;
+  return `<div class="card factors"><h2>Риски и чувствительность бизнеса</h2><div class="muted" style="margin-bottom:4px">Факторы, через которые внешние события влияют на компанию, — по данным Альфа-Банка</div>${rows.map(row).join('')}</div>`;
 }
 function legendHtml(i) {
   const ps = new Set([...i.key_points, ...['what', 'why', 'risks', 'opportunities', 'actions'].flatMap(k => i.blocks[k] || [])].map(s => s.p));
-  return `<div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span>${ps.has('ai') || origin(i) !== 'rules' ? '<span class="l-ai">вывод ИИ</span>' : ''}${ps.has('rule') ? `<span class="l-rule" title="${P_FULL.rule}">вывод по правилам</span>` : ''}</div>`;
+  return `<div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span>${ps.has('ai') || origin(i) !== 'rules' ? '<span class="l-ai">вывод ИИ</span>' : ''}${ps.has('rule') ? `<span class="l-rule" title="${P_FULL.rule}">вывод по правилам</span>` : ''}${origin(i) === 'rules' ? '<em class="origin-note" title="Факты, данные компании, позиция банка, расчёт и выводы по правилам — без ИИ">Краткий разбор: собран правилами, без ИИ</em>' : ''}</div>`;
 }
 // Сводка «ваш бизнес в данных банка»: то, от чего зависит влияние новостей на компанию
 function flowCard(title, s, who) {
@@ -767,7 +842,7 @@ function flowCard(title, s, who) {
 }
 function companySummary(c) {
   const prods = c.products.length ? c.products.map(x => x === 'РКО' ? 'расчётный счёт' : x).join(', ') : 'нет';
-  return `<div class="grid3" style="margin-top:16px">
+  return `<div class="grid3">
     <div class="card"><h3 class="card-h">Компания</h3>
       <div class="kv"><span>Выручка за год</span><b>${c.revenue_bn.toLocaleString('ru-RU')} млрд ₽</b></div>
       <div class="kv"><span>Регион</span><b>${esc(c.region)}</b></div>
@@ -780,33 +855,38 @@ function companySummary(c) {
 }
 function viewFeed() {
   const c = company();
-  const all = ranked(), items = all.filter(i => i.group === 'mine' || inZone(i, state.zone));
+  const all = shown(ranked()), items = all.filter(i => i.group === 'mine' || inZone(i, state.zone));
   const groups = PRIORITY.map(([id, name]) => [id, name, items.filter(i => i.group === id)]).filter(g => g[2].length);
+  // решений нет — так и говорим над лентой, а не оставляем пустое место под «Требует решения»
+  const noAct = items.some(i => ['watch', 'info'].includes(i.group)) && !items.some(i => i.group === 'act');
   return `<h1>Новости для бизнеса</h1>${forWho(c)}${aiBanner()}
-    ${c.data_quality.length ? `<div class="dq"><b>Данные о компании неполные — выводы ориентировочные.</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
+    ${c.data_quality.length ? `<details class="dq"><summary>Данные о компании неполные — выводы ориентировочные</summary>${c.data_quality.map(esc).join('<br>')}</details>` : ''}
     ${API ? quickForm() : ''}
     ${all.length ? zoneFilter(all.filter(i => i.group !== 'mine')) : ''}
     ${all.length && !items.length ? `<div class="card empty">В зоне «${esc(state.zone === 'mine' ? 'Мои зоны' : zoneName(state.zone))}» событий нет</div>` : ''}
+    ${noAct ? '<div class="no-act">Сегодня решений не требуется — ниже события, за которыми стоит следить</div>' : ''}
     ${items.length ? groups.map(([id, name, its]) => `<section class="grp"><h2 class="grp-h">${name}<span class="n">${its.length}</span></h2>
       ${its.map(i => (id === 'info' || id === 'old') && state.open !== i.id ? rowHtml(i) : cardHtml(i)).join('')}</section>`).join('')
       : all.length ? '' : '<div class="card empty">Разобранных событий пока нет — выберите новость ниже или вставьте ссылку</div>'}
     ${API ? `<div class="sec"><h3>Ещё новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
 }
+// Своя новость — свёрнутой строкой над лентой: лента начинается сразу, а форма — по нажатию
 function quickForm() {
-  return `<form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость" aria-describedby="an-err">
+  return `<details class="quick-box quick-more" ${state.quickOpen ? 'open' : ''}><summary>Проверить свою новость</summary>
+    <form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость" aria-describedby="an-err">
       <button class="btn pri">Оценить</button></form><div class="an-err" id="an-err" role="alert"></div>
-    <details class="quick-more"><summary class="linkbtn">Нет ссылки — вставить текст новости</summary>
-      <textarea id="quick-text" rows="5" maxlength="20000" placeholder="Текст новости"></textarea>
-      <button class="btn" id="quick-text-go">Оценить текст</button> <span id="an-msg" class="muted" role="status"></span></details>`;
+    <div class="or">Нет ссылки — вставьте текст новости</div>
+    <textarea id="quick-text" rows="4" maxlength="20000" placeholder="Текст новости" aria-label="Текст новости"></textarea>
+    <button class="btn" id="quick-text-go">Оценить текст</button> <span id="an-msg" class="muted" role="status"></span></details>`;
 }
 /* События, прошедшие отбор правилами (без LLM): видно, на какие признаки компании они сработали */
 const EVENTS_SHOWN = 5;
 function eventsHtml() {
   let ev = state.events[state.company];
   if (ev === undefined) return '<div class="muted">Подбираем новости…</div>';
-  if (!ev.length) return '<div class="card empty">Значимых для компании новостей за последние дни нет</div>';
+  if (!ev.length) return '<div class="calm-line">Других значимых для компании новостей за последние дни нет</div>';
   ev = ev.filter(e => !e.analyzed);  // разобранные уже в ленте карточками
-  if (!ev.length) return '<div class="card empty">Все значимые новости по профилю уже разобраны</div>';
+  if (!ev.length) return '<div class="calm-line">Все значимые новости по профилю уже разобраны — они в ленте выше</div>';
   const more = state.moreEvents ? ev : ev.slice(0, EVENTS_SHOWN);
   const btn = e => { const j = state.jobs[state.company + ':' + e.id];
     return j && j.status === 'running' ? `<button class="btn" disabled>${jobMark(j, 'Разбор идёт · ')}</button>` : `<button class="btn" data-ev="${e.id}">Получить разбор</button>`; };
@@ -1246,7 +1326,8 @@ function openTrace(i) {
   state.drawer = 'card';
   const body = $('#drawer-body');
   body.innerHTML = i.trace.map(s => stepHtml(s, false)).join('');
-  $('#drawer-totals').textContent = origin(i) === 'seed' ? 'Разбор подготовлен аналитиками по материалам банка' : totalsText(i.trace);
+  $('#drawer-totals').textContent = origin(i) === 'seed' ? 'Разбор подготовлен аналитиками по материалам банка'
+    : origin(i) === 'rules' ? `Шагов: ${i.trace.length} · мгновенно, без модели` : totalsText(i.trace);
   openDrawer();
   let t = 150;
   [...body.querySelectorAll('.step')].forEach((el, k) => { traceTimers.push(setTimeout(() => el.classList.add('shown'), t)); t += Math.min(900, 250 + i.trace[k].ms / 6); });
@@ -1269,12 +1350,13 @@ function render(scrollToOpen = false, keep = false) {
   if (r === 'analyze') { location.replace('#feed'); return; }  // старые ссылки на отдельную страницу
   const views = {feed: viewFeed, admin: viewAdmin};
   document.body.classList.toggle('adm', r === 'admin' && API);
-  $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))();
+  $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))() + (r === 'admin' ? '' : appFoot());
   state.firstPaint = false;
   bind();
   if (r === 'feed') { loadEvents(); bindEvents(); }
   if (r === 'admin' && API) bindAdmin();
   if (r === 'feed' && API && $('#quick-an')) {
+    $('.quick-box').ontoggle = e => { state.quickOpen = e.target.open; };
     /* Ссылку не прочитали — она остаётся в поле, ошибка видна под ним, а поле для текста открыто: можно вставить
        текст новости. Удачный разбор перерисовывает ленту — форма снова пустая */
     $('#quick-an').onsubmit = async e => { e.preventDefault(); const f = e.target, url = f.url.value.trim(), btn = f.querySelector('button');
@@ -1305,7 +1387,6 @@ function toggle(id) {
 }
 function bind() {
   document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => toggle(b.dataset.toggle));
-  document.querySelectorAll('[data-zone]').forEach(a => a.onclick = () => { state.zone = a.dataset.zone; });
   document.querySelectorAll('[data-zf]').forEach(b => b.onclick = () => { state.zone = b.dataset.zf; render(); });
   if (!state.open) return;
   const i = ranked().find(x => x.id === state.open); if (!i) return;
@@ -1316,13 +1397,23 @@ function bind() {
   card.querySelector('[data-share]').onclick = () => shareCard(i);
   const up = card.querySelector('[data-upgrade]');  // краткий разбор → полный разбор агентом по тому же событию
   if (up) up.onclick = () => startJob(state.company + ':' + evId(i), i.title, `/api/companies/${state.company}/events/${evId(i)}/analyze`, {});
-  card.querySelector('[data-chat]').onclick = () => { state.chatOpen[i.id] = !state.chatOpen[i.id]; render(); };
+  // «Задать вопрос»: окно чата — в поле зрения, курсор — в поле вопроса
+  card.querySelector('[data-chat]').onclick = () => {
+    const on = state.chatOpen[i.id] = !state.chatOpen[i.id]; render();
+    const box = on && document.querySelector(`#card-${CSS.escape(i.id)} .chat`);
+    if (box) { box.scrollIntoView({behavior: 'smooth', block: 'nearest'}); box.querySelector('.chat-in input').focus({preventScroll: true}); }
+  };
+  const recalc = card.querySelector('[data-recalc]');  // главная кнопка без действия банка — к полю суммы расчёта
+  if (recalc) recalc.onclick = () => { const inp = card.querySelector('[data-per]'); inp.scrollIntoView({behavior: 'smooth', block: 'center'}); inp.focus({preventScroll: true}); };
+  const wa = card.querySelector('[data-why-all]');
+  if (wa) wa.onclick = () => { state.whyAll[i.id] = true; render(); };
   card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render();
     if (API) api(`/api/cards/${i.id}/feedback`, {company_id: state.company, role: state.role, vote: b.dataset.fb}).catch(() => {}); });
   card.querySelectorAll('[data-per]').forEach(inp => inp.oninput = () => {
     const v = parseFloat(inp.value.replace(',', '.')), out = inp.parentElement.querySelector('output'), x = v * +inp.dataset.per;
-    const w = x ? moneyWord(inp.dataset.fam, x < 0) : '';  // как в заголовке расчёта: «экономия 100 млн ₽ в год»
-    out.textContent = v > 0 ? '→ ' + (w ? w + ' ' + rubFmt(Math.abs(x), false) : rubFmt(x, inp.dataset.signed === 'true')) + ' ' + inp.dataset.period : '→ введите сумму, чтобы пересчитать';
+    const pm = inp.dataset.pm === 'true', w = x && !pm ? moneyWord(inp.dataset.fam, x < 0) : '';  // как в заголовке: «экономия 100 млн ₽ в год»
+    const sum = pm ? '±' + rubFmt(Math.abs(x), false) : w ? w + ' ' + rubFmt(Math.abs(x), false) : rubFmt(x, inp.dataset.signed === 'true');
+    out.textContent = v > 0 ? `→ ${sum} ${inp.dataset.period}` : '→ введите сумму, чтобы пересчитать';
   });
   card.querySelectorAll('[data-cta]').forEach(b => b.onclick = () => {
     if (!API) { showModal(b.dataset.label, 'Обратитесь к вашему персональному менеджеру — разбор события он увидит в карточке клиента.'); return; }
