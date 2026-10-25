@@ -3,7 +3,7 @@ import httpx
 import pytest
 
 from agent.ingest import article
-from agent.ingest.article import UnsafeURL, check_url, extract_html, fetch_article
+from agent.ingest.article import UnsafeURL, check_url, extract_html, fetch_article, public_ip
 
 PARA = "Банк России сохранил ключевую ставку на уровне 14% годовых, отметив ускорение устойчивой инфляции. "
 
@@ -37,10 +37,17 @@ def test_script_rendered_page_uses_json_text_without_boilerplate():
 
 
 @pytest.mark.parametrize("url", ["http://127.0.0.1/", "http://10.1.2.3/x", "http://169.254.169.254/meta",
-                                 "file:///etc/passwd", "ftp://example.org/", "http://[::1]/", "https://8.8.8.8:8443/"])
+                                 "file:///etc/passwd", "ftp://example.org/", "http://[::1]/", "https://8.8.8.8:8443/",
+                                 "http://100.64.0.1/", "http://[::ffff:10.0.0.1]/", "http://[64:ff9b::7f00:1]/"])
 def test_ssrf_blocked(url):
     with pytest.raises(UnsafeURL):
         check_url(url)
+
+
+
+def test_public_ip_only_internet_addresses():
+    assert public_ip("8.8.8.8") and public_ip("2a00:1450:4001::1")
+    assert not any(public_ip(a) for a in ("100.64.0.1", "192.168.0.1", "::ffff:127.0.0.1", "64:ff9b::a00:1", "224.0.0.1"))
 
 
 def _client(routes):

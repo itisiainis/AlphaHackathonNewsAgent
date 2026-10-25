@@ -529,7 +529,9 @@ function showModal(title, text, form = false, submit = 'Отправить ме�
 
 /* ---------- фрагменты ---------- */
 // источник без адреса (например, новость, вставленная пользователем) — подпись без ссылки, а не мёртвый href
-const srcLink = (s, inner, title = '') => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener"${title ? ` title="${esc(title)}"` : ''}>${inner}</a>` : `<span title="${esc(title)}">${inner}</span>`;
+// ссылка из данных — только http(s): адрес «javascript:…» из новости или ответа модели не станет кликабельным кодом
+const webUrl = u => /^https?:\/\/[^\s"<>]+$/i.test(String(u || '').trim()) ? String(u).trim() : '';
+const srcLink = (s, inner, title = '') => webUrl(s.url) ? `<a href="${esc(webUrl(s.url))}" target="_blank" rel="noopener noreferrer"${title ? ` title="${esc(title)}"` : ''}>${inner}</a>` : `<span title="${esc(title)}">${inner}</span>`;
 const ref = (s, i) => (s.src !== undefined && i && i.sources[s.src]) ? ` <sup>${srcLink(i.sources[s.src], `[${s.src + 1}]`, i.sources[s.src].name)}</sup>` : '';
 function stmtHtml(s, i) {
   const str = s.strength ? `<span class="str">${STR_RU[s.strength]}</span>` : '';
