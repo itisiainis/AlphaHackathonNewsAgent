@@ -294,8 +294,9 @@ details.profile{margin-top:16px;padding:0;background:transparent;border:0}
 details.profile>summary{cursor:pointer;font-weight:600;color:var(--ink-2);padding:6px 0}
 details.profile[open]>summary{margin-bottom:8px}
 details.profile .grid3{margin-top:0}
-.app-foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
-.app-foot a{color:var(--ink-2)}
+/* панель для сотрудников банка — в меню, отдельно от клиентских разделов: жюри видит её сразу */
+nav.side .nav-foot{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+nav.side .nav-foot a{margin-top:4px;font-size:13px}
 /* карточка: ключевая дата, повторы темы, источник краткого разбора */
 .ic-until{font-size:13px;color:var(--ink-2);margin:0 0 8px}.ic-until b{font-weight:600;color:var(--ink)}
 .dup{flex:0 0 auto;font-size:12px;color:var(--ink-3)}
@@ -309,6 +310,7 @@ details.dq>summary{cursor:pointer;font-weight:600}details.dq[open]>summary{margi
   .layout{grid-template-columns:minmax(0,1fr)}
   nav.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 10px}
   nav.side a{white-space:nowrap;min-height:44px;gap:6px}
+  nav.side .nav-foot{display:none}
   .top{position:static;padding:8px 16px;gap:8px}
   .switch{margin-left:0;width:100%;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px;flex-wrap:nowrap}
   .switch label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -572,10 +574,9 @@ function renderNav(route) {
   const n = newCount();
   $('#nav').innerHTML = `
     <a href="#home" class="${route === 'home' ? 'on' : ''}">Главная</a>
-    <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>`;
+    <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>
+    ${API ? `<div class="nav-foot">Для сотрудников банка<a href="#admin" class="${route === 'admin' ? 'on' : ''}">Панель управления</a></div>` : ''}`;
 }
-// служебная ссылка для сотрудников банка — в подвале, а не в меню клиента
-const appFoot = () => API ? '<footer class="app-foot">Для сотрудников банка: <a href="#admin">панель управления</a></footer>' : '';
 /* Модель: подключена и лимит дня не исчерпан. Расход и состояние модели — служебные (панель управления);
    клиенту говорим только последствие — разборы сейчас краткие, без выводов ИИ. Выключенный фоновый сбор новостей
    к модели отношения не имеет и плашку не включает. */
@@ -807,13 +808,11 @@ function actionsRow(i, main = true) {
   const row = [...ctas, recalc, manager].filter(Boolean).join('');
   return row ? `<div class="actions-row">${row}</div>` : '';
 }
-const WHY_SHOWN = 2;
 function bodyHtml(i) {
   const b = i.blocks, fb = state.feedback[i.id], job = cardJob(i), running = job && job.status === 'running';
   const upgradable = origin(i) === 'rules' && API && aiReady();
   const chatLog = (state.chats[i.id] || []).join(''), acts = actionsRow(i, !upgradable);
   const srcNames = [...new Set(i.sources.map(s => s.name))].slice(0, 3).join(', ');
-  const why = state.whyAll[i.id] ? b.why : b.why.slice(0, WHY_SHOWN), whyRest = b.why.length - why.length;
   const dups = i.dups.map(id => ranked().find(x => x.id === id)).filter(Boolean);
   return `<div class="ic-body">
     ${aiAdded(i)}
@@ -821,7 +820,7 @@ function bodyHtml(i) {
     ${whatHappened(i, b)}
     ${b.actions.length || acts ? `<div class="sec"><h3>Что можно сделать</h3>${b.actions.length ? list(b.actions, i) : ''}${acts}</div>` : ''}
     ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${calcsOf(i).map(c => calcHtml(c, i)).join('')}</div>` : ''}
-    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(why, i)}${whyRest ? `<button class="linkbtn why-more" data-why-all>Ещё ${whyRest} ${plural(whyRest, 'причина', 'причины', 'причин')}</button>` : ''}</div>` : ''}
+    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
     ${b.risks.length || b.opportunities.length ? `<div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>` : ''}
     <div class="sec"><h3>Как оценивает банк${state.before[i.id] && b.bank.quote && !state.before[i.id].has('bank:' + b.bank.quote) ? '<span class="sec-new" title="Позицию банка нашёл ИИ-аналитик">новое</span>' : ''}</h3>${bankHtml(i)}</div>
     ${dups.length ? `<details class="sec-d"><summary>Ещё по теме за этот день <span class="muted">· ${dups.length}</span></summary>${dups.map(d => `<div class="stmt fact"><a href="#feed/${d.id}">${esc(d.title)}</a> <span class="muted">· ${srcShort(d)}</span></div>`).join('')}</details>` : ''}
@@ -883,7 +882,7 @@ function dayLine(items) {
   const ev = k => `${k} ${plural(k, 'событие', 'события', 'событий')}`;
   const head = act.length ? `${cap(ev(act.length))} ${act.length === 1 ? 'требует' : 'требуют'} решения`
     : 'Сегодня решений не требуется';  // сколько под наблюдением — в числах ниже, не повторяем
-  const stat = (cls, k, label) => `<a class="stat ${cls}${k ? '' : ' zero'}" href="#feed"><b>${k}</b><span>${label}</span></a>`;
+  const stat = (cls, k, label) => `<a class="stat ${cls}${k ? '' : ' zero'}" href="#feed" ${k ? `data-goto="${cls}"` : ''}><b>${k}</b><span>${label}</span></a>`;
   return `<section class="card brief" aria-label="Брифинг дня"><div class="eyebrow">Брифинг · ${fmtDateY(today())}</div>
     <div class="brief-t">${head}</div>
     <div class="stats">${stat('act', act.length, plural(act.length, 'требует решения', 'требуют решения', 'требуют решения'))}${stat('watch', watch.length, 'под наблюдением')}${stat('new', n, plural(n, 'новое в ленте', 'новых в ленте', 'новых в ленте'))}</div>
@@ -1551,7 +1550,7 @@ function render(scrollToOpen = false, keep = false) {
   if (r === 'analyze') { location.replace('#feed'); return; }  // старые ссылки на отдельную страницу
   const views = {feed: viewFeed, admin: viewAdmin};
   document.body.classList.toggle('adm', r === 'admin' && API);
-  $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))() + (r === 'admin' ? '' : appFoot());
+  $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))();
   state.firstPaint = false;
   bind();
   if (r === 'feed') { loadEvents(); bindEvents(); }
@@ -1579,6 +1578,11 @@ function render(scrollToOpen = false, keep = false) {
         err => { if ($('#an-msg')) $('#an-msg').textContent = err.message; else toast(err.message, 6000); });
       if (ok) { state.quickText = ''; if ($('#quick-text')) $('#quick-text').value = ''; } };
   }
+  if (r === 'feed' && state.goto) {  // переход из брифинга: к группе ленты или к первому новому событию
+    const g = state.goto; state.goto = null;
+    const el = g === 'new' ? document.querySelector('.ic.is-new') : document.querySelector('.grp-' + g);
+    if (el) { el.scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
+  }
   if (scrollToOpen && state.open) { const el = document.getElementById('card-' + state.open); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
   else if (!arg) window.scrollTo(0, 0);
 }
@@ -1592,6 +1596,7 @@ function toggle(id) {
 function bind() {
   document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => toggle(b.dataset.toggle));
   document.querySelectorAll('[data-zf]').forEach(b => b.onclick = () => { state.zone = b.dataset.zf; render(); });
+  document.querySelectorAll('[data-goto]').forEach(a => a.onclick = () => { state.goto = a.dataset.goto; state.zone = ''; });
   if (!state.open) return;
   const i = ranked().find(x => x.id === state.open); if (!i) return;
   const card = document.getElementById('card-' + i.id); if (!card) return;
@@ -1609,8 +1614,6 @@ function bind() {
   };
   const recalc = card.querySelector('[data-recalc]');  // главная кнопка без действия банка — к полю суммы расчёта
   if (recalc) recalc.onclick = () => { const inp = card.querySelector('[data-per]'); inp.scrollIntoView({behavior: 'smooth', block: 'center'}); inp.focus({preventScroll: true}); };
-  const wa = card.querySelector('[data-why-all]');
-  if (wa) wa.onclick = () => { state.whyAll[i.id] = true; render(); };
   card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render();
     if (API) api(`/api/cards/${i.id}/feedback`, {company_id: state.company, role: state.role, vote: b.dataset.fb}).catch(() => {}); });
   card.querySelectorAll('[data-per]').forEach(inp => inp.oninput = () => {
