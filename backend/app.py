@@ -17,7 +17,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -36,6 +36,7 @@ from agent.sensitivity import factors as factors_of
 from agent.sensitivity import hits as factor_hits_of
 from agent.slices import SUGGESTED, data_answer
 
+from .admin import admin as admin_guard
 from .store import Store
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,28 +60,55 @@ app = FastAPI(title="Новостная аналитика для Альфа-Б�
 # Платные эндпоинты (вызывают модель) — не чаще RATE_LIMIT запросов в минуту с одного адреса:
 # защита общего ключа с лимитом 500 ₽/день от случайных и намеренных повторов.
 RATE_LIMIT = int(os.environ.get("RATE_LIMIT_PER_MIN", "10"))
-COSTLY = ("/api/analyze", "/chat", "/events/", "/api/news/refresh")
+# Любые POST без модели (краткий разбор, чтение ссылки, оценки, запросы менеджеру) — тоже с потолком: база и чтение
+# чужих сайтов по ссылке не должны быть доступны для перебора
+POST_LIMIT = int(os.environ.get("POST_LIMIT_PER_MIN", "60"))
+COSTLY = ("/api/analyze", "/chat", "/events/")
 FREE = ("/feedback", "/brief", "/request")  # без вызова модели: лимит платных запросов на них не распространяется
 _hits: dict[str, deque] = defaultdict(deque)
+_posts: dict[str, deque] = defaultdict(deque)
+_last_sweep = [0.0]
+
+
+def _over(hits: dict[str, deque], ip: str, limit: int, now: float) -> bool:
+    q = hits[ip]
+    while q and now - q[0] > 60:
+        q.popleft()
+    if len(q) >= limit:
+        return True
+    q.append(now)
+    return False
+
+
+def _sweep(now: float) -> None:
+    """Раз в минуту — забыть адреса без запросов за минуту: словари счётчиков не растут без предела."""
+    if now - _last_sweep[0] < 60:
+        return
+    _last_sweep[0] = now
+    for hits in (_hits, _posts):
+        for ip in [ip for ip, q in hits.items() if not q or now - q[-1] > 60]:
+            del hits[ip]
 
 
 @app.middleware("http")
 async def guard(request: Request, call_next):
     path = request.url.path
-    if request.method == "POST" and any(k in path for k in COSTLY) and not path.endswith(FREE):
-        ip = request.client.host if request.client else "?"
-        q, now = _hits[ip], time.monotonic()
-        while q and now - q[0] > 60:
-            q.popleft()
-        if len(q) >= RATE_LIMIT:
+    if request.method in ("POST", "PUT", "DELETE"):
+        ip, now = request.client.host if request.client else "?", time.monotonic()
+        _sweep(now)
+        if _over(_posts, ip, POST_LIMIT, now):
+            return JSONResponse({"detail": "слишком много запросов, попробуйте через минуту"}, status_code=429)
+        if any(k in path for k in COSTLY) and not path.endswith(FREE) and _over(_hits, ip, RATE_LIMIT, now):
             return JSONResponse({"detail": "слишком много запросов к модели, попробуйте через минуту"}, status_code=429)
-        q.append(now)
     resp = await call_next(request)
-    # базовые заголовки безопасности; inline-скрипты нужны прототипу, внешних ресурсов нет
+    # заголовки безопасности; inline-скрипты нужны странице, внешних ресурсов нет; ссылки — только своего сайта
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["Referrer-Policy"] = "same-origin"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
     resp.headers["Content-Security-Policy"] = ("default-src 'self'; script-src 'self' 'unsafe-inline'; "
-                                               "style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'")
+                                               "style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; "
+                                               "base-uri 'none'; object-src 'none'; form-action 'self'")
     return resp
 
 
@@ -605,6 +633,10 @@ class FeedbackIn(BaseModel):
 
 @app.post("/api/cards/{card_id}/feedback")
 def feedback(card_id: str, body: FeedbackIn):
+    # оценка меняет порядок ленты (agent/learning.py) — только по существующей карточке существующей компании
+    _company(body.company_id)
+    if not store.card(body.company_id, card_id):
+        raise HTTPException(404, "карточка не найдена")
     store.put_feedback(body.company_id, card_id, body.role, body.vote)
     return {"ok": True}
 
@@ -627,9 +659,10 @@ def manager_request(card_id: str, body: RequestIn):
     return {"ok": True}
 
 
-@app.post("/api/news/refresh")
+@app.post("/api/news/refresh", dependencies=[Depends(admin_guard)])
 def refresh_news(hours: int = 48):
-    """Сбор свежих новостей из data/sources.json (занимает до минуты)."""
+    """Сбор свежих новостей из data/sources.json (занимает до минуты). Только для сотрудников банка: сбор ходит в сеть
+    и размечает новости моделью — за счёт общего ключа."""
     from agent.ingest.collect import collect
 
     if not _collect_lock.acquire(blocking=False):

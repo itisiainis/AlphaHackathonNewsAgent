@@ -2,7 +2,7 @@
 import json
 from datetime import date
 
-from agent import okved, profiles
+from agent import impact, okved, profiles
 from agent.kb import BM25Index
 from agent.llm import Completion, LLMUnavailable
 from agent.loop import Agent, verbatim
@@ -79,8 +79,10 @@ def test_full_cycle_produces_valid_card():
     res = run(ScriptedLLM())
     assert res.card is not None, res.report.errors
     c = res.card
-    assert [s["kind"] for s in c["sources"]] == ["news", "bank"]
-    assert "calc" not in c["blocks"], "ставка не изменилась — расчёта эффекта нет"
+    # новость, банк и профиль компании (вход расчёта «сколько стоит 1 п.п. ставки» при сохранении ставки)
+    assert [s["kind"] for s in c["sources"]] == ["news", "bank", "stat"]
+    # ставка не изменилась — эффекта нет, есть только масштаб: сколько стоит 1 п.п. ставки
+    assert [x["title"] for x in c["blocks"]["calc"]] == [impact.SENS_RATE] and c["blocks"]["calc"][0]["sign"] == "neutral"
     assert c["key_points"][1]["src"] == 1 and c["blocks"]["what"][0]["src"] == 0
     assert c["blocks"]["bank"]["date"] == "2026-09-11" and not c["blocks"]["bank"]["stale"]
     kinds = [t["kind"] for t in c["trace"]]

@@ -41,6 +41,8 @@ JARGON = {r"\(\d{2}(?:\.\d+)*\)|оквэд": "код отрасли", r"\bдкп
           r"контрагент": "«контрагенты» вместо «покупатели / поставщики»",
           r"(?:входящ|исходящ)\w* поток": "«входящий поток» вместо «поступления / платежи»"}
 JARGON_RE = {re.compile(k, re.I): v for k, v in JARGON.items()}
+# Иероглифы, кана, хангыль, арабское письмо в русском выводе — сбой модели (так ошибается GLM): такой вывод не показываем
+FOREIGN_SCRIPT = re.compile(r"[\u0600-\u06ff\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]")
 
 
 @dataclass
@@ -160,6 +162,7 @@ def validate_card(card: dict, today: date | None = None, source_texts: dict[int,
         if a.get("cta") and a["p"] not in ("ai", "rule"):  # действие предлагает аналитик или правило, а не источник
             rep.warnings.append(f"blocks.actions[{k}]: кнопка действия у утверждения «{a['p']}»")
     rep.style = style_issues(card)
+    rep.errors += script_issues(card)
     if check_revised:
         errors, warnings = revised_issues(card, today, source_texts)
         rep.errors += errors
@@ -224,13 +227,25 @@ def repeats_title(text: str, title: str, share: float = 0.8) -> bool:
     return len(st) >= 3 and len(st & _stems(title)) / len(st) >= share
 
 
-def style_issues(card: dict) -> list[str]:
-    """Понятность выводов ИИ и выводов по правилам: без кодов отраслей и жаргона, без повтора заголовка. Факты и цитаты
-    банка не трогаем — они переписываются из источника как есть."""
+def _conclusions(card: dict) -> list[tuple[str, str]]:
+    """Тексты выводов (не фактов и не цитат): главный вывод под роль, «почему», выводы ИИ и по правилам, «проще говоря»."""
     texts = [(f"takeaway.{r}", t) for r, t in card["takeaway"].items()] + [("why_short", card["why_short"])]
     texts += [(w, s["t"]) for w, s, strict in _iter_stmts(card) if strict and s["p"] in ("ai", "rule")]
     if card["blocks"]["bank"].get("plain"):
         texts.append(("blocks.bank.plain", card["blocks"]["bank"]["plain"]))
+    return texts
+
+
+def script_issues(card: dict) -> list[str]:
+    """Чужое письмо в выводе — ошибка: карточка уходит на правку, а не к клиенту."""
+    return [f"{where}: символы не русского письма — «{FOREIGN_SCRIPT.search(t).group()}»"
+            for where, t in _conclusions(card) if FOREIGN_SCRIPT.search(t)]
+
+
+def style_issues(card: dict) -> list[str]:
+    """Понятность выводов ИИ и выводов по правилам: без кодов отраслей и жаргона, без повтора заголовка. Факты и цитаты
+    банка не трогаем — они переписываются из источника как есть."""
+    texts = _conclusions(card)
     out = []
     for where, t in texts:
         for rx, what in JARGON_RE.items():

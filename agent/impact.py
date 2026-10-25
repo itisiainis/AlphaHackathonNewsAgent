@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import re
 
-from .okved import country_name, label, related_sectors, sectors_in, who
+from .okved import TOPIC_TEST, country_name, key_rate_in, label, related_sectors, sectors_in, who
 from .profiles import pct
 
 BN = 1e9
@@ -538,6 +538,32 @@ def _sign(title: str, eff: float) -> str:
     return "risk" if (eff > 0) == title.startswith(COST_TITLES) else "opportunity"
 
 
+SENS_RATE = "Стоимость долга при изменении ставки на 1 п.п."
+SENS_FX = "Валютные расчёты при изменении курса на 1%"
+
+
+# «Если ставку снизят на 0,5 п.п., стоимость долга»: условие сценария — до запятой с пробелом (в «0,5» пробела нет)
+SCENARIO_HEAD = re.compile(r"^Если (.+?), (?=[а-яё])")
+
+
+def base_title(title: str) -> str:
+    """Название расчёта без условия сценария: «стоимость долга»."""
+    return SCENARIO_HEAD.sub("", title)
+
+
+def scenario_condition(title: str) -> str:
+    m = SCENARIO_HEAD.match(title)
+    return m.group(1) if m else ""
+
+
+def _has(calcs: list[dict], title: str) -> bool:
+    return any(base_title(c["title"]).lower().startswith(title.lower()) for c in calcs)
+
+
+def fx_news(low: str) -> bool:
+    return bool(TOPIC_TEST["курс"](low))
+
+
 def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "profile") -> list[dict]:
     """Расчёты эффекта. src во входных данных — метки news_src / profile_src (их подставляет вызывающий)."""
     text = (event.get("title", "") + ". " + event.get("text", "")).strip()
@@ -594,6 +620,25 @@ def compute(event: dict, p: dict, news_src: str = "news", profile_src: str = "pr
             _sign("Валютные расчёты", eff),
             {"label": "Ваши валютные закупки за год, млрд ₽", "per_bn": eff, "period": "за год"})
         calcs.append(_scenario(c, f"рубль {'ослабнет' if ch > 0 else 'укрепится'} на {num(abs(ch), 2)}%") if fx["modal"] else c)
+
+    # Чувствительность, когда в новости о ставке или курсе изменения нет (анонс заседания, «ставка сохранена»):
+    # сколько стоит 1 п.п. ставки или 1% курса. Это масштаб, а не прогноз — цифра, чтобы сравнить событие с другими
+    low = _low(text)
+    if has_debt and not _has(calcs, "Стоимость долга") and (rs or key_rate_in(low)):
+        prods = ", ".join(x for x in ("кредит", "лизинг") if x in products)
+        calcs.append(_calc(
+            SENS_RATE, f"±{rub(BN / 100)} в год на каждый 1 млрд ₽ долга с плавающей ставкой", "1 млрд ₽ × 1 п.п.",
+            ([fact(rs["quote"])] if rs else []) + [fact(f"Продукты банка: {prods}", profile_src)],
+            ["Изменения ставки в новости нет: это масштаб, а не прогноз — сколько стоит каждый 1 п.п. ключевой ставки",
+             "Ставка по кредиту привязана к ключевой и меняется на ту же величину"], "neutral",
+            {"label": "Ваш долг с плавающей ставкой, млрд ₽", "per_bn": BN / 100, "period": "в год за 1 п.п."}))
+    if ved and not _has(calcs, "Валютные расчёты") and fx_news(low):
+        calcs.append(_calc(
+            SENS_FX, f"±{rub(BN / 100)} на каждый 1 млрд ₽ валютных закупок", "1 млрд ₽ × 1%",
+            [fact(f"Внешняя торговля: {countries}", profile_src)],
+            ["Изменения курса в новости нет: это масштаб — сколько стоит каждый 1% курса рубля",
+             "Направление внешней торговли (импорт или экспорт) в данных не указано"], "neutral",
+            {"label": "Ваши валютные закупки за год, млрд ₽", "per_bn": BN / 100, "period": "за 1% курса"}))
 
     goods = {p["okved2"], *related_sectors(p["okved"])}  # что компания продаёт: своя отрасль и отрасль её товара
     du = duty_shock(text)

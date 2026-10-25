@@ -277,6 +277,8 @@ class Agent:
                       "detail": final_note(rep.summary(), verdict if rep.ok else None), "ms": 0, "cost": 0})
         self._emit(trace)
         card["trace"] = [self._public_step(t) for t in trace]
+        if getattr(self, "_until", ""):
+            card["until"] = self._until
         return Result(card if rep.ok else None, rep, trace, ses.log)
 
     def _explore(self, ses: ToolSession, match: Match, trace: list) -> list[dict]:
@@ -357,6 +359,7 @@ class Agent:
                 f"- {c['title']}: {c['value']} ({c['formula']}); допущения: {'; '.join(c['assumptions'])}" for c in ses.calcs)
         p = profiles.get(ses.company_id)
         chs = channels.build(ses.event, match, p, ses.calcs, self.today, channels.meetings_for(self.bank, self.news))
+        self._until = next((ch.when for ch in chs if ch.when), "")  # срок актуальности — в карточку (card.until)
         if chs:
             user += "\n\nКаналы влияния (код, по данным банка — каркас вывода):\n" + channels.as_text(chs)
         user += "\n\nФакторы чувствительности компании (код, по данным банка):\n" + "\n".join(

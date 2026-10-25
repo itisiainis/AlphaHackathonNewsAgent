@@ -7,83 +7,97 @@
 <link rel="icon" href="data:,">
 <style>
 :root{
-  --brand:#e3262f;
-  --ink:#16181d; --ink-2:#4a4f5a; --ink-3:#8a909c;
-  --line:#e6e8ec; --bg:#f4f5f7; --card:#fff;
-  --fact:#5b6472; --fact-bg:#eef0f3;
-  --bank:#e3262f; --bank-bg:#fdecec;
-  --ai:#6b4fd8; --ai-bg:#efebfc;
-  --rule:#0f7b8a; --rule-bg:#e7f4f5;
-  --new:#1a73e8; --new-bg:#e8f0fe;
-  --risk:#d23b3b; --opp:#1f9d60; --info:#6b7280;
-  --r:14px;
+  
+  --brand:#e3262f; --brand-2:#c41d25;
+  --ink:#14171f; --ink-2:#454b57; --ink-3:#69707d;
+  --line:#e4e7ec; --line-2:#d5d9e0; --bg:#f3f4f6; --card:#fff; --soft:#f7f8fa;
+  --fact:#5b6472; --fact-bg:#eef0f3; --fact-line:#cdd1d8;
+  --bank:#e3262f; --bank-bg:#fdecec; --bank-line:#f3c2c2;
+  --ai:#6b4fd8; --ai-bg:#efebfc; --ai-line:#d9d2f7; --ai-ink:#3d2a8c;
+  --rule:#0f7b8a; --rule-bg:#e7f4f5; --rule-line:#bfe0e3;
+  --new:#1a6fe0; --new-bg:#e8f0fe; --new-line:#c6dafc;
+  --risk:#c8302c; --risk-bg:#fdeeed; --risk-line:#f3c2c2;
+  --opp:#18794e; --opp-bg:#e8f6ee; --opp-line:#bfe6d2;
+  --warn:#a35a00; --warn-dot:#e8a33a; --warn-bg:#fff7e6; --warn-line:#f1dc9c; --warn-ink:#6b4d00;
+  --info:#5f6673;
+  --shadow-1:0 1px 2px rgba(16,24,40,.05); --shadow-2:0 10px 30px rgba(16,24,40,.08);
+  --r:14px; --r-s:8px;
+  --num:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
-body{margin:0;overflow-x:hidden;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+body{margin:0;overflow-x:hidden;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--new);outline-offset:2px;border-radius:6px}
+
+.nchip,.calc-v,.calc-s output,.kv b,.badge-new,.stat b,.zf .n,.grp-h .n,.kpi b{font-variant-numeric:tabular-nums}
 a{color:inherit}
 button{font:inherit;cursor:pointer}
 
-.top{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:10px 20px;flex-wrap:wrap}
+.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);box-shadow:var(--shadow-1);display:flex;align-items:center;gap:16px;padding:10px 20px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700}
-.logo i{width:30px;height:30px;border-radius:8px;background:var(--brand);color:#fff;display:grid;place-items:center;font-style:normal}
+.logo i{width:32px;height:32px;border-radius:10px;background:var(--brand);color:var(--card);display:grid;place-items:center;font-style:normal;font-weight:800;letter-spacing:-.02em}
 .logo small{font-weight:400;color:var(--ink-3)}
 .switch{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .switch label{font-size:12px;color:var(--ink-3)}
+select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);max-width:260px}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 54px)}
+nav.side{background:var(--card);border-right:1px solid var(--line);padding:16px 10px}
+nav.side a{display:flex;justify-content:space-between;align-items:center;gap:8px;white-space:nowrap;font-size:14px;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--ink-2);margin-bottom:2px}
+nav.side a:hover{background:var(--soft);color:var(--ink)}
+nav.side a.on{background:var(--soft);color:var(--ink);font-weight:600;box-shadow:inset 3px 0 0 var(--brand)}
+.badge-new{white-space:nowrap;display:inline-block;background:var(--new);color:var(--card);border-radius:10px;font-size:11px;padding:0 7px;font-weight:600}
+main{padding:24px;width:100%;min-width:0}
+h1{font-size:26px;line-height:1.2;letter-spacing:-.02em;margin:0 0 4px}
+h2{font-size:17px;letter-spacing:-.01em;margin:0}
 
 .switch select{max-width:min(60vw,100%);field-sizing:content}
-select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;max-width:260px}
-.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 54px)}
-nav.side{background:#fff;border-right:1px solid var(--line);padding:16px 10px}
-nav.side a{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--ink-2);margin-bottom:2px}
-nav.side a.on{background:var(--bg);color:var(--ink);font-weight:600}
-.badge-new{white-space:nowrap;display:inline-block;background:var(--new);color:#fff;border-radius:10px;font-size:11px;padding:0 7px;font-weight:600}
-main{padding:24px;width:100%;min-width:0}
-h1{font-size:22px;margin:0 0 4px}
-h2{font-size:16px;margin:0}
 .muted{color:var(--ink-3)}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow-1)}
 
 .kv{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
 .kv:last-child{border-bottom:0}.kv span:first-child{color:var(--ink-2)}.kv b{font-weight:600;text-align:right}
 .card h3.card-h{font-size:13px;margin:0 0 6px;color:var(--ink)}
 .foot-note{font-size:12px;color:var(--ink-3);margin-top:6px}
 .quick{display:flex;gap:8px;margin:0 0 6px}.quick input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
-.quick-more{font-size:13px;margin:0 0 14px}
-
-.quick-more>summary{cursor:pointer;color:var(--ink-2);width:fit-content}.quick-more>summary:hover{color:var(--ink)}
+.quick-more{font-size:13px;margin:0 0 6px}
+.quick-box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:4px 0 6px}
+.quick-box>summary{cursor:pointer;color:var(--ink-2);width:fit-content}.quick-box>summary:hover{color:var(--ink)}
+.quick-box[open]>summary{margin-bottom:8px}.quick-box .or{font-size:12px;color:var(--ink-3);margin:8px 0 0}
 
 .quick-row{display:flex;gap:8px;align-items:flex-end;margin-top:6px}
 .quick-row textarea{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;resize:vertical}
 .ctx{font-size:13px;color:var(--ink-2);margin:6px 0 14px}.ctx b{color:var(--ink);font-weight:600}
-nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
-.modal textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px}
+nav.side .modal textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px}
 .ev-why{font-size:12px;color:var(--ink-2);margin-top:6px}
-.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px}
-.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
-.btn.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn{border:1px solid var(--line-2);background:var(--card);border-radius:10px;padding:8px 15px;color:var(--ink);transition:background .15s,border-color .15s}
+.btn:hover{background:var(--soft)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:var(--card);font-weight:600}.btn.pri:hover{background:var(--brand-2);border-color:var(--brand-2)}
+.btn.sel{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .linkbtn{border:0;background:none;color:var(--brand);padding:0;font-weight:600}
 
-.widget{margin-top:16px;border-left:4px solid var(--brand)}
+.widget{margin-top:16px}
 .widget-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
-.w-item{display:flex;gap:10px;align-items:flex-start;text-decoration:none;padding:12px 0;border-top:1px solid var(--line)}
+.w-item{display:flex;gap:10px;align-items:flex-start;text-decoration:none;padding:14px 0;border-top:1px solid var(--line)}
 .w-item:first-of-type{border-top:0}
+.w-grp{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);margin:12px 0 0}
+.w-grp+.w-item{border-top:0;padding-top:8px}
 
 .factors{margin-top:16px}
 .factor{display:grid;grid-template-columns:10px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .factor:first-of-type{border-top:0}
-.factor .lv{width:10px;height:10px;border-radius:50%;margin-top:5px;background:#cdd1d8}
-.factor .lv.high{background:var(--bank)}.factor .lv.medium{background:#e8a33a}
-.factor b{font-size:14px}.factor .pd{font-size:12px;color:var(--muted)}
-.factor .ps{font-size:13px;margin-top:3px}.factor .ps a{text-decoration:none}
-.factor .ps.risk a{color:var(--bank)}.factor .ps.opportunity a{color:#1d8a4b}.factor .ps.calm{color:var(--muted)}
-.factor-tag{font-size:11px;color:var(--rule);border:1px solid #bfe0e3;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.factor .lv{width:10px;height:10px;border-radius:50%;margin-top:5px;background:var(--fact-line)}
+.factor .lv.high{background:var(--bank)}.factor .lv.medium{background:var(--warn-dot)}
+.factor b{font-size:14px}.factor .pd{font-size:12px;color:var(--ink-3)}
+.factor .ps{font-size:13px;margin-top:3px;display:flex;gap:6px;min-width:0;align-items:baseline}.factor .ps a{text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.factor .ps>span{white-space:nowrap;flex:0 0 auto}
+.factor>div{min-width:0}
+.factor .ps.risk a{color:var(--bank)}.factor .ps.opportunity a{color:var(--opp)}.factor .ps.calm{color:var(--ink-3)}
+.factor-tag{font-size:11px;color:var(--rule);border:1px solid var(--rule-line);border-radius:999px;padding:1px 8px;white-space:nowrap}
 .w-item:hover .w-take{color:var(--brand)}
-.w-take{font-weight:600;font-size:15px}
+.w-take{font-weight:600;font-size:16px;line-height:1.4}
 .w-ev{font-size:13px;color:var(--ink-3)}
 
-.tag{font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
-.tag.risk{background:#fdeaea;color:var(--risk)}.tag.opportunity{background:#e6f6ee;color:var(--opp)}.tag.info{background:#eef0f3;color:var(--info)}
+.tag{font-size:12px;font-weight:600;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.tag.risk{background:var(--risk-bg);color:var(--risk)}.tag.opportunity{background:var(--opp-bg);color:var(--opp)}.tag.info{background:var(--fact-bg);color:var(--info)}
 .imp{font-size:11px;color:var(--ink-3)}
 .newmark{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--new);text-transform:uppercase;letter-spacing:.03em}
 .newmark::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--new)}
@@ -91,9 +105,11 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .dot-read{flex:0 0 8px}
 .chip{font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--ink-2)}
 .forwho{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0 14px}
-.dq{background:#fff7e0;border:1px solid #f1dc9c;color:#6b4d00;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.dq{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-ink);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}
 
-.ai-off{background:var(--ai-bg);border:1px solid #d9d2f7;color:#3d2a8c;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:600}
+.ai-off{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px;color:var(--ink-2)}
+.ai-off .i{flex:0 0 18px;height:18px;border-radius:50%;background:var(--soft);color:var(--ink-2);display:grid;place-items:center;font-size:11px;font-weight:700;font-style:normal}
+.ai-off b{color:var(--ink);font-weight:600}
 .an-err{color:var(--risk);font-size:13px;margin:0 0 8px}.an-err:empty{display:none}
 
 .disclaimer{font-size:11.5px;color:var(--ink-3);margin-top:14px}
@@ -101,20 +117,23 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .w-quiet{padding:12px 0 2px;font-size:14px;color:var(--ink-2)}.w-quiet a{color:var(--ink);font-weight:600;text-decoration:none}.w-quiet a:hover{color:var(--brand)}
 .q-more{margin-left:6px;font-style:normal;font-size:13px}
 
-.ic{background:#fff;border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;transition:box-shadow .2s,border-color .2s;scroll-margin-top:70px}
-.ic.is-new{border-color:#c6dafc;box-shadow:0 0 0 3px var(--new-bg)}
-.ic.open{box-shadow:0 6px 24px rgba(20,24,32,.08);border-color:#d5d8de}
+.ic{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;transition:box-shadow .2s,border-color .2s;scroll-margin-top:70px;box-shadow:var(--shadow-1)}
+.ic:hover{border-color:var(--line-2)}
+.ic.is-new{border-color:var(--new-line);box-shadow:0 0 0 3px var(--new-bg)}
+.ic.open{box-shadow:0 6px 24px rgba(20,24,32,.08);border-color:var(--line-2)}
 .ic.fresh{animation:appear .5s ease-out both}
 @keyframes appear{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .ic-head{display:block;width:100%;text-align:left;background:none;border:0;padding:16px 18px;color:inherit}
 .ic-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ic-date{margin-left:auto;font-size:12px;color:var(--ink-3)}
 .ic-event{font-size:13px;color:var(--ink-2);margin-top:8px;font-weight:600}
-.ic-take{font-size:18px;line-height:1.35;font-weight:700;margin:8px 0 10px}
+.ic-take{font-size:19px;line-height:1.35;font-weight:700;letter-spacing:-.01em;margin:10px 0 12px}
 
-.kp-bank{border-left:3px solid var(--bank);background:var(--bank-bg);padding:5px 10px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:13.5px;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.kp-bank.kp-note{border-left-color:#c79200;background:#fff7e0;color:#6b4d00}
-.kp-bank sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
+.nchips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.nchip{font-size:13px;font-weight:600;background:var(--soft);border:1px solid var(--line-2);border-radius:8px;padding:3px 10px;color:var(--ink)}
+.kp-bank{border-left:3px solid var(--bank);background:var(--bank-bg);padding:5px 10px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:13.5px;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kp-bank.kp-note{border-left-color:var(--warn-dot);background:var(--warn-bg);color:var(--warn-ink)}
+.kp-bank sup{vertical-align:baseline}.kp-bank sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .ic-ev{font-size:12.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .jobchip{font-size:11px;color:var(--ai);font-weight:600}
 
@@ -126,8 +145,11 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .btn .jobchip{color:inherit;font-size:inherit}
 
 .grp{margin-top:18px}
-.grp-h{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2);margin:0 0 8px;display:flex;gap:8px;align-items:baseline}
-.grp-h .n{color:var(--ink-3);font-weight:400}
+.grp-h{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);margin:0 0 10px;display:flex;gap:8px;align-items:center}
+.grp-h::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--line-2)}
+.grp-act .grp-h::before{background:var(--risk)}.grp-watch .grp-h::before{background:var(--warn-dot)}.grp-mine .grp-h::before{background:var(--new)}
+.grp-h .n{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:0 7px;font-size:11px;letter-spacing:0}
+.grp-h .n{color:var(--ink-3);font-weight:600}
 
 .ic.row .ic-head{display:flex;gap:10px;align-items:center;padding:10px 16px}
 .ic.row .dot-new,.ic.row .dot-read{margin-top:0}
@@ -149,14 +171,14 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .ic-body>:first-child{border-top:0;padding-top:0}
 
 .stmt{padding:6px 10px 6px 12px;margin:6px 0;border-left:3px solid;border-radius:0 6px 6px 0}
-.stmt.fact{border-color:#cdd1d8;background:transparent}
+.stmt.fact{border-color:var(--fact-line);background:transparent}
 .stmt.bank{border-color:var(--bank);background:var(--bank-bg)}
 .stmt.ai{border-color:var(--ai);background:var(--ai-bg)}
 .stmt.rule{border-color:var(--rule);background:var(--rule-bg)}
 .stmt sup a,.kp sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .str{font-size:11px;color:var(--ink-3);margin-left:6px}
 
-.calc{border:1px solid var(--line);border-left:3px solid var(--info);border-radius:0 10px 10px 0;padding:10px 12px;margin:8px 0;background:#fff}
+.calc{border:1px solid var(--line);border-left:3px solid var(--info);border-radius:0 10px 10px 0;padding:10px 12px;margin:8px 0;background:var(--card)}
 .calc.risk{border-left-color:var(--risk)}.calc.opportunity{border-left-color:var(--opp)}
 .calc-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
 .calc-v{font-size:16px;font-weight:700}
@@ -177,27 +199,27 @@ details.sec-d{margin-top:16px}
 details.sec-d>summary{cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
 details.sec-d>summary .muted{font-weight:400;text-transform:none;letter-spacing:0}
 details.sec-d[open]>summary{margin-bottom:6px}
-.stale-note{font-size:12px;color:#8a6200;font-weight:600;margin-top:6px}
+.stale-note{font-size:12px;color:var(--warn);font-weight:600;margin-top:6px}
 .src-line{font-size:12px;color:var(--ink-3);margin-top:6px}
 .srcs{margin:0;padding-left:18px}.srcs li{margin:3px 0}
 .kind{font-size:10px;font-weight:700;text-transform:uppercase;border-radius:4px;padding:1px 5px;margin-right:6px}
 .kind.news,.kind.stat{background:var(--fact-bg);color:var(--fact)}.kind.bank{background:var(--bank-bg);color:var(--bank)}
-.chip.f{background:#fff;border-color:#d9d2f7;color:var(--ai);display:inline-block;margin:2px 4px 2px 0}
+.chip.f{background:var(--card);border-color:var(--ai-line);color:var(--ai);display:inline-block;margin:2px 4px 2px 0}
 .actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);align-items:center}
-.tools .sp{flex:1}
+.tools .fbk{margin-left:auto;display:flex;gap:8px;align-items:center;white-space:nowrap}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:12px}
 .legend>span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
-.legend .l-fact::before{background:#cdd1d8}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}.legend .l-rule::before{background:var(--rule)}
+.legend .l-fact::before{background:var(--fact-line)}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}.legend .l-rule::before{background:var(--rule)}
 
 .chat{display:none;margin-top:12px;background:var(--bg);border-radius:12px;padding:12px}
 .chat.on{display:block}
 .sugg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.sugg button{border:1px solid #d9d2f7;background:#fff;color:var(--ai);border-radius:999px;padding:4px 12px}
+.sugg button{border:1px solid var(--ai-line);background:var(--card);color:var(--ai);border-radius:999px;padding:4px 12px}
 .msg{margin:8px 0;max-width:88%;overflow-wrap:anywhere}
 .chart svg{display:block}
-.msg.u{margin-left:auto;background:var(--ink);color:#fff;border-radius:12px 12px 2px 12px;padding:8px 12px;width:fit-content}
-.msg.a{background:#fff;border:1px solid var(--line);border-radius:12px 12px 12px 2px;padding:8px 12px}
+.msg.u{margin-left:auto;background:var(--ink);color:var(--card);border-radius:12px 12px 2px 12px;padding:8px 12px;width:fit-content}
+.msg.a{background:var(--card);border:1px solid var(--line);border-radius:12px 12px 12px 2px;padding:8px 12px}
 .chat-in{display:flex;gap:8px;margin-top:8px}
 .chat-in input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
 .chart .cap{font-size:12px;color:var(--ink-2);font-weight:600;margin-top:8px}
@@ -210,7 +232,7 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .hb-b.unk{opacity:.3}
 .hb-v{font-variant-numeric:tabular-nums;color:var(--ink)}
 
-.drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.08);transform:translateX(100%);visibility:hidden;transition:transform .25s,visibility 0s .25s;z-index:40;display:flex;flex-direction:column}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.08);transform:translateX(100%);visibility:hidden;transition:transform .25s,visibility 0s .25s;z-index:40;display:flex;flex-direction:column}
 .drawer.open{transform:none;visibility:visible;transition:transform .25s,visibility 0s}
 .drawer header{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
 .drawer .body{padding:16px 18px;overflow:auto;flex:1}
@@ -218,11 +240,11 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .step.shown{opacity:1}
 .step::before{content:"";position:absolute;left:7px;top:18px;bottom:0;width:2px;background:var(--line)}
 .step:last-child::before{display:none}
-.dot{position:absolute;left:0;top:3px;width:16px;height:16px;border-radius:50%;border:2px solid var(--ink-3);background:#fff}
+.dot{position:absolute;left:0;top:3px;width:16px;height:16px;border-radius:50%;border:2px solid var(--ink-3);background:var(--card)}
 .step.shown .dot{border-color:var(--ai);background:var(--ai)}
-.step.k-check.shown .dot{border-color:#c79200;background:#c79200}
+.step.k-check.shown .dot{border-color:var(--warn-dot);background:var(--warn-dot)}
 .step.k-done.shown .dot{border-color:var(--opp);background:var(--opp)}
-.step.k-pending .dot{border-color:var(--ai);background:#fff;animation:pulse 1.2s ease-in-out infinite}
+.step.k-pending .dot{border-color:var(--ai);background:var(--card);animation:pulse 1.2s ease-in-out infinite}
 .step.k-pending .st{color:var(--ink-2);font-family:inherit;font-weight:500}
 @keyframes pulse{50%{background:var(--ai)}}
 @media (prefers-reduced-motion:reduce){.step.k-pending .dot{animation:none;background:var(--ai)}}
@@ -232,21 +254,18 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .totals{border-top:1px solid var(--line);padding:12px 18px;font-size:13px;color:var(--ink-2)}
 .overlay{position:fixed;inset:0;background:rgba(15,17,22,.35);display:none;z-index:30}
 .overlay.on{display:block}
-.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:22px;width:min(380px,92%);z-index:50;display:none}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card);border-radius:14px;padding:22px;width:min(380px,92%);z-index:50;display:none}
 .modal.on{display:block}
 .empty{padding:30px;text-align:center;color:var(--ink-3)}
 
-.zones{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
-.zone{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;text-decoration:none;color:var(--ink-2);background:#fff}
-.zone b{color:var(--ink);font-weight:600}.zone.risk{border-color:#f3c4c4;background:#fff7f7}
-.zfs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
-.zf{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 12px;font-size:13px;color:var(--ink-2)}
-.zf.on{background:var(--ink);color:#fff;border-color:var(--ink)}.zf .n{opacity:.65}
+.zfs{display:flex;gap:6px;margin:10px 0 4px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.zfs::-webkit-scrollbar{display:none}
+.zf{flex:0 0 auto;white-space:nowrap;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 12px;font-size:13px;color:var(--ink-2)}
+.zf.on{background:var(--ink);color:var(--card);border-color:var(--ink)}.zf .n{opacity:.65}
 
 .dock{position:fixed;right:16px;bottom:16px;z-index:35;display:flex;flex-direction:column;gap:8px;width:min(340px,calc(100vw - 32px));pointer-events:none}
 .dock>div{display:flex;flex-direction:column;gap:8px}
 .job,.toast{pointer-events:auto}
-.job{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(20,24,32,.12);padding:12px 14px;font-size:13px}
+.job{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(20,24,32,.12);padding:12px 14px;font-size:13px}
 .job-h{display:flex;gap:8px;align-items:baseline}
 .job-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
 .bar{height:6px;background:var(--bg);border-radius:4px;margin:8px 0 6px;overflow:hidden}
@@ -254,19 +273,53 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .job.done .bar span{background:var(--opp)}.job.failed .bar span{background:var(--risk)}
 .job-s{display:flex;justify-content:space-between;gap:8px;color:var(--ink-3);font-size:12px;align-items:center}
 .x{border:0;background:none;color:var(--ink-3);font-size:18px;line-height:1;padding:0 2px}
-.toast{background:var(--ink);color:#fff;border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:0 6px 24px rgba(20,24,32,.18)}
+.toast{background:var(--ink);color:var(--card);border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:0 6px 24px rgba(20,24,32,.18)}
 @media (prefers-reduced-motion:reduce){.bar span{transition:none}}
 footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
+
+.brief{margin-top:16px;padding:20px 22px;background:linear-gradient(180deg,var(--card),var(--soft))}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.brief-t{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:4px 0 14px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{display:flex;flex-direction:column;gap:2px;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;transition:border-color .15s}
+.stat:hover{border-color:var(--line-2)}
+.stat b{font-size:28px;line-height:1.1;font-weight:700;letter-spacing:-.02em}
+.stat span{font-size:13px;color:var(--ink-2)}
+.stat.act b{color:var(--risk)}.stat.watch b{color:var(--warn)}.stat.new b{color:var(--new)}.stat.zero b{color:var(--ink-3)}
+.brief-f{font-size:13px;color:var(--ink-2);margin-top:12px}
+.widget-head .all{white-space:nowrap;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+details.profile{margin-top:16px;padding:0;background:transparent;border:0}
+details.profile>summary{cursor:pointer;font-weight:600;color:var(--ink-2);padding:6px 0}
+details.profile[open]>summary{margin-bottom:8px}
+details.profile .grid3{margin-top:0}
+.app-foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.app-foot a{color:var(--ink-2)}
+
+.ic-until{font-size:13px;color:var(--ink-2);margin:0 0 8px}.ic-until b{font-weight:600;color:var(--ink)}
+.dup{flex:0 0 auto;font-size:12px;color:var(--ink-3)}
+.origin-note{font-size:12px;color:var(--rule);margin-left:auto;font-style:normal}
+.why-more{margin-top:2px;font-size:13px}
+.no-act{font-size:14px;color:var(--ink-2);margin:16px 0 0;display:flex;gap:8px;align-items:center}
+.no-act::before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--opp)}
+.calm-line{font-size:13px;color:var(--ink-3);padding:4px 0}
+details.dq>summary{cursor:pointer;font-weight:600}details.dq[open]>summary{margin-bottom:4px}
 @media (max-width:860px){
   .layout{grid-template-columns:minmax(0,1fr)}
   nav.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 10px}
-  nav.side a{white-space:nowrap}
-  nav.side .nav-foot{display:none}
-  .top{position:static}
+  nav.side a{white-space:nowrap;min-height:44px;gap:6px}
+  .top{position:static;padding:8px 16px;gap:8px}
+  .switch{margin-left:0;width:100%;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px;flex-wrap:nowrap}
+  .switch label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .switch select{max-width:none;width:100%;min-width:0;padding:8px 8px}
+  .widget-head h2{font-size:15px}
+  .stats{gap:8px}.stat{padding:10px}.stat b{font-size:22px}.stat span{font-size:12px}
+  .brief{padding:16px}.brief-t{font-size:17px}
+  h1{font-size:22px}
   .ic{scroll-margin-top:8px}
   .grid3,.two{grid-template-columns:1fr}
   main{padding:16px}
   .ic-take{font-size:16px}
+  .ic-foot{flex-wrap:wrap;row-gap:4px}.ic-foot .ic-ev{flex:1 1 100%}.ic-foot .more{margin-left:auto}
 }
 
 body.adm .switch{display:none}
@@ -274,22 +327,22 @@ body.adm main{max-width:none}
 body.adm .adm-filter select{max-width:none;width:min(560px,100%)}
 .adm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .adm-login{display:grid;gap:12px;max-width:420px;margin-top:16px}.adm-login label{display:grid;gap:4px;font-size:13px;color:var(--ink-2)}
-.adm-login input,.fld input,.fld select{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.adm-login input,.fld input,.fld select{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
 .tabs{display:flex;gap:4px;margin:16px 0;border-bottom:1px solid var(--line);overflow-x:auto}
 .tabs button{border:0;background:none;padding:8px 12px;color:var(--ink-2);border-bottom:2px solid transparent;white-space:nowrap}
 .tabs button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--brand)}
 .adm-h{margin:20px 0 8px}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}.kpi b{display:block;font-size:22px;margin:2px 0}.kpi .muted{font-size:12px}
-.alert{border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:13px;border:1px solid var(--line);background:#fff}
-.alert.high{border-color:#f3c2c2;background:#fdf1f1}.alert.medium{border-color:#f1dc9c;background:#fff9e8}.alert.ok{border-color:#bfe6d2;background:#effaf4}
-.tblw{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}.kpi b{display:block;font-size:22px;margin:2px 0}.kpi .muted{font-size:12px}
+.alert{border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:13px;border:1px solid var(--line);background:var(--card)}
+.alert.high{border-color:var(--risk-line);background:var(--risk-bg)}.alert.medium{border-color:var(--warn-line);background:var(--warn-bg)}.alert.ok{border-color:var(--opp-line);background:var(--opp-bg)}
+.tblw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
 .tbl{width:100%;border-collapse:collapse;font-size:13px}.tbl th{text-align:left;font-weight:600;color:var(--ink-3);font-size:12px;background:var(--bg)}
 .tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}.tbl tr:last-child td{border-bottom:0}
 .tbl tr.off td{opacity:.55}.tbl .acts{white-space:nowrap}.tbl .acts .linkbtn{margin-right:10px}
 .tbl .cm{font-style:italic;color:var(--ink-2);margin-top:2px}
 .up{color:var(--opp)}.down{color:var(--risk)}
-.adm-empty{background:#fff;border:1px dashed var(--line);border-radius:12px;padding:14px}
+.adm-empty{background:var(--card);border:1px dashed var(--line);border-radius:12px;padding:14px}
 .adm-filter{font-size:13px;color:var(--ink-2)}
 .bar-s{display:inline-block;height:8px;border-radius:4px;background:var(--ai);margin-right:6px;vertical-align:middle}
 .learn-intro{margin-bottom:12px}
@@ -358,7 +411,7 @@ body.adm .adm-filter select{max-width:none;width:min(560px,100%)}
   <button class="btn pri" id="modal-ok">Понятно</button>
 </div>
 
-<script id="data" type="application/json">{"_comment": "Моковые данные прототипа = JSON-контракт между агентом, бэком и фронтом. Факты о событиях взяты из аналитических материалов Альфа-Банка из кейса; ссылки на первоисточники — корневые страницы, в рабочей версии их подставляет парсер. stmt.p: fact | bank | ai. Карточка: takeaway{роль: вывод} и key_points[] — короткий слой; blocks — раскрываемый полный разбор. is_new — непрочитанное.", "generated_at": "2026-10-20T09:00:00+03:00", "roles": [{"id": "cfo", "name": "Финансовый директор", "prompt": "финансовый директор", "duties": "долг и стоимость финансирования, бюджет, маржа", "zones": ["debt", "liquidity", "tax"], "weights": {"ставка": 3, "долг": 3, "курс": 2, "ликвидность": 2, "отрасль": 1, "спрос": 1, "контрагенты": 1, "налоги": 2}, "actions": ["пересчитать бюджет и план платежей по долгу", "обсудить с менеджером банка рефинансирование или фиксацию ставки", "проверить ковенанты по кредитам", "заложить эффект в прогноз маржи"]}, {"id": "ceo", "name": "Генеральный директор", "prompt": "генеральный директор / собственник", "duties": "стратегия, рынок и спрос, крупные покупатели, инвестиционные проекты", "zones": ["industry", "debt", "ved"], "weights": {"отрасль": 3, "спрос": 3, "контрагенты": 2, "ставка": 1, "курс": 1, "долг": 1, "ликвидность": 1, "налоги": 1}, "actions": ["пересмотреть план продаж и ассортимент", "перенести или ускорить инвестиционный проект", "поговорить с крупнейшими покупателями об объёмах", "диверсифицировать покупателей и каналы сбыта"]}, {"id": "treasurer", "name": "Казначей", "prompt": "казначей", "duties": "платежи, валютные позиции, ликвидность, размещение остатков", "zones": ["liquidity", "ved", "debt"], "weights": {"курс": 3, "ликвидность": 3, "долг": 2, "ставка": 2, "отрасль": 0, "спрос": 0, "контрагенты": 1, "налоги": 1}, "actions": ["захеджировать валютную позицию", "разместить свободные остатки на депозите", "сдвинуть график платежей", "проверить лимиты и маршруты платежей по ВЭД"]}, {"id": "accountant", "name": "Главный бухгалтер", "prompt": "главный бухгалтер", "duties": "налоги и платежи в бюджет, учёт, курсовые разницы, резервы, первичные документы", "zones": ["tax", "ved", "liquidity"], "weights": {"налоги": 3, "курс": 2, "контрагенты": 2, "ликвидность": 2, "долг": 1, "ставка": 1, "отрасль": 0, "спрос": 0}, "actions": ["перенастроить учёт и ставки налогов в учётной системе", "пересчитать платежи в бюджет", "создать или пересмотреть резерв по сомнительным долгам", "проверить документы валютного контроля"]}], "companies": [{"id": "U_25835", "display": "Опт автозапчастей", "okved": "45.31.1", "industry": "Торговля оптовая автомобильными деталями, узлами и принадлежностями, кроме деятельности агентов", "revenue_bn": 22.3, "region": "Москва", "employees": "более 250", "products": ["РКО", "кредит", "лизинг", "зарплатный проект"], "ved": ["ОАЭ", "Китай", "Италия"], "group_size": 1, "counterparties": {"customers": {"n": 744, "known_share": 0.51, "top_industries": [{"name": "Торговля и ремонт автотранспорта (45)", "who": "автодилеры и автосервисы", "share": 0.46}, {"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.02}, {"name": "Сухопутный транспорт (49)", "who": "железнодорожные и автоперевозчики", "share": 0.01}], "total_bn": 3.41, "top1_share": 0.06, "top5_share": 0.2}, "suppliers": {"n": 268, "known_share": 0.78, "top_industries": [{"name": "Торговля и ремонт автотранспорта (45)", "who": "автодилеры и автосервисы", "share": 0.45}, {"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.32}], "total_bn": 11.28, "top1_share": 0.27, "top5_share": 0.44}}, "data_quality": []}, {"id": "U_177581", "display": "Девелопер (мега-группа)", "okved": "41.20.9", "industry": "Прочие виды строительства жилых и нежилых зданий", "revenue_bn": 42.4, "region": "Москва", "employees": "более 250", "products": ["РКО", "лизинг", "зарплатный проект"], "ved": [], "group_size": 482, "counterparties": {"customers": {"n": 30, "known_share": 0.42, "top_industries": [{"name": "Неметаллические минеральные продукты (23)", "who": "производители стройматериалов", "share": 0.2}, {"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.19}, {"name": "Специализированные строительные работы (43)", "who": "строительные подрядчики", "share": 0.03}], "total_bn": 0.05, "top1_share": 0.36, "top5_share": 0.82, "intragroup_share": 0.44}, "suppliers": {"n": 103, "known_share": 0.41, "top_industries": [{"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.17}, {"name": "Специализированные строительные работы (43)", "who": "строительные подрядчики", "share": 0.09}, {"name": "Обслуживание зданий (81)", "who": "компании по обслуживанию зданий", "share": 0.05}], "total_bn": 1.19, "top1_share": 0.26, "top5_share": 0.52, "intragroup_share": 0.01}}, "data_quality": ["Группа из 482 юрлиц: анализ по агрегату долей отраслей, не по каждому юрлицу"], "group_industries": [{"name": "Недвижимость (68)", "share": 0.24}, {"name": "Строительство зданий (41)", "share": 0.17}, {"name": "Финансовые услуги (64)", "share": 0.14}, {"name": "Архитектура и инжиниринг (71)", "share": 0.07}]}, {"id": "U_200890", "display": "Опт металлов", "okved": "46.72", "industry": "Торговля оптовая металлами и металлическими рудами", "revenue_bn": 59.6, "region": "Челябинская область", "employees": "менее 15", "products": ["РКО"], "ved": ["Ирак", "Ливан", "Грузия"], "group_size": 1, "counterparties": {"customers": {"n": 29, "known_share": 0.21, "top_industries": [{"name": "Резиновые и пластмассовые изделия (22)", "who": "производители пластика и резины", "share": 0.12}, {"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.05}, {"name": "Специализированные строительные работы (43)", "who": "строительные подрядчики", "share": 0.03}], "total_bn": 0.49, "top1_share": 0.23, "top5_share": 0.57}, "suppliers": {"n": 0, "known_share": null, "top_industries": [], "total_bn": 0.0}}, "data_quality": ["Выручка 59,6 млрд ₽ при штате менее 15 человек — нетипично, возможна агентская или транзитная модель", "Нет данных о поставщиках в платёжной выборке", "Отрасль известна лишь для 21% входящего потока"]}], "insights": {"U_25835": [{"id": "i-rate-auto", "type": "risk", "impact": "high", "topics": ["ставка", "долг"], "published": "2026-09-11", "title": "ЦБ сохранил ставку 14% и ужесточил риторику", "why_short": "У вас кредит и лизинг: удешевления долга в 2026 году ждать не стоит", "matched": ["кредит", "лизинг", "выручка 22,3 млрд ₽"], "sources": [{"name": "ЦБ РФ, пресс-релиз", "kind": "news", "date": "2026-09-11", "url": "https://www.cbr.ru/"}, {"name": "Альфа-Банк: «Ключевая ставка ЦБ РФ»", "kind": "bank", "date": "2026-09-11", "url": "#doc-policy-rate"}, {"name": "Альфа-Банк: «Бонд Бриф»", "kind": "bank", "date": "2026-09-14", "url": "#doc-bond-brief"}], "blocks": {"what": [{"t": "11 сентября ЦБ оставил ключевую ставку без изменений на уровне 14,0%.", "p": "fact", "src": 0}, {"t": "Глава ЦБ пояснила, что совет директоров обсуждал только паузу, вариант снижения не рассматривался.", "p": "fact", "src": 1}, {"t": "После заседания доходности ОФЗ на среднем и дальнем участке выросли на 10–17 б.п.", "p": "fact", "src": 2}], "why": [{"t": "У компании есть кредитные продукты и лизинг — стоимость обслуживания долга напрямую зависит от ключевой ставки.", "p": "ai"}, {"t": "Если часть долга с плавающей ставкой (КС + спред), платежи сохранятся на текущем высоком уровне минимум до конца года.", "p": "ai"}], "risks": [{"t": "Рефинансирование на лучших условиях в 2026 году маловероятно.", "p": "ai", "strength": "high"}, {"t": "Дорогой долг на фоне падения продаж новых авто (см. отдельное событие) давит на маржу.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Зафиксировать ставку сейчас по части долга, если ожидается снижение только в 2027 году — защита от нового ужесточения.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Проверить долю долга с плавающей ставкой и график погашений на 6 месяцев.", "p": "ai"}, {"t": "Обсудить с менеджером фиксацию ставки или хеджирование процентного риска.", "p": "ai", "cta": {"label": "Обсудить с менеджером", "kind": "manager"}}], "bank": {"quote": "С учётом риторики ЦБ РФ мы меняем наш взгляд на динамику ключевой ставки: теперь ожидаем её сохранения на текущем значении 14,0% до конца года. Прогноз на конец 2027 года — 12,0%.", "doc": "Ключевая ставка ЦБ РФ: ставка без изменения на 14,0%, риторика стала жестче", "date": "2026-09-11", "stale": false}, "basis": {"features": ["Продукты банка: кредит, лизинг", "Масштаб: выручка 22,3 млрд ₽"], "coverage": "Структура долга (фикс/плавающая) в данных отсутствует — вывод о плавающей ставке условный."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Новость о ключевой ставке. Нужны: продукты компании, позиция банка по ставке, реакция рынка долга.", "ms": 640, "cost": 0.05}, {"kind": "tool", "title": "get_company_profile(U_25835)", "detail": "кредит=1, лизинг=1, ВЭД=[ОАЭ, Китай, Италия], ОКВЭД 45.31.1", "ms": 40, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"ключевая ставка\", max_age=90д)", "detail": "2 фрагмента: «Ключевая ставка ЦБ РФ» (11.09.2026), «Бонд Бриф» (14.09.2026)", "ms": 210, "cost": 0.01}, {"kind": "tool", "title": "search_news(\"ставка ЦБ 11 сентября\")", "detail": "3 публикации → 1 кластер после дедупликации", "ms": 180, "cost": 0.01}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков, 3 факта, 1 цитата банка, 5 выводов модели", "ms": 4200, "cost": 0.62}, {"kind": "check", "title": "Самопроверка", "detail": "Факт «доходности ОФЗ +10–17 б.п.» без ссылки → найден в «Бонд Бриф». Вывод о плавающей ставке не подтверждён данными → помечен как условный.", "ms": 1900, "cost": 0.21}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,91 · проверок пройдено 6/6", "ms": 0, "cost": 0}], "chat": [{"q": "Что будет со ставкой в 2027 году?", "a": [{"t": "Альфа-Банк прогнозирует ключевую ставку 12,0% на конец 2027 года, до конца 2026 — сохранение 14,0%.", "p": "bank"}, {"t": "Для вас это значит, что основное удешевление долга возможно только во второй половине 2027 года.", "p": "ai"}], "chart": {"title": "Прогноз Альфа-Банка по ключевой ставке, %", "unit": "%", "points": [["Сейчас", 14.0], ["Конец 2026", 14.0], ["Конец 2027", 12.0]], "note": "Ранее банк ожидал 13,5% на конец 2026"}}, {"q": "Когда следующее заседание ЦБ?", "a": [{"t": "Следующие заседания по ставке — 23 октября и 18 декабря.", "p": "fact"}, {"t": "Банк ожидает паузы и на заседании 23 октября.", "p": "bank"}]}], "is_new": true, "takeaway": {"cfo": "Ваш долг не подешевеет до 2027 года — рефинансировать сейчас невыгодно", "ceo": "Дорогие деньги продлятся до конца 2026 — закладывайте высокую стоимость финансирования в план", "treasurer": "Платежи по кредиту и лизингу останутся на текущем уровне минимум до конца года"}, "key_points": [{"t": "У компании кредит и лизинг — их стоимость зависит от ключевой ставки", "p": "ai"}, {"t": "Банк ждёт сохранения 14% до конца 2026 и 12% к концу 2027", "p": "bank", "src": 1}, {"t": "Вариант снижения ставки ЦБ даже не рассматривал", "p": "fact", "src": 1}]}, {"id": "i-auto-sales", "type": "risk", "impact": "high", "topics": ["отрасль", "спрос", "контрагенты"], "published": "2026-09-07", "title": "Продажи новых легковых авто в августе упали на 7%", "why_short": "46% поступлений через банк — от автодилеров и автосервисов", "matched": ["Опт автозапчастей", "покупатели: 46% — автодилеры и автосервисы"], "sources": [{"name": "АЕБ, статистика продаж", "kind": "news", "date": "2026-09-05", "url": "https://aebrus.ru/"}, {"name": "Альфа-Банк: «Макростатистика 7М26»", "kind": "bank", "date": "2026-09-07", "url": "#doc-7m26"}, {"name": "Альфа-Банк: «Потребление на пике»", "kind": "bank", "date": "2026-08-05", "url": "#doc-consumption"}, {"name": "Профиль компании: данные банка (выручка, продукты, платёжный поток)", "kind": "stat", "date": "2026-10-20", "url": ""}], "blocks": {"what": [{"t": "В июле продажи легковых авто были около локального пика — 124 тыс. шт., но в годовом выражении рост уже нулевой (после +19% г/г во 2К26).", "p": "fact", "src": 1}, {"t": "В августе объём продаж снизился на 7% к июлю и также в годовом выражении.", "p": "fact", "src": 1}, {"t": "С 1 октября ужесточаются макропруденциальные лимиты по автокредитам.", "p": "fact", "src": 2}], "why": [{"t": "Почти половина входящего денежного потока (46%) приходит от компаний авторынка — дилеров и сервисов.", "p": "ai"}, {"t": "Спрос на запчасти реагирует на продажи новых авто с лагом: меньше новых машин — дольше эксплуатация старых, что частично компенсирует падение.", "p": "ai"}], "risks": [{"t": "Снижение закупок со стороны дилеров и их сервисных центров в IV квартале 2026.", "p": "ai", "strength": "high"}, {"t": "Рост дебиторской задолженности: у дилеров падают продажи и растёт стоимость складского запаса.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Сместить ассортимент в сторону вторичного рынка и обслуживания стареющего парка.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Проверить долг десяти крупнейших покупателей среди автодилеров и автосервисов.", "p": "ai"}, {"t": "Рассмотреть факторинг, чтобы не замораживать оборотный капитал в отсрочках дилерам.", "p": "ai", "cta": {"label": "Узнать про факторинг", "kind": "product"}}], "bank": {"quote": "Мы ожидаем дополнительного замедления роста потребления на фоне более слабых продаж автомобилей. Динамика потребления сейчас на пике, к 4К26 ориентируемся на рост около нуля в годовом выражении.", "doc": "Макростатистика 7М26; Потребление на пике", "date": "2026-09-07", "stale": false}, "basis": {"features": ["Опт автозапчастей", "Покупатели: 744 компании, отрасль известна для 51% поступлений", "Из известных — 46% поступлений от автодилеров и автосервисов"], "coverage": "Отрасль известна для 51% поступлений — доля автодилеров может быть выше."}, "calc": [{"title": "Выручка от покупателей — автодилеры и автосервисы", "value": "−717 млн ₽ в год", "formula": "22,3 млрд ₽ × 46% × −7%", "inputs": [{"t": "Продажи новых легковых авто в августе упали на 7%.", "p": "fact", "src": 1}, {"t": "Выручка компании за год: 22,3 млрд ₽", "p": "fact", "src": 3}, {"t": "46% поступлений через банк — автодилеры и автосервисы", "p": "fact", "src": 3}], "assumptions": ["Выручка от этих покупателей меняется так же, как спрос/объёмы в их отрасли", "Доля — по платежам через банк; отрасль плательщика известна для 51% поступлений, поэтому это оценка по известной части", "Изменение за месяц к тому же месяцу прошлого года: оценка в год — если так будет весь год"], "sign": "risk", "strength": "medium"}]}, "trace": [{"kind": "plan", "title": "План", "detail": "Отраслевая новость (авторынок). Проверить: отрасль компании, отрасли покупателей, позицию банка по потреблению.", "ms": 580, "cost": 0.05}, {"kind": "tool", "title": "get_company_profile(U_25835)", "detail": "ОКВЭД 45.31.1", "ms": 40, "cost": 0}, {"kind": "tool", "title": "get_counterparties(U_25835, side=customers)", "detail": "744 покупателя; известна отрасль для 51% потока; ОКВЭД 45 — 46%", "ms": 120, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"продажи автомобилей\")", "detail": "2 фрагмента: «Макростатистика 7М26», «Потребление на пике»", "ms": 230, "cost": 0.01}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков", "ms": 3900, "cost": 0.58}, {"kind": "check", "title": "Самопроверка", "detail": "Покрытие данных по покупателям 51% < 60% → добавлена оговорка в «На чём основан вывод».", "ms": 1500, "cost": 0.18}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,88 · проверок пройдено 6/6", "ms": 0, "cost": 0}], "chat": [{"q": "Покажи динамику продаж авто", "a": [{"t": "Июнь — 118 тыс., июль — 124 тыс., август — около 115 тыс. (−7% к июлю).", "p": "fact"}, {"t": "Значение за август рассчитано из процентного изменения в отчёте банка.", "p": "ai"}], "chart": {"title": "Продажи новых легковых авто, тыс. шт.", "unit": "тыс.", "points": [["Июнь", 118], ["Июль", 124], ["Август", 115]], "note": "Август — расчёт от −7% м/м"}}, {"q": "Кто из моих покупателей самый крупный?", "a": [{"t": "Крупнейший покупатель — компания с оборотом около 218 млн ₽ за период, её отрасль в данных не указана.", "p": "fact"}, {"t": "Следующие два — оптовики автозапчастей, по 134 млн ₽ каждый.", "p": "fact"}]}], "is_new": true, "takeaway": {"cfo": "Дилеры могут сократить закупки к концу года — следите за их долгами перед вами", "ceo": "Почти половина вашей выручки зависит от авторынка, а он замедляется", "treasurer": "Возможны задержки оплат от дилеров — заложите запас ликвидности"}, "key_points": [{"t": "46% поступлений — от автодилеров и автосервисов", "p": "ai"}, {"t": "Продажи новых авто в августе −7% к июлю", "p": "fact", "src": 1}, {"t": "Банк ждёт, что к концу года потребление перестанет расти", "p": "bank", "src": 2}]}, {"id": "i-ruble-import", "type": "risk", "impact": "medium", "topics": ["курс", "ликвидность"], "published": "2026-09-02", "title": "Ослабление рубля продолжит давить на цены импортных товаров", "why_short": "Вы импортируете из Китая, ОАЭ и Италии", "matched": ["Внешняя торговля: Китай, ОАЭ, Италия"], "sources": [{"name": "Альфа-Банк: «Инфляция 25–31 августа»", "kind": "bank", "date": "2026-09-02", "url": "#doc-inflation"}, {"name": "Альфа-Банк: «Макростатистика 1П26»", "kind": "bank", "date": "2026-07-31", "url": "#doc-1h26"}, {"name": "Росстат", "kind": "stat", "date": "2026-09-02", "url": "https://rosstat.gov.ru/"}], "blocks": {"what": [{"t": "Годовая инфляция на конец августа — 6,32%; непродовольственные товары за неделю подорожали на 0,23%.", "p": "fact", "src": 2}, {"t": "Импорт товаров за 5М26 вырос на 11% г/г в номинале.", "p": "fact", "src": 1}], "why": [{"t": "Закупки у иностранных поставщиков номинированы в валюте — себестоимость растёт вместе с курсом.", "p": "ai"}], "risks": [{"t": "Сжатие маржи, если рост закупочных цен не удастся переложить на покупателей при слабеющем спросе.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Локальные конкуренты без импорта получают ценовое преимущество — возможна переоценка поставщиков.", "p": "ai", "strength": "low"}], "actions": [{"t": "Оценить долю валютных закупок на ближайшие 3 месяца и захеджировать её часть.", "p": "ai", "cta": {"label": "Валютный контроль и хеджирование", "kind": "product"}}], "bank": {"quote": "Ослабление курса рубля, на наш взгляд, продолжит воздействовать на динамику цен в непродовольственном сегменте. Прогноз по курсу — 87 руб./$ на конец 2026 года.", "doc": "Инфляция 25–31 августа; Макростатистика 1П26", "date": "2026-09-02", "stale": false}, "basis": {"features": ["Внешняя торговля: Китай, ОАЭ, Италия", "Поставщики: 268, отрасль известна для 78% потока"], "coverage": "Объём валютных платежей в данных отсутствует — оценка влияния качественная."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Макро-событие (курс). Проверить ВЭД компании и позицию банка по курсу.", "ms": 500, "cost": 0.04}, {"kind": "tool", "title": "get_company_profile(U_25835)", "detail": "ВЭД=[ОАЭ, Китай, Италия]", "ms": 40, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"курс рубля\")", "detail": "2 фрагмента", "ms": 200, "cost": 0.01}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков", "ms": 3100, "cost": 0.44}, {"kind": "check", "title": "Самопроверка", "detail": "Нет данных об объёме валютных платежей → вывод помечен как качественный.", "ms": 1200, "cost": 0.14}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,79", "ms": 0, "cost": 0}], "chat": [], "is_new": false, "takeaway": {"cfo": "Импортная себестоимость растёт вместе с курсом — маржа под давлением", "ceo": "Закупки в Китае и ОАЭ дорожают — пересмотрите цены или поставщиков", "treasurer": "Захеджируйте валютные платежи поставщикам на ближайшие 3 месяца"}, "key_points": [{"t": "Вы импортируете из Китая, ОАЭ и Италии", "p": "ai"}, {"t": "Банк прогнозирует 87 ₽/$ на конец 2026 и давление на цены непродовольственных товаров", "p": "bank", "src": 0}, {"t": "Импорт за 5М26 вырос на 11% г/г", "p": "fact", "src": 1}]}, {"id": "i-fuel", "type": "info", "impact": "low", "topics": ["контрагенты"], "published": "2026-09-02", "title": "Бензин дорожает быстрее общей инфляции", "why_short": "Логистика доставки запчастей подорожает", "matched": ["поставщики: перевозчики и логистика"], "sources": [{"name": "Альфа-Банк: «Инфляция 25–31 августа»", "kind": "bank", "date": "2026-09-02", "url": "#doc-inflation"}], "blocks": {"what": [{"t": "За неделю 25–31 августа бензин подорожал на 0,91% при общей недельной дефляции 0,01%.", "p": "fact", "src": 0}], "why": [{"t": "Среди поставщиков есть перевозчики — их тарифы, вероятно, вырастут.", "p": "ai"}], "risks": [{"t": "Умеренный рост логистических расходов.", "p": "ai", "strength": "low"}], "opportunities": [], "actions": [{"t": "Учесть в бюджете на конец года рост тарифов перевозчиков.", "p": "ai"}], "bank": {"quote": "Ситуация на рынке топлива не позволяет рассчитывать на то, что новая волна роста цен уже исчерпана; динамика в этом сегменте остаётся важным проинфляционным риском.", "doc": "Инфляция 25–31 августа", "date": "2026-09-02", "stale": false}, "basis": {"features": ["Перевозчики и логистика — менее 1% платежей"], "coverage": "Доля логистики в расходах мала — событие показано как «к сведению»."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Ценовое событие (топливо). Проверить, есть ли у компании топливоёмкие контрагенты.", "ms": 450, "cost": 0.03}, {"kind": "tool", "title": "get_counterparties(U_25835, side=suppliers)", "detail": "ОКВЭД 49/52 — <1% потока", "ms": 110, "cost": 0}, {"kind": "draft", "title": "Черновик карточки", "detail": "Сокращённая карточка: влияние низкое", "ms": 2100, "cost": 0.25}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,41 → «к сведению»", "ms": 0, "cost": 0}], "chat": [], "is_new": false, "takeaway": {"cfo": "Логистика подорожает умеренно — учтите в бюджете на конец года", "ceo": "Небольшой рост транспортных расходов, на бизнес влияет слабо", "treasurer": "Возможна индексация тарифов перевозчиков"}, "key_points": [{"t": "Бензин +0,91% за неделю при общей дефляции", "p": "fact", "src": 0}, {"t": "Перевозчики — меньше 1% ваших расходов", "p": "ai"}]}], "U_177581": [{"id": "i-rate-dev", "type": "risk", "impact": "high", "topics": ["ставка", "спрос", "отрасль"], "published": "2026-09-11", "title": "ЦБ сохранил ставку 14%: снижения в 2026 году не будет", "why_short": "Дорогая ипотека тормозит спрос на жильё, а вы и ваша группа — девелоперы", "matched": ["Строительство зданий", "группа: 482 юрлица, недвижимость и стройка"], "sources": [{"name": "ЦБ РФ, пресс-релиз", "kind": "news", "date": "2026-09-11", "url": "https://www.cbr.ru/"}, {"name": "Альфа-Банк: «Ключевая ставка ЦБ РФ»", "kind": "bank", "date": "2026-09-11", "url": "#doc-policy-rate"}], "blocks": {"what": [{"t": "11 сентября ЦБ оставил ключевую ставку на уровне 14,0%, вариант снижения не рассматривался.", "p": "fact", "src": 0}, {"t": "ЦБ отметил ускорение устойчивой инфляции до 5–6%.", "p": "fact", "src": 1}], "why": [{"t": "Рыночная ипотека при ставке 14% остаётся дорогой — спрос на жильё без господдержки слабый.", "p": "ai"}, {"t": "Группа из 482 компаний на 41% состоит из девелопмента и недвижимости — эффект затронет её целиком.", "p": "ai"}, {"t": "У компании есть лизинг: стоимость фондирования техники остаётся высокой.", "p": "ai"}], "risks": [{"t": "Продажи замедлятся, квартиры будут дольше ждать покупателя в IV квартале 2026.", "p": "ai", "strength": "high"}, {"t": "Проектное финансирование дороже из-за медленного наполнения эскроу.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Девелоперские субсидии ставки для покупателей становятся сильным маркетинговым инструментом.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Пересмотреть план продаж на конец 2026 и первое полугодие 2027 с учётом прогноза ставки банка.", "p": "ai"}, {"t": "Обсудить с банком программы субсидирования ипотеки для покупателей.", "p": "ai", "cta": {"label": "Обсудить с менеджером", "kind": "manager"}}], "bank": {"quote": "Теперь мы ожидаем сохранения ставки на текущем значении 14,0% до конца года. Наш прогноз по ставке на конец 2027 года остаётся на уровне 12,0%.", "doc": "Ключевая ставка ЦБ РФ", "date": "2026-09-11", "stale": false}, "basis": {"features": ["Строительство зданий", "Группа: 482 юрлица (68 — 24%, 41 — 17%, 64 — 14%)", "Продукты: лизинг"], "coverage": "Данные о продажах объектов и ипотечной доле в выручке отсутствуют."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Новость о ставке. Компания из стройки — проверить группу и канал влияния через ипотеку.", "ms": 610, "cost": 0.05}, {"kind": "tool", "title": "get_company_profile(U_177581)", "detail": "ОКВЭД 41.20.9, лизинг=1, кредит=0", "ms": 40, "cost": 0}, {"kind": "tool", "title": "get_group_summary(group_134409_sb)", "detail": "482 юрлица → агрегат по 5 отраслям (свёрнуто, чтобы не переполнять контекст)", "ms": 160, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"ключевая ставка\")", "detail": "1 фрагмент", "ms": 190, "cost": 0.01}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков", "ms": 4100, "cost": 0.6}, {"kind": "check", "title": "Самопроверка", "detail": "Кредита у компании нет → вывод про «стоимость долга» заменён на канал через ипотечный спрос и лизинг.", "ms": 1700, "cost": 0.2}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,86", "ms": 0, "cost": 0}], "chat": [{"q": "Что будет со ставкой в 2027 году?", "a": [{"t": "Банк ожидает 14,0% до конца 2026 и 12,0% на конец 2027 года.", "p": "bank"}, {"t": "Оживление рыночной ипотеки вероятно не раньше второй половины 2027 года.", "p": "ai"}], "chart": {"title": "Прогноз Альфа-Банка по ключевой ставке, %", "unit": "%", "points": [["Сейчас", 14.0], ["Конец 2026", 14.0], ["Конец 2027", 12.0]], "note": ""}}], "is_new": true, "takeaway": {"cfo": "Рыночная ипотека останется дорогой до 2027 — спрос на ваши объекты будет слабым", "ceo": "Продажи жилья без льготной ипотеки к концу года замедлятся — пересмотрите план продаж", "treasurer": "Лизинг техники остаётся дорогим, эскроу наполняются медленнее"}, "key_points": [{"t": "Группа на 41% состоит из девелопмента и недвижимости", "p": "ai"}, {"t": "Банк ждёт 14% до конца 2026 и 12% к концу 2027", "p": "bank", "src": 1}, {"t": "ЦБ отметил ускорение устойчивой инфляции до 5–6%", "p": "fact", "src": 1}]}, {"id": "i-bonds", "type": "info", "impact": "medium", "topics": ["долг", "ликвидность"], "published": "2026-09-14", "title": "Доходности ОФЗ выросли: публичный долг дорожает", "why_short": "Если группа планирует облигации — фиксированный купон сейчас невыгоден", "matched": ["группа: 14% — финансовые компании (64)"], "sources": [{"name": "Альфа-Банк: «Бонд Бриф»", "kind": "bank", "date": "2026-09-14", "url": "#doc-bond-brief"}, {"name": "Альфа-Банк: «Долговой рынок 3К26»", "kind": "bank", "date": "2026-07-22", "url": "#doc-fi-strategy"}, {"name": "Минфин РФ", "kind": "news", "date": "2026-09-09", "url": "https://minfin.gov.ru/"}], "blocks": {"what": [{"t": "После заседания ЦБ доходность 14-летнего бенчмарка ОФЗ 26254 выросла до 16,2%.", "p": "fact", "src": 0}, {"t": "Минфин вернулся к размещению ОФЗ-ПД: выпуск 26230 размещён по средневзвешенной доходности 15,97%.", "p": "fact", "src": 2}], "why": [{"t": "В группе есть финансовые компании (14% юрлиц) — вероятный канал привлечения долга для девелопмента.", "p": "ai"}], "risks": [{"t": "Размещение с фиксированным купоном сейчас зафиксирует высокую стоимость надолго.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Флоатеры (купон КС + спред) позволят снизить стоимость долга вместе со ставкой в 2027 году.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Если планируется выпуск — рассмотреть плавающий купон.", "p": "ai", "cta": {"label": "Консультация DCM", "kind": "manager"}}], "bank": {"quote": "Корпоративные облигации с переменным купоном — основной инструмент привлечения средств на публичном долговом рынке, более 50% рынка; купон привязан к ключевой ставке или RUONIA.", "doc": "Долговой рынок: тактический взгляд на 3-й квартал 2026", "date": "2026-07-22", "stale": false}, "basis": {"features": ["Группа: 482 юрлица, из них около 14% — финансовые компании"], "coverage": "Нет данных о наличии облигационных выпусков группы — событие «к сведению»."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Новость рынка облигаций. Проверить, есть ли в группе эмитенты/финкомпании.", "ms": 520, "cost": 0.04}, {"kind": "tool", "title": "get_group_summary(group_134409_sb)", "detail": "ОКВЭД 64 — 14% юрлиц", "ms": 150, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"облигации флоатер\")", "detail": "2 фрагмента", "ms": 240, "cost": 0.01}, {"kind": "check", "title": "Недостаточно данных", "detail": "Факт выпусков группы не подтверждён → повторный поиск search_news(\"облигации\", entity=group) → 0 результатов → понижено до «к сведению».", "ms": 900, "cost": 0.06}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков", "ms": 3300, "cost": 0.47}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,62", "ms": 0, "cost": 0}], "chat": [], "is_new": true, "takeaway": {"cfo": "Облигации с фиксированным купоном сейчас дороги — если планируете выпуск, смотрите флоатеры", "ceo": "Публичный долг подорожал — выпуск облигаций лучше отложить или делать с плавающим купоном", "treasurer": "Доходности ОФЗ выросли до 16,2% — фиксировать стоимость долга сейчас невыгодно"}, "key_points": [{"t": "В группе ~14% финансовых компаний — вероятный канал заимствований", "p": "ai"}, {"t": "Доходность ОФЗ 26254 выросла до 16,2%", "p": "fact", "src": 0}, {"t": "Флоатеры — уже более 50% корпоративного рынка", "p": "bank", "src": 1}]}, {"id": "i-consumption-dev", "type": "info", "impact": "low", "topics": ["спрос"], "published": "2026-08-05", "title": "Банк ждёт замедления потребления к концу года", "why_short": "Охлаждение рынка труда снизит спрос на жильё", "matched": ["Строительство зданий"], "sources": [{"name": "Альфа-Банк: «Потребление на пике»", "kind": "bank", "date": "2026-08-05", "url": "#doc-consumption"}], "blocks": {"what": [{"t": "Рост номинальных зарплат замедлился с 15,1% г/г в 1К25 до 10,1% г/г в мае 2026.", "p": "fact", "src": 0}], "why": [{"t": "Покупательная способность населения — ключевой драйвер продаж жилья.", "p": "ai"}], "risks": [{"t": "Слабее спрос на новостройки без субсидированной ипотеки.", "p": "ai", "strength": "low"}], "opportunities": [], "actions": [{"t": "Учесть в прогнозе продаж на 2027 год.", "p": "ai"}], "bank": {"quote": "Мы полагаем, что динамика потребления сейчас находится на пике и в следующие месяцы будет происходить постепенное охлаждение темпов роста спроса.", "doc": "Потребление на пике", "date": "2026-08-05", "stale": false}, "basis": {"features": ["Строительство зданий"], "coverage": ""}}, "trace": [{"kind": "plan", "title": "План", "detail": "Макро-событие (потребление).", "ms": 400, "cost": 0.03}, {"kind": "draft", "title": "Черновик карточки", "detail": "Сокращённая карточка", "ms": 2000, "cost": 0.22}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,44", "ms": 0, "cost": 0}], "chat": [], "is_new": false, "takeaway": {"cfo": "Замедление зарплат снизит спрос на жильё в 2027", "ceo": "Покупательная способность снижается — учтите в прогнозе продаж на 2027", "treasurer": "На ликвидность напрямую не влияет"}, "key_points": [{"t": "Рост зарплат замедлился с 15,1% до 10,1% г/г", "p": "fact", "src": 0}, {"t": "Банк считает, что потребление прошло пик", "p": "bank", "src": 0}]}], "U_200890": [{"id": "i-steel", "type": "info", "impact": "medium", "topics": ["отрасль"], "published": "2026-09-07", "title": "Корпоративные финрезультаты в июне резко снизились", "why_short": "Ваши покупатели — промышленность, слабые финансы клиентов = риск неплатежей", "matched": ["Опт металлов", "покупатели: производство (22, 23, 43)"], "sources": [{"name": "Альфа-Банк: «Макростатистика 7М26»", "kind": "bank", "date": "2026-09-07", "url": "#doc-7m26"}, {"name": "Альфа-Банк: «Российская сталь» (апрель 2021)", "kind": "bank", "date": "2021-04-15", "url": "#doc-steel"}], "blocks": {"what": [{"t": "Сальдированный финансовый результат компаний в июне составил только 400 млрд ₽ после среднемесячных 2,3 трлн ₽ за 5М26.", "p": "fact", "src": 0}, {"t": "Корпоративный кредитный портфель в июле вырос на 1,3% м/м — компании компенсируют выпадающую прибыль заёмными средствами.", "p": "fact", "src": 0}], "why": [{"t": "Среди известных покупателей — производители пластмассовых изделий, бетона и строительные подрядчики, чувствительные к циклу.", "p": "ai"}], "risks": [{"t": "Рост просрочек оплаты со стороны покупателей.", "p": "ai", "strength": "medium"}], "opportunities": [], "actions": [{"t": "Ужесточить условия отсрочки для новых покупателей; рассмотреть банковскую гарантию оплаты.", "p": "ai", "cta": {"label": "Гарантии и аккредитивы", "kind": "product"}}], "bank": {"quote": "Последняя доступная отраслевая оценка банка по металлургии — апрель 2021 года («Ралли цен продолжается»). Она неактуальна для текущей ситуации и в выводе не используется.", "doc": "Российская сталь: превью результатов за 1К21", "date": "2021-04-15", "stale": true}, "basis": {"features": ["Опт металлов", "Покупатели: 29, отрасль известна для 21% потока"], "coverage": "Данные неполные: нет поставщиков; выручка 59,6 млрд ₽ при штате <15 человек нетипична. Вывод ограничен."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Макро-событие (финрезультаты компаний). Нужна отраслевая позиция банка по металлам.", "ms": 560, "cost": 0.04}, {"kind": "tool", "title": "get_company_profile(U_200890)", "detail": "ОКВЭД 46.72, только РКО; флаг качества: выручка/штат аномальны", "ms": 40, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"металлургия сталь\", max_age=365д)", "detail": "0 фрагментов в окне 365 дней", "ms": 210, "cost": 0.01}, {"kind": "check", "title": "Недостаточно данных → повторный поиск", "detail": "search_bank_analytics(\"сталь\", без ограничения) → 1 документ от 15.04.2021 → помечен stale=true, в выводе не используется", "ms": 260, "cost": 0.01}, {"kind": "tool", "title": "get_counterparties(U_200890)", "detail": "покупатели: 29 (покрытие 21%), поставщики: 0", "ms": 90, "cost": 0}, {"kind": "draft", "title": "Черновик карточки", "detail": "Опора на макроаналитику 7М26", "ms": 3500, "cost": 0.5}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,58 · вывод помечен «ограничен данными»", "ms": 0, "cost": 0}], "chat": [], "is_new": true, "takeaway": {"cfo": "Покупатели слабеют финансово — риск задержек оплаты растёт", "ceo": "Финрезультаты промышленности упали — ваши покупатели под давлением", "treasurer": "Ужесточите отсрочки: риск неплатежей вырос"}, "key_points": [{"t": "Прибыль компаний в июне — 400 млрд ₽ против 2,3 трлн в среднем", "p": "fact", "src": 0}, {"t": "Ваши известные покупатели — производство и стройка", "p": "ai"}, {"t": "Свежей оценки банка по металлургии нет (последняя — 2021)", "p": "bank", "src": 1}]}, {"id": "i-rate-metal", "type": "info", "impact": "low", "topics": ["ставка"], "published": "2026-09-11", "title": "ЦБ сохранил ставку 14%", "why_short": "Кредитов в банке у вас нет — прямого влияния мало", "matched": ["продукты банка: только расчётный счёт"], "sources": [{"name": "ЦБ РФ, пресс-релиз", "kind": "news", "date": "2026-09-11", "url": "https://www.cbr.ru/"}, {"name": "Альфа-Банк: «Ключевая ставка ЦБ РФ»", "kind": "bank", "date": "2026-09-11", "url": "#doc-policy-rate"}], "blocks": {"what": [{"t": "Ключевая ставка сохранена на уровне 14,0%.", "p": "fact", "src": 0}], "why": [{"t": "Кредитных продуктов в банке нет; влияние возможно через покупателей, финансирующих закупки в кредит.", "p": "ai"}], "risks": [{"t": "Покупатели будут дольше рассчитываться.", "p": "ai", "strength": "low"}], "opportunities": [{"t": "Свободные остатки на счетах можно разместить под высокую ставку.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Рассмотреть депозит или неснижаемый остаток.", "p": "ai", "cta": {"label": "Депозиты для бизнеса", "kind": "product"}}], "bank": {"quote": "Ожидаем сохранения ставки 14,0% до конца года.", "doc": "Ключевая ставка ЦБ РФ", "date": "2026-09-11", "stale": false}, "basis": {"features": ["Продукты банка: расчётный счёт"], "coverage": ""}}, "trace": [{"kind": "plan", "title": "План", "detail": "Новость о ставке.", "ms": 420, "cost": 0.03}, {"kind": "tool", "title": "get_company_profile(U_200890)", "detail": "кредит=0, депозит=0", "ms": 40, "cost": 0}, {"kind": "draft", "title": "Черновик карточки", "detail": "Нативное предложение: депозит (нет депозитов, высокая ставка)", "ms": 2300, "cost": 0.27}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,39", "ms": 0, "cost": 0}], "chat": [], "is_new": false, "takeaway": {"cfo": "Кредитов у вас нет — зато остатки можно разместить под высокую ставку", "ceo": "Прямого влияния почти нет; покупатели будут дольше рассчитываться", "treasurer": "Высокая ставка — время положить свободные остатки на депозит"}, "key_points": [{"t": "Ставка сохранена на 14%", "p": "fact", "src": 0}, {"t": "Из продуктов банка у вас только расчётный счёт", "p": "ai"}]}]}, "zones": [{"id": "debt", "name": "Долг и финансирование", "topics": ["ставка", "долг"]}, {"id": "liquidity", "name": "Ликвидность и расчёты", "topics": ["ликвидность", "контрагенты"]}, {"id": "industry", "name": "Отрасль и спрос", "topics": ["отрасль", "спрос"]}, {"id": "ved", "name": "ВЭД и валюта", "topics": ["курс"]}, {"id": "tax", "name": "Налоги", "topics": ["налоги"]}]}</script>
+<script id="data" type="application/json">{"_comment": "Моковые данные прототипа = JSON-контракт между агентом, бэком и фронтом. Факты о событиях взяты из аналитических материалов Альфа-Банка из кейса; ссылки на первоисточники — корневые страницы, в рабочей версии их подставляет парсер. stmt.p: fact | bank | ai. Карточка: takeaway{роль: вывод} и key_points[] — короткий слой; blocks — раскрываемый полный разбор. is_new — непрочитанное.", "generated_at": "2026-10-20T09:00:00+03:00", "roles": [{"id": "cfo", "name": "Финансовый директор", "prompt": "финансовый директор", "duties": "долг и стоимость финансирования, бюджет, маржа", "zones": ["debt", "liquidity", "tax"], "weights": {"ставка": 3, "долг": 3, "курс": 2, "ликвидность": 2, "отрасль": 1, "спрос": 1, "контрагенты": 1, "налоги": 2}, "actions": ["пересчитать бюджет и план платежей по долгу", "обсудить с менеджером банка рефинансирование или фиксацию ставки", "проверить ковенанты по кредитам", "заложить эффект в прогноз маржи"]}, {"id": "ceo", "name": "Генеральный директор", "prompt": "генеральный директор / собственник", "duties": "стратегия, рынок и спрос, крупные покупатели, инвестиционные проекты", "zones": ["industry", "debt", "ved"], "weights": {"отрасль": 3, "спрос": 3, "контрагенты": 2, "ставка": 1, "курс": 1, "долг": 1, "ликвидность": 1, "налоги": 1}, "actions": ["пересмотреть план продаж и ассортимент", "перенести или ускорить инвестиционный проект", "поговорить с крупнейшими покупателями об объёмах", "диверсифицировать покупателей и каналы сбыта"]}, {"id": "treasurer", "name": "Казначей", "prompt": "казначей", "duties": "платежи, валютные позиции, ликвидность, размещение остатков", "zones": ["liquidity", "ved", "debt"], "weights": {"курс": 3, "ликвидность": 3, "долг": 2, "ставка": 2, "отрасль": 0, "спрос": 0, "контрагенты": 1, "налоги": 1}, "actions": ["захеджировать валютную позицию", "разместить свободные остатки на депозите", "сдвинуть график платежей", "проверить лимиты и маршруты платежей по ВЭД"]}, {"id": "accountant", "name": "Главный бухгалтер", "prompt": "главный бухгалтер", "duties": "налоги и платежи в бюджет, учёт, курсовые разницы, резервы, первичные документы", "zones": ["tax", "ved", "liquidity"], "weights": {"налоги": 3, "курс": 2, "контрагенты": 2, "ликвидность": 2, "долг": 1, "ставка": 1, "отрасль": 0, "спрос": 0}, "actions": ["перенастроить учёт и ставки налогов в учётной системе", "пересчитать платежи в бюджет", "создать или пересмотреть резерв по сомнительным долгам", "проверить документы валютного контроля"]}], "companies": [{"id": "U_25835", "display": "Опт автозапчастей", "okved": "45.31.1", "industry": "Торговля оптовая автомобильными деталями, узлами и принадлежностями, кроме деятельности агентов", "revenue_bn": 22.3, "region": "Москва", "employees": "более 250", "products": ["РКО", "кредит", "лизинг", "зарплатный проект"], "ved": ["ОАЭ", "Китай", "Италия"], "group_size": 1, "counterparties": {"customers": {"n": 744, "known_share": 0.51, "top_industries": [{"name": "Торговля и ремонт автотранспорта (45)", "who": "автодилеры и автосервисы", "share": 0.46}, {"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.02}, {"name": "Сухопутный транспорт (49)", "who": "железнодорожные и автоперевозчики", "share": 0.01}], "total_bn": 3.41, "top1_share": 0.06, "top5_share": 0.2}, "suppliers": {"n": 268, "known_share": 0.78, "top_industries": [{"name": "Торговля и ремонт автотранспорта (45)", "who": "автодилеры и автосервисы", "share": 0.45}, {"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.32}], "total_bn": 11.28, "top1_share": 0.27, "top5_share": 0.44}}, "data_quality": []}, {"id": "U_177581", "display": "Девелопер (мега-группа)", "okved": "41.20.9", "industry": "Прочие виды строительства жилых и нежилых зданий", "revenue_bn": 42.4, "region": "Москва", "employees": "более 250", "products": ["РКО", "лизинг", "зарплатный проект"], "ved": [], "group_size": 482, "counterparties": {"customers": {"n": 30, "known_share": 0.42, "top_industries": [{"name": "Неметаллические минеральные продукты (23)", "who": "производители стройматериалов", "share": 0.2}, {"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.19}, {"name": "Специализированные строительные работы (43)", "who": "строительные подрядчики", "share": 0.03}], "total_bn": 0.05, "top1_share": 0.36, "top5_share": 0.82, "intragroup_share": 0.44}, "suppliers": {"n": 103, "known_share": 0.41, "top_industries": [{"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.17}, {"name": "Специализированные строительные работы (43)", "who": "строительные подрядчики", "share": 0.09}, {"name": "Обслуживание зданий (81)", "who": "компании по обслуживанию зданий", "share": 0.05}], "total_bn": 1.19, "top1_share": 0.26, "top5_share": 0.52, "intragroup_share": 0.01}}, "data_quality": ["Группа из 482 юрлиц: анализ по агрегату долей отраслей, не по каждому юрлицу"], "group_industries": [{"name": "Недвижимость (68)", "share": 0.24}, {"name": "Строительство зданий (41)", "share": 0.17}, {"name": "Финансовые услуги (64)", "share": 0.14}, {"name": "Архитектура и инжиниринг (71)", "share": 0.07}]}, {"id": "U_200890", "display": "Опт металлов", "okved": "46.72", "industry": "Торговля оптовая металлами и металлическими рудами", "revenue_bn": 59.6, "region": "Челябинская область", "employees": "менее 15", "products": ["РКО"], "ved": ["Ирак", "Ливан", "Грузия"], "group_size": 1, "counterparties": {"customers": {"n": 29, "known_share": 0.21, "top_industries": [{"name": "Резиновые и пластмассовые изделия (22)", "who": "производители пластика и резины", "share": 0.12}, {"name": "Оптовая торговля (46)", "who": "оптовые компании", "share": 0.05}, {"name": "Специализированные строительные работы (43)", "who": "строительные подрядчики", "share": 0.03}], "total_bn": 0.49, "top1_share": 0.23, "top5_share": 0.57}, "suppliers": {"n": 0, "known_share": null, "top_industries": [], "total_bn": 0.0}}, "data_quality": ["Выручка 59,6 млрд ₽ при штате менее 15 человек — нетипично, возможна агентская или транзитная модель", "Нет данных о поставщиках в платёжной выборке", "Отрасль известна лишь для 21% входящего потока"]}], "insights": {"U_25835": [{"id": "i-rate-auto", "type": "risk", "impact": "high", "topics": ["ставка", "долг"], "published": "2026-09-11", "title": "ЦБ сохранил ставку 14% и ужесточил риторику", "why_short": "У вас кредит и лизинг: удешевления долга в 2026 году ждать не стоит", "matched": ["кредит", "лизинг", "выручка 22,3 млрд ₽"], "sources": [{"name": "ЦБ РФ, пресс-релиз", "kind": "news", "date": "2026-09-11", "url": "https://www.cbr.ru/"}, {"name": "Альфа-Банк: «Ключевая ставка ЦБ РФ»", "kind": "bank", "date": "2026-09-11", "url": "#doc-policy-rate"}, {"name": "Альфа-Банк: «Бонд Бриф»", "kind": "bank", "date": "2026-09-14", "url": "#doc-bond-brief"}, {"name": "Профиль компании: данные банка (выручка, продукты, платёжный поток)", "kind": "stat", "date": "2026-10-20", "url": ""}], "blocks": {"what": [{"t": "11 сентября ЦБ оставил ключевую ставку без изменений на уровне 14,0%.", "p": "fact", "src": 0}, {"t": "Глава ЦБ пояснила, что совет директоров обсуждал только паузу, вариант снижения не рассматривался.", "p": "fact", "src": 1}, {"t": "После заседания доходности ОФЗ на среднем и дальнем участке выросли на 10–17 б.п.", "p": "fact", "src": 2}], "why": [{"t": "У компании есть кредитные продукты и лизинг — стоимость обслуживания долга напрямую зависит от ключевой ставки.", "p": "ai"}, {"t": "Если часть долга с плавающей ставкой (КС + спред), платежи сохранятся на текущем высоком уровне минимум до конца года.", "p": "ai"}], "risks": [{"t": "Рефинансирование на лучших условиях в 2026 году маловероятно.", "p": "ai", "strength": "high"}, {"t": "Дорогой долг на фоне падения продаж новых авто (см. отдельное событие) давит на маржу.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Зафиксировать ставку сейчас по части долга, если ожидается снижение только в 2027 году — защита от нового ужесточения.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Проверить долю долга с плавающей ставкой и график погашений на 6 месяцев.", "p": "ai"}, {"t": "Обсудить с менеджером фиксацию ставки или хеджирование процентного риска.", "p": "ai", "cta": {"label": "Обсудить с менеджером", "kind": "manager"}}], "bank": {"quote": "С учётом риторики ЦБ РФ мы меняем наш взгляд на динамику ключевой ставки: теперь ожидаем её сохранения на текущем значении 14,0% до конца года. Прогноз на конец 2027 года — 12,0%.", "doc": "Ключевая ставка ЦБ РФ: ставка без изменения на 14,0%, риторика стала жестче", "date": "2026-09-11", "stale": false}, "basis": {"features": ["Продукты банка: кредит, лизинг", "Масштаб: выручка 22,3 млрд ₽"], "coverage": "Структура долга (фикс/плавающая) в данных отсутствует — вывод о плавающей ставке условный."}, "calc": [{"title": "Стоимость долга при изменении ставки на 1 п.п.", "value": "±10 млн ₽ в год на каждый 1 млрд ₽ долга с плавающей ставкой", "formula": "1 млрд ₽ × 1 п.п.", "inputs": [{"t": "ЦБ сохранил ставку 14% и ужесточил риторику.", "p": "fact", "src": 0}, {"t": "Продукты банка: кредит, лизинг", "p": "fact", "src": 3}], "assumptions": ["Изменения ставки в новости нет: это масштаб, а не прогноз — сколько стоит каждый 1 п.п. ключевой ставки", "Ставка по кредиту привязана к ключевой и меняется на ту же величину"], "sign": "neutral", "strength": "medium", "scale": {"label": "Ваш долг с плавающей ставкой, млрд ₽", "per_bn": 10000000.0, "period": "в год за 1 п.п."}}]}, "trace": [{"kind": "plan", "title": "План", "detail": "Новость о ключевой ставке. Нужны: продукты компании, позиция банка по ставке, реакция рынка долга.", "ms": 640, "cost": 0.05}, {"kind": "tool", "title": "get_company_profile(U_25835)", "detail": "кредит=1, лизинг=1, ВЭД=[ОАЭ, Китай, Италия], ОКВЭД 45.31.1", "ms": 40, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"ключевая ставка\", max_age=90д)", "detail": "2 фрагмента: «Ключевая ставка ЦБ РФ» (11.09.2026), «Бонд Бриф» (14.09.2026)", "ms": 210, "cost": 0.01}, {"kind": "tool", "title": "search_news(\"ставка ЦБ 11 сентября\")", "detail": "3 публикации → 1 кластер после дедупликации", "ms": 180, "cost": 0.01}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков, 3 факта, 1 цитата банка, 5 выводов модели", "ms": 4200, "cost": 0.62}, {"kind": "check", "title": "Самопроверка", "detail": "Факт «доходности ОФЗ +10–17 б.п.» без ссылки → найден в «Бонд Бриф». Вывод о плавающей ставке не подтверждён данными → помечен как условный.", "ms": 1900, "cost": 0.21}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,91 · проверок пройдено 6/6", "ms": 0, "cost": 0}], "chat": [{"q": "Что будет со ставкой в 2027 году?", "a": [{"t": "Альфа-Банк прогнозирует ключевую ставку 12,0% на конец 2027 года, до конца 2026 — сохранение 14,0%.", "p": "bank"}, {"t": "Для вас это значит, что основное удешевление долга возможно только во второй половине 2027 года.", "p": "ai"}], "chart": {"title": "Прогноз Альфа-Банка по ключевой ставке, %", "unit": "%", "points": [["Сейчас", 14.0], ["Конец 2026", 14.0], ["Конец 2027", 12.0]], "note": "Ранее банк ожидал 13,5% на конец 2026"}}, {"q": "Когда следующее заседание ЦБ?", "a": [{"t": "Следующие заседания по ставке — 23 октября и 18 декабря.", "p": "fact"}, {"t": "Банк ожидает паузы и на заседании 23 октября.", "p": "bank"}]}], "is_new": true, "takeaway": {"cfo": "Ваш долг не подешевеет до 2027 года — рефинансировать сейчас невыгодно", "ceo": "Дорогие деньги продлятся до конца 2026 — закладывайте высокую стоимость финансирования в план", "treasurer": "Платежи по кредиту и лизингу останутся на текущем уровне минимум до конца года"}, "key_points": [{"t": "У компании кредит и лизинг — их стоимость зависит от ключевой ставки", "p": "ai"}, {"t": "Банк ждёт сохранения 14% до конца 2026 и 12% к концу 2027", "p": "bank", "src": 1}, {"t": "Вариант снижения ставки ЦБ даже не рассматривал", "p": "fact", "src": 1}]}, {"id": "i-auto-sales", "type": "risk", "impact": "high", "topics": ["отрасль", "спрос", "контрагенты"], "published": "2026-09-07", "title": "Продажи новых легковых авто в августе упали на 7%", "why_short": "46% поступлений через банк — от автодилеров и автосервисов", "matched": ["Опт автозапчастей", "покупатели: 46% — автодилеры и автосервисы"], "sources": [{"name": "АЕБ, статистика продаж", "kind": "news", "date": "2026-09-05", "url": "https://aebrus.ru/"}, {"name": "Альфа-Банк: «Макростатистика 7М26»", "kind": "bank", "date": "2026-09-07", "url": "#doc-7m26"}, {"name": "Альфа-Банк: «Потребление на пике»", "kind": "bank", "date": "2026-08-05", "url": "#doc-consumption"}, {"name": "Профиль компании: данные банка (выручка, продукты, платёжный поток)", "kind": "stat", "date": "2026-10-20", "url": ""}], "blocks": {"what": [{"t": "В июле продажи легковых авто были около локального пика — 124 тыс. шт., но в годовом выражении рост уже нулевой (после +19% г/г во 2К26).", "p": "fact", "src": 1}, {"t": "В августе объём продаж снизился на 7% к июлю и также в годовом выражении.", "p": "fact", "src": 1}, {"t": "С 1 октября ужесточаются макропруденциальные лимиты по автокредитам.", "p": "fact", "src": 2}], "why": [{"t": "Почти половина входящего денежного потока (46%) приходит от компаний авторынка — дилеров и сервисов.", "p": "ai"}, {"t": "Спрос на запчасти реагирует на продажи новых авто с лагом: меньше новых машин — дольше эксплуатация старых, что частично компенсирует падение.", "p": "ai"}], "risks": [{"t": "Снижение закупок со стороны дилеров и их сервисных центров в IV квартале 2026.", "p": "ai", "strength": "high"}, {"t": "Рост дебиторской задолженности: у дилеров падают продажи и растёт стоимость складского запаса.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Сместить ассортимент в сторону вторичного рынка и обслуживания стареющего парка.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Проверить долг десяти крупнейших покупателей среди автодилеров и автосервисов.", "p": "ai"}, {"t": "Рассмотреть факторинг, чтобы не замораживать оборотный капитал в отсрочках дилерам.", "p": "ai", "cta": {"label": "Узнать про факторинг", "kind": "product"}}], "bank": {"quote": "Мы ожидаем дополнительного замедления роста потребления на фоне более слабых продаж автомобилей. Динамика потребления сейчас на пике, к 4К26 ориентируемся на рост около нуля в годовом выражении.", "doc": "Макростатистика 7М26; Потребление на пике", "date": "2026-09-07", "stale": false}, "basis": {"features": ["Опт автозапчастей", "Покупатели: 744 компании, отрасль известна для 51% поступлений", "Из известных — 46% поступлений от автодилеров и автосервисов"], "coverage": "Отрасль известна для 51% поступлений — доля автодилеров может быть выше."}, "calc": [{"title": "Выручка от покупателей — автодилеры и автосервисы", "value": "−717 млн ₽ в год", "formula": "22,3 млрд ₽ × 46% × −7%", "inputs": [{"t": "Продажи новых легковых авто в августе упали на 7%.", "p": "fact", "src": 1}, {"t": "Выручка компании за год: 22,3 млрд ₽", "p": "fact", "src": 3}, {"t": "46% поступлений через банк — автодилеры и автосервисы", "p": "fact", "src": 3}], "assumptions": ["Выручка от этих покупателей меняется так же, как спрос/объёмы в их отрасли", "Доля — по платежам через банк; отрасль плательщика известна для 51% поступлений, поэтому это оценка по известной части", "Изменение за месяц к тому же месяцу прошлого года: оценка в год — если так будет весь год"], "sign": "risk", "strength": "medium"}]}, "trace": [{"kind": "plan", "title": "План", "detail": "Отраслевая новость (авторынок). Проверить: отрасль компании, отрасли покупателей, позицию банка по потреблению.", "ms": 580, "cost": 0.05}, {"kind": "tool", "title": "get_company_profile(U_25835)", "detail": "ОКВЭД 45.31.1", "ms": 40, "cost": 0}, {"kind": "tool", "title": "get_counterparties(U_25835, side=customers)", "detail": "744 покупателя; известна отрасль для 51% потока; ОКВЭД 45 — 46%", "ms": 120, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"продажи автомобилей\")", "detail": "2 фрагмента: «Макростатистика 7М26», «Потребление на пике»", "ms": 230, "cost": 0.01}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков", "ms": 3900, "cost": 0.58}, {"kind": "check", "title": "Самопроверка", "detail": "Покрытие данных по покупателям 51% < 60% → добавлена оговорка в «На чём основан вывод».", "ms": 1500, "cost": 0.18}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,88 · проверок пройдено 6/6", "ms": 0, "cost": 0}], "chat": [{"q": "Покажи динамику продаж авто", "a": [{"t": "Июнь — 118 тыс., июль — 124 тыс., август — около 115 тыс. (−7% к июлю).", "p": "fact"}, {"t": "Значение за август рассчитано из процентного изменения в отчёте банка.", "p": "ai"}], "chart": {"title": "Продажи новых легковых авто, тыс. шт.", "unit": "тыс.", "points": [["Июнь", 118], ["Июль", 124], ["Август", 115]], "note": "Август — расчёт от −7% м/м"}}, {"q": "Кто из моих покупателей самый крупный?", "a": [{"t": "Крупнейший покупатель — компания с оборотом около 218 млн ₽ за период, её отрасль в данных не указана.", "p": "fact"}, {"t": "Следующие два — оптовики автозапчастей, по 134 млн ₽ каждый.", "p": "fact"}]}], "is_new": true, "takeaway": {"cfo": "Дилеры могут сократить закупки к концу года — следите за их долгами перед вами", "ceo": "Почти половина вашей выручки зависит от авторынка, а он замедляется", "treasurer": "Возможны задержки оплат от дилеров — заложите запас ликвидности"}, "key_points": [{"t": "46% поступлений — от автодилеров и автосервисов", "p": "ai"}, {"t": "Продажи новых авто в августе −7% к июлю", "p": "fact", "src": 1}, {"t": "Банк ждёт, что к концу года потребление перестанет расти", "p": "bank", "src": 2}]}, {"id": "i-ruble-import", "type": "risk", "impact": "medium", "topics": ["курс", "ликвидность"], "published": "2026-09-02", "title": "Ослабление рубля продолжит давить на цены импортных товаров", "why_short": "Вы импортируете из Китая, ОАЭ и Италии", "matched": ["Внешняя торговля: Китай, ОАЭ, Италия"], "sources": [{"name": "Альфа-Банк: «Инфляция 25–31 августа»", "kind": "bank", "date": "2026-09-02", "url": "#doc-inflation"}, {"name": "Альфа-Банк: «Макростатистика 1П26»", "kind": "bank", "date": "2026-07-31", "url": "#doc-1h26"}, {"name": "Росстат", "kind": "stat", "date": "2026-09-02", "url": "https://rosstat.gov.ru/"}, {"name": "Профиль компании: данные банка (выручка, продукты, платёжный поток)", "kind": "stat", "date": "2026-10-20", "url": ""}], "blocks": {"what": [{"t": "Годовая инфляция на конец августа — 6,32%; непродовольственные товары за неделю подорожали на 0,23%.", "p": "fact", "src": 2}, {"t": "Импорт товаров за 5М26 вырос на 11% г/г в номинале.", "p": "fact", "src": 1}], "why": [{"t": "Закупки у иностранных поставщиков номинированы в валюте — себестоимость растёт вместе с курсом.", "p": "ai"}], "risks": [{"t": "Сжатие маржи, если рост закупочных цен не удастся переложить на покупателей при слабеющем спросе.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Локальные конкуренты без импорта получают ценовое преимущество — возможна переоценка поставщиков.", "p": "ai", "strength": "low"}], "actions": [{"t": "Оценить долю валютных закупок на ближайшие 3 месяца и захеджировать её часть.", "p": "ai", "cta": {"label": "Валютный контроль и хеджирование", "kind": "product"}}], "bank": {"quote": "Ослабление курса рубля, на наш взгляд, продолжит воздействовать на динамику цен в непродовольственном сегменте. Прогноз по курсу — 87 руб./$ на конец 2026 года.", "doc": "Инфляция 25–31 августа; Макростатистика 1П26", "date": "2026-09-02", "stale": false}, "basis": {"features": ["Внешняя торговля: Китай, ОАЭ, Италия", "Поставщики: 268, отрасль известна для 78% потока"], "coverage": "Объём валютных платежей в данных отсутствует — оценка влияния качественная."}, "calc": [{"title": "Валютные расчёты при изменении курса на 1%", "value": "±10 млн ₽ на каждый 1 млрд ₽ валютных закупок", "formula": "1 млрд ₽ × 1%", "inputs": [{"t": "Внешняя торговля: ОАЭ, Китай, Италия", "p": "fact", "src": 3}], "assumptions": ["Изменения курса в новости нет: это масштаб — сколько стоит каждый 1% курса рубля", "Направление внешней торговли (импорт или экспорт) в данных не указано"], "sign": "neutral", "strength": "medium", "scale": {"label": "Ваши валютные закупки за год, млрд ₽", "per_bn": 10000000.0, "period": "за 1% курса"}}]}, "trace": [{"kind": "plan", "title": "План", "detail": "Макро-событие (курс). Проверить ВЭД компании и позицию банка по курсу.", "ms": 500, "cost": 0.04}, {"kind": "tool", "title": "get_company_profile(U_25835)", "detail": "ВЭД=[ОАЭ, Китай, Италия]", "ms": 40, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"курс рубля\")", "detail": "2 фрагмента", "ms": 200, "cost": 0.01}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков", "ms": 3100, "cost": 0.44}, {"kind": "check", "title": "Самопроверка", "detail": "Нет данных об объёме валютных платежей → вывод помечен как качественный.", "ms": 1200, "cost": 0.14}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,79", "ms": 0, "cost": 0}], "chat": [], "is_new": false, "takeaway": {"cfo": "Импортная себестоимость растёт вместе с курсом — маржа под давлением", "ceo": "Закупки в Китае и ОАЭ дорожают — пересмотрите цены или поставщиков", "treasurer": "Захеджируйте валютные платежи поставщикам на ближайшие 3 месяца"}, "key_points": [{"t": "Вы импортируете из Китая, ОАЭ и Италии", "p": "ai"}, {"t": "Банк прогнозирует 87 ₽/$ на конец 2026 и давление на цены непродовольственных товаров", "p": "bank", "src": 0}, {"t": "Импорт за 5М26 вырос на 11% г/г", "p": "fact", "src": 1}]}, {"id": "i-fuel", "type": "info", "impact": "low", "topics": ["контрагенты"], "published": "2026-09-02", "title": "Бензин дорожает быстрее общей инфляции", "why_short": "Логистика доставки запчастей подорожает", "matched": ["поставщики: перевозчики и логистика"], "sources": [{"name": "Альфа-Банк: «Инфляция 25–31 августа»", "kind": "bank", "date": "2026-09-02", "url": "#doc-inflation"}], "blocks": {"what": [{"t": "За неделю 25–31 августа бензин подорожал на 0,91% при общей недельной дефляции 0,01%.", "p": "fact", "src": 0}], "why": [{"t": "Среди поставщиков есть перевозчики — их тарифы, вероятно, вырастут.", "p": "ai"}], "risks": [{"t": "Умеренный рост логистических расходов.", "p": "ai", "strength": "low"}], "opportunities": [], "actions": [{"t": "Учесть в бюджете на конец года рост тарифов перевозчиков.", "p": "ai"}], "bank": {"quote": "Ситуация на рынке топлива не позволяет рассчитывать на то, что новая волна роста цен уже исчерпана; динамика в этом сегменте остаётся важным проинфляционным риском.", "doc": "Инфляция 25–31 августа", "date": "2026-09-02", "stale": false}, "basis": {"features": ["Перевозчики и логистика — менее 1% платежей"], "coverage": "Доля логистики в расходах мала — событие показано как «к сведению»."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Ценовое событие (топливо). Проверить, есть ли у компании топливоёмкие контрагенты.", "ms": 450, "cost": 0.03}, {"kind": "tool", "title": "get_counterparties(U_25835, side=suppliers)", "detail": "ОКВЭД 49/52 — <1% потока", "ms": 110, "cost": 0}, {"kind": "draft", "title": "Черновик карточки", "detail": "Сокращённая карточка: влияние низкое", "ms": 2100, "cost": 0.25}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,41 → «к сведению»", "ms": 0, "cost": 0}], "chat": [], "is_new": false, "takeaway": {"cfo": "Логистика подорожает умеренно — учтите в бюджете на конец года", "ceo": "Небольшой рост транспортных расходов, на бизнес влияет слабо", "treasurer": "Возможна индексация тарифов перевозчиков"}, "key_points": [{"t": "Бензин +0,91% за неделю при общей дефляции", "p": "fact", "src": 0}, {"t": "Перевозчики — меньше 1% ваших расходов", "p": "ai"}]}], "U_177581": [{"id": "i-rate-dev", "type": "risk", "impact": "high", "topics": ["ставка", "спрос", "отрасль"], "published": "2026-09-11", "title": "ЦБ сохранил ставку 14%: снижения в 2026 году не будет", "why_short": "Дорогая ипотека тормозит спрос на жильё, а вы и ваша группа — девелоперы", "matched": ["Строительство зданий", "группа: 482 юрлица, недвижимость и стройка"], "sources": [{"name": "ЦБ РФ, пресс-релиз", "kind": "news", "date": "2026-09-11", "url": "https://www.cbr.ru/"}, {"name": "Альфа-Банк: «Ключевая ставка ЦБ РФ»", "kind": "bank", "date": "2026-09-11", "url": "#doc-policy-rate"}, {"name": "Профиль компании: данные банка (выручка, продукты, платёжный поток)", "kind": "stat", "date": "2026-10-20", "url": ""}], "blocks": {"what": [{"t": "11 сентября ЦБ оставил ключевую ставку на уровне 14,0%, вариант снижения не рассматривался.", "p": "fact", "src": 0}, {"t": "ЦБ отметил ускорение устойчивой инфляции до 5–6%.", "p": "fact", "src": 1}], "why": [{"t": "Рыночная ипотека при ставке 14% остаётся дорогой — спрос на жильё без господдержки слабый.", "p": "ai"}, {"t": "Группа из 482 компаний на 41% состоит из девелопмента и недвижимости — эффект затронет её целиком.", "p": "ai"}, {"t": "У компании есть лизинг: стоимость фондирования техники остаётся высокой.", "p": "ai"}], "risks": [{"t": "Продажи замедлятся, квартиры будут дольше ждать покупателя в IV квартале 2026.", "p": "ai", "strength": "high"}, {"t": "Проектное финансирование дороже из-за медленного наполнения эскроу.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Девелоперские субсидии ставки для покупателей становятся сильным маркетинговым инструментом.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Пересмотреть план продаж на конец 2026 и первое полугодие 2027 с учётом прогноза ставки банка.", "p": "ai"}, {"t": "Обсудить с банком программы субсидирования ипотеки для покупателей.", "p": "ai", "cta": {"label": "Обсудить с менеджером", "kind": "manager"}}], "bank": {"quote": "Теперь мы ожидаем сохранения ставки на текущем значении 14,0% до конца года. Наш прогноз по ставке на конец 2027 года остаётся на уровне 12,0%.", "doc": "Ключевая ставка ЦБ РФ", "date": "2026-09-11", "stale": false}, "basis": {"features": ["Строительство зданий", "Группа: 482 юрлица (68 — 24%, 41 — 17%, 64 — 14%)", "Продукты: лизинг"], "coverage": "Данные о продажах объектов и ипотечной доле в выручке отсутствуют."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Новость о ставке. Компания из стройки — проверить группу и канал влияния через ипотеку.", "ms": 610, "cost": 0.05}, {"kind": "tool", "title": "get_company_profile(U_177581)", "detail": "ОКВЭД 41.20.9, лизинг=1, кредит=0", "ms": 40, "cost": 0}, {"kind": "tool", "title": "get_group_summary(group_134409_sb)", "detail": "482 юрлица → агрегат по 5 отраслям (свёрнуто, чтобы не переполнять контекст)", "ms": 160, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"ключевая ставка\")", "detail": "1 фрагмент", "ms": 190, "cost": 0.01}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков", "ms": 4100, "cost": 0.6}, {"kind": "check", "title": "Самопроверка", "detail": "Кредита у компании нет → вывод про «стоимость долга» заменён на канал через ипотечный спрос и лизинг.", "ms": 1700, "cost": 0.2}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,86", "ms": 0, "cost": 0}], "chat": [{"q": "Что будет со ставкой в 2027 году?", "a": [{"t": "Банк ожидает 14,0% до конца 2026 и 12,0% на конец 2027 года.", "p": "bank"}, {"t": "Оживление рыночной ипотеки вероятно не раньше второй половины 2027 года.", "p": "ai"}], "chart": {"title": "Прогноз Альфа-Банка по ключевой ставке, %", "unit": "%", "points": [["Сейчас", 14.0], ["Конец 2026", 14.0], ["Конец 2027", 12.0]], "note": ""}}], "is_new": true, "takeaway": {"cfo": "Рыночная ипотека останется дорогой до 2027 — спрос на ваши объекты будет слабым", "ceo": "Продажи жилья без льготной ипотеки к концу года замедлятся — пересмотрите план продаж", "treasurer": "Лизинг техники остаётся дорогим, эскроу наполняются медленнее"}, "key_points": [{"t": "Группа на 41% состоит из девелопмента и недвижимости", "p": "ai"}, {"t": "Банк ждёт 14% до конца 2026 и 12% к концу 2027", "p": "bank", "src": 1}, {"t": "ЦБ отметил ускорение устойчивой инфляции до 5–6%", "p": "fact", "src": 1}]}, {"id": "i-bonds", "type": "info", "impact": "medium", "topics": ["долг", "ликвидность"], "published": "2026-09-14", "title": "Доходности ОФЗ выросли: публичный долг дорожает", "why_short": "Если группа планирует облигации — фиксированный купон сейчас невыгоден", "matched": ["группа: 14% — финансовые компании (64)"], "sources": [{"name": "Альфа-Банк: «Бонд Бриф»", "kind": "bank", "date": "2026-09-14", "url": "#doc-bond-brief"}, {"name": "Альфа-Банк: «Долговой рынок 3К26»", "kind": "bank", "date": "2026-07-22", "url": "#doc-fi-strategy"}, {"name": "Минфин РФ", "kind": "news", "date": "2026-09-09", "url": "https://minfin.gov.ru/"}], "blocks": {"what": [{"t": "После заседания ЦБ доходность 14-летнего бенчмарка ОФЗ 26254 выросла до 16,2%.", "p": "fact", "src": 0}, {"t": "Минфин вернулся к размещению ОФЗ-ПД: выпуск 26230 размещён по средневзвешенной доходности 15,97%.", "p": "fact", "src": 2}], "why": [{"t": "В группе есть финансовые компании (14% юрлиц) — вероятный канал привлечения долга для девелопмента.", "p": "ai"}], "risks": [{"t": "Размещение с фиксированным купоном сейчас зафиксирует высокую стоимость надолго.", "p": "ai", "strength": "medium"}], "opportunities": [{"t": "Флоатеры (купон КС + спред) позволят снизить стоимость долга вместе со ставкой в 2027 году.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Если планируется выпуск — рассмотреть плавающий купон.", "p": "ai", "cta": {"label": "Консультация DCM", "kind": "manager"}}], "bank": {"quote": "Корпоративные облигации с переменным купоном — основной инструмент привлечения средств на публичном долговом рынке, более 50% рынка; купон привязан к ключевой ставке или RUONIA.", "doc": "Долговой рынок: тактический взгляд на 3-й квартал 2026", "date": "2026-07-22", "stale": false}, "basis": {"features": ["Группа: 482 юрлица, из них около 14% — финансовые компании"], "coverage": "Нет данных о наличии облигационных выпусков группы — событие «к сведению»."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Новость рынка облигаций. Проверить, есть ли в группе эмитенты/финкомпании.", "ms": 520, "cost": 0.04}, {"kind": "tool", "title": "get_group_summary(group_134409_sb)", "detail": "ОКВЭД 64 — 14% юрлиц", "ms": 150, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"облигации флоатер\")", "detail": "2 фрагмента", "ms": 240, "cost": 0.01}, {"kind": "check", "title": "Недостаточно данных", "detail": "Факт выпусков группы не подтверждён → повторный поиск search_news(\"облигации\", entity=group) → 0 результатов → понижено до «к сведению».", "ms": 900, "cost": 0.06}, {"kind": "draft", "title": "Черновик карточки", "detail": "6 блоков", "ms": 3300, "cost": 0.47}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,62", "ms": 0, "cost": 0}], "chat": [], "is_new": true, "takeaway": {"cfo": "Облигации с фиксированным купоном сейчас дороги — если планируете выпуск, смотрите флоатеры", "ceo": "Публичный долг подорожал — выпуск облигаций лучше отложить или делать с плавающим купоном", "treasurer": "Доходности ОФЗ выросли до 16,2% — фиксировать стоимость долга сейчас невыгодно"}, "key_points": [{"t": "В группе ~14% финансовых компаний — вероятный канал заимствований", "p": "ai"}, {"t": "Доходность ОФЗ 26254 выросла до 16,2%", "p": "fact", "src": 0}, {"t": "Флоатеры — уже более 50% корпоративного рынка", "p": "bank", "src": 1}]}, {"id": "i-consumption-dev", "type": "info", "impact": "low", "topics": ["спрос"], "published": "2026-08-05", "title": "Банк ждёт замедления потребления к концу года", "why_short": "Охлаждение рынка труда снизит спрос на жильё", "matched": ["Строительство зданий"], "sources": [{"name": "Альфа-Банк: «Потребление на пике»", "kind": "bank", "date": "2026-08-05", "url": "#doc-consumption"}], "blocks": {"what": [{"t": "Рост номинальных зарплат замедлился с 15,1% г/г в 1К25 до 10,1% г/г в мае 2026.", "p": "fact", "src": 0}], "why": [{"t": "Покупательная способность населения — ключевой драйвер продаж жилья.", "p": "ai"}], "risks": [{"t": "Слабее спрос на новостройки без субсидированной ипотеки.", "p": "ai", "strength": "low"}], "opportunities": [], "actions": [{"t": "Учесть в прогнозе продаж на 2027 год.", "p": "ai"}], "bank": {"quote": "Мы полагаем, что динамика потребления сейчас находится на пике и в следующие месяцы будет происходить постепенное охлаждение темпов роста спроса.", "doc": "Потребление на пике", "date": "2026-08-05", "stale": false}, "basis": {"features": ["Строительство зданий"], "coverage": ""}}, "trace": [{"kind": "plan", "title": "План", "detail": "Макро-событие (потребление).", "ms": 400, "cost": 0.03}, {"kind": "draft", "title": "Черновик карточки", "detail": "Сокращённая карточка", "ms": 2000, "cost": 0.22}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,44", "ms": 0, "cost": 0}], "chat": [], "is_new": false, "takeaway": {"cfo": "Замедление зарплат снизит спрос на жильё в 2027", "ceo": "Покупательная способность снижается — учтите в прогнозе продаж на 2027", "treasurer": "На ликвидность напрямую не влияет"}, "key_points": [{"t": "Рост зарплат замедлился с 15,1% до 10,1% г/г", "p": "fact", "src": 0}, {"t": "Банк считает, что потребление прошло пик", "p": "bank", "src": 0}]}], "U_200890": [{"id": "i-steel", "type": "info", "impact": "medium", "topics": ["отрасль"], "published": "2026-09-07", "title": "Корпоративные финрезультаты в июне резко снизились", "why_short": "Ваши покупатели — промышленность, слабые финансы клиентов = риск неплатежей", "matched": ["Опт металлов", "покупатели: производство (22, 23, 43)"], "sources": [{"name": "Альфа-Банк: «Макростатистика 7М26»", "kind": "bank", "date": "2026-09-07", "url": "#doc-7m26"}, {"name": "Альфа-Банк: «Российская сталь» (апрель 2021)", "kind": "bank", "date": "2021-04-15", "url": "#doc-steel"}], "blocks": {"what": [{"t": "Сальдированный финансовый результат компаний в июне составил только 400 млрд ₽ после среднемесячных 2,3 трлн ₽ за 5М26.", "p": "fact", "src": 0}, {"t": "Корпоративный кредитный портфель в июле вырос на 1,3% м/м — компании компенсируют выпадающую прибыль заёмными средствами.", "p": "fact", "src": 0}], "why": [{"t": "Среди известных покупателей — производители пластмассовых изделий, бетона и строительные подрядчики, чувствительные к циклу.", "p": "ai"}], "risks": [{"t": "Рост просрочек оплаты со стороны покупателей.", "p": "ai", "strength": "medium"}], "opportunities": [], "actions": [{"t": "Ужесточить условия отсрочки для новых покупателей; рассмотреть банковскую гарантию оплаты.", "p": "ai", "cta": {"label": "Гарантии и аккредитивы", "kind": "product"}}], "bank": {"quote": "Последняя доступная отраслевая оценка банка по металлургии — апрель 2021 года («Ралли цен продолжается»). Она неактуальна для текущей ситуации и в выводе не используется.", "doc": "Российская сталь: превью результатов за 1К21", "date": "2021-04-15", "stale": true}, "basis": {"features": ["Опт металлов", "Покупатели: 29, отрасль известна для 21% потока"], "coverage": "Данные неполные: нет поставщиков; выручка 59,6 млрд ₽ при штате <15 человек нетипична. Вывод ограничен."}}, "trace": [{"kind": "plan", "title": "План", "detail": "Макро-событие (финрезультаты компаний). Нужна отраслевая позиция банка по металлам.", "ms": 560, "cost": 0.04}, {"kind": "tool", "title": "get_company_profile(U_200890)", "detail": "ОКВЭД 46.72, только РКО; флаг качества: выручка/штат аномальны", "ms": 40, "cost": 0}, {"kind": "tool", "title": "search_bank_analytics(\"металлургия сталь\", max_age=365д)", "detail": "0 фрагментов в окне 365 дней", "ms": 210, "cost": 0.01}, {"kind": "check", "title": "Недостаточно данных → повторный поиск", "detail": "search_bank_analytics(\"сталь\", без ограничения) → 1 документ от 15.04.2021 → помечен stale=true, в выводе не используется", "ms": 260, "cost": 0.01}, {"kind": "tool", "title": "get_counterparties(U_200890)", "detail": "покупатели: 29 (покрытие 21%), поставщики: 0", "ms": 90, "cost": 0}, {"kind": "draft", "title": "Черновик карточки", "detail": "Опора на макроаналитику 7М26", "ms": 3500, "cost": 0.5}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,58 · вывод помечен «ограничен данными»", "ms": 0, "cost": 0}], "chat": [], "is_new": true, "takeaway": {"cfo": "Покупатели слабеют финансово — риск задержек оплаты растёт", "ceo": "Финрезультаты промышленности упали — ваши покупатели под давлением", "treasurer": "Ужесточите отсрочки: риск неплатежей вырос"}, "key_points": [{"t": "Прибыль компаний в июне — 400 млрд ₽ против 2,3 трлн в среднем", "p": "fact", "src": 0}, {"t": "Ваши известные покупатели — производство и стройка", "p": "ai"}, {"t": "Свежей оценки банка по металлургии нет (последняя — 2021)", "p": "bank", "src": 1}]}, {"id": "i-rate-metal", "type": "info", "impact": "low", "topics": ["ставка"], "published": "2026-09-11", "title": "ЦБ сохранил ставку 14%", "why_short": "Кредитов в банке у вас нет — прямого влияния мало", "matched": ["продукты банка: только расчётный счёт"], "sources": [{"name": "ЦБ РФ, пресс-релиз", "kind": "news", "date": "2026-09-11", "url": "https://www.cbr.ru/"}, {"name": "Альфа-Банк: «Ключевая ставка ЦБ РФ»", "kind": "bank", "date": "2026-09-11", "url": "#doc-policy-rate"}], "blocks": {"what": [{"t": "Ключевая ставка сохранена на уровне 14,0%.", "p": "fact", "src": 0}], "why": [{"t": "Кредитных продуктов в банке нет; влияние возможно через покупателей, финансирующих закупки в кредит.", "p": "ai"}], "risks": [{"t": "Покупатели будут дольше рассчитываться.", "p": "ai", "strength": "low"}], "opportunities": [{"t": "Свободные остатки на счетах можно разместить под высокую ставку.", "p": "ai", "strength": "medium"}], "actions": [{"t": "Рассмотреть депозит или неснижаемый остаток.", "p": "ai", "cta": {"label": "Депозиты для бизнеса", "kind": "product"}}], "bank": {"quote": "Ожидаем сохранения ставки 14,0% до конца года.", "doc": "Ключевая ставка ЦБ РФ", "date": "2026-09-11", "stale": false}, "basis": {"features": ["Продукты банка: расчётный счёт"], "coverage": ""}}, "trace": [{"kind": "plan", "title": "План", "detail": "Новость о ставке.", "ms": 420, "cost": 0.03}, {"kind": "tool", "title": "get_company_profile(U_200890)", "detail": "кредит=0, депозит=0", "ms": 40, "cost": 0}, {"kind": "draft", "title": "Черновик карточки", "detail": "Нативное предложение: депозит (нет депозитов, высокая ставка)", "ms": 2300, "cost": 0.27}, {"kind": "done", "title": "Готово", "detail": "Релевантность 0,39", "ms": 0, "cost": 0}], "chat": [], "is_new": false, "takeaway": {"cfo": "Кредитов у вас нет — зато остатки можно разместить под высокую ставку", "ceo": "Прямого влияния почти нет; покупатели будут дольше рассчитываться", "treasurer": "Высокая ставка — время положить свободные остатки на депозит"}, "key_points": [{"t": "Ставка сохранена на 14%", "p": "fact", "src": 0}, {"t": "Из продуктов банка у вас только расчётный счёт", "p": "ai"}]}]}, "zones": [{"id": "debt", "name": "Долг и финансирование", "topics": ["ставка", "долг"]}, {"id": "liquidity", "name": "Ликвидность и расчёты", "topics": ["ликвидность", "контрагенты"]}, {"id": "industry", "name": "Отрасль и спрос", "topics": ["отрасль", "спрос"]}, {"id": "ved", "name": "ВЭД и валюта", "topics": ["курс"]}, {"id": "tax", "name": "Налоги", "topics": ["налоги"]}]}</script>
 <script>
 
 let DATA = JSON.parse(document.getElementById('data').textContent);
@@ -369,7 +422,7 @@ function loadRead() { try { return new Set(JSON.parse(localStorage.getItem(READ_
 function saveRead() { try { localStorage.setItem(READ_KEY, JSON.stringify([...state.read].slice(-500))); } catch (e) {  } }
 const state = {company: null, role: null, open: null,
   read: loadRead(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {},
-  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}, zone: '', before: {}};
+  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}, zone: '', whyAll: {}, before: {}};
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   const data = await r.json().catch(() => ({}));
@@ -413,7 +466,25 @@ function supersededIds(items) {
     if (a !== b && (a.topics || [])[0] && (a.topics || [])[0] === (b.topics || [])[0] && ageDays(a) - ageDays(b) >= 3) out.add(a.id);
   return out;
 }
-const priority = (i, old) => isMine(i) ? 'mine' : old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old' : i.type === 'info' ? 'info' : i.impact === 'high' ? 'act' : 'watch';
+
+const realMoney = i => (i.blocks.calc || []).some(c => calcSign(c) !== 'neutral' && calcFits(c, i));
+const hasCta = i => (i.blocks.actions || []).some(a => a.cta);
+const priority = (i, old) => isMine(i) ? 'mine' : old.has(i.id) || ageDays(i) > OLD_DAYS ? 'old'
+  : i.type !== 'info' && (i.impact === 'high' || realMoney(i) || hasCta(i)) ? 'act'
+  : i.type !== 'info' || i.impact !== 'low' || i.until ? 'watch' : 'info';
+
+const DEDUP_TOPICS = ['ставка', 'курс', 'налоги'];
+function sameDayDups(items) {
+  const keep = {}, dupOf = {};
+  const best = [...items].sort((a, b) => b.score - a.score || (origin(b) !== 'rules') - (origin(a) !== 'rules'));
+  for (const i of best) {
+    const t = (i.topics || []).find(x => DEDUP_TOPICS.includes(x));
+    if (!t || isMine(i)) continue;
+    const k = t + '|' + i.published;
+    if (keep[k]) dupOf[i.id] = keep[k]; else keep[k] = i.id;
+  }
+  return dupOf;
+}
 
 function ranked() {
   const key = state.company + '|' + state.role, items = scored(), by = Object.fromEntries(items.map(i => [i.id, i]));
@@ -428,31 +499,24 @@ function ranked() {
     const g = o.group[i.id] = pr(i), at = o.ids.findIndex(id => PR_IDX[o.group[id]] >= PR_IDX[g]);
     o.ids.splice(at < 0 ? o.ids.length : at, 0, i.id);
   }
-  return o.ids.filter(id => by[id]).map(id => ({...by[id], group: o.group[id]}));
+  const dupOf = sameDayDups(items), dups = {};
+  for (const [d, k] of Object.entries(dupOf)) (dups[k] = dups[k] || []).push(d);
+  return o.ids.filter(id => by[id]).map(id => ({...by[id], group: o.group[id], dupOf: dupOf[id] || '', dups: dups[id] || []}));
 }
-const newCount = () => ranked().filter(isNew).length;
+const shown = items => items.filter(i => !i.dupOf || state.open === i.id);
+const newCount = () => ranked().filter(i => !i.dupOf && isNew(i)).length;
 const ZONES = () => DATA.zones || [];
 const zoneName = id => (ZONES().find(z => z.id === id) || {}).name || id;
 const zonesOf = i => ZONES().filter(z => z.topics.some(t => (i.topics || []).includes(t))).map(z => z.id);
 const myZones = () => role().zones || [];
 const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? b : c;
 const inZone = (i, z) => !z || (z === 'mine' ? zonesOf(i).some(x => myZones().includes(x)) : zonesOf(i).includes(z));
-function zoneSummary(items) {
-  const row = id => {
-    const its = items.filter(i => zonesOf(i).includes(id)), risk = its.filter(i => i.type === 'risk').length;
-    const opp = its.filter(i => i.type === 'opportunity').length, nw = its.filter(isNew).length;
-    const st = [risk ? `${risk} ${plural(risk, 'риск', 'риска', 'рисков')}` : '', opp ? `${opp} ${plural(opp, 'возможность', 'возможности', 'возможностей')}` : '',
-      nw ? `${nw} ${plural(nw, 'новое', 'новых', 'новых')}` : ''].filter(Boolean).join(', ') || 'спокойно';
-    return `<a class="zone ${risk ? 'risk' : ''}" href="#feed" data-zone="${id}"><b>${esc(zoneName(id))}</b>: ${st}</a>`;
-  };
-  return myZones().length ? `<div class="zones" aria-label="Ваши зоны ответственности">${myZones().map(row).join('')}</div>` : '';
-}
 function zoneFilter(items) {
   const mine = myZones(), rest = ZONES().map(z => z.id).filter(id => !mine.includes(id));
   const btn = (id, name, n) => `<button class="zf ${state.zone === id ? 'on' : ''}" data-zf="${id}" aria-pressed="${state.zone === id}">${esc(name)}${n === null ? '' : ` <span class="n">${n}</span>`}</button>`;
   const count = id => items.filter(i => inZone(i, id)).length;
-  return `<div class="zfs" role="group" aria-label="Фильтр по зонам ответственности">${btn('', 'Все', null)}${mine.length ? btn('mine', 'Мои зоны', count('mine')) : ''}`
-    + [...mine, ...rest].map(id => count(id) ? btn(id, zoneName(id), count(id)) : '').join('') + '</div>';
+  return `<div class="zfs" role="group" aria-label="Фильтр по зонам ответственности">${btn('', 'Все', items.length)}${mine.length ? btn('mine', 'Мои зоны', count('mine')) : ''}`
+    + [...mine, ...rest].map(id => count(id) ? btn(id, zoneName(id), null) : '').join('') + '</div>';
 }
 
 function companyOptions() {
@@ -490,13 +554,13 @@ function renderNav(route) {
   const n = newCount();
   $('#nav').innerHTML = `
     <a href="#home" class="${route === 'home' ? 'on' : ''}">Главная</a>
-    <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>
-    ${API ? `<div class="nav-foot">Для сотрудников банка<a href="#admin" class="${route === 'admin' ? 'on' : ''}">Панель управления</a></div>` : ''}`;
+    <a href="#feed" class="${route === 'feed' ? 'on' : ''}">Новости для бизнеса ${n ? `<span class="badge-new">${n}</span>` : ''}</a>`;
 }
+const appFoot = () => API ? '<footer class="app-foot">Для сотрудников банка: <a href="#admin">панель управления</a></footer>' : '';
 
 const aiReady = () => !!(DATA.status && DATA.status.llm_online && !(DATA.status.spent_today_rub >= DATA.status.budget_rub));
 const aiBanner = () => API && DATA.status && !aiReady()
-  ? '<div class="ai-off" role="status">ИИ-аналитик недоступен — краткие разборы: факты, позиция банка, расчёт и выводы по правилам, без ИИ</div>' : '';
+  ? '<div class="ai-off" role="status"><i class="i" aria-hidden="true">i</i><div><b>ИИ-аналитик сейчас недоступен.</b> Карточки ниже — быстрые выводы по данным банка: факты новости, позиция банка и расчёт в рублях. Углубить разбор с ИИ можно будет, когда он снова станет доступен.</div></div>' : '';
 
 let opener = null;
 let lastPressed = null;
@@ -522,7 +586,8 @@ function showModal(title, text, form = false, submit = 'Отправить ме�
   (form ? $('#modal-form').comment : $('#modal-ok')).focus(); }
 
 
-const srcLink = (s, inner, title = '') => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener"${title ? ` title="${esc(title)}"` : ''}>${inner}</a>` : `<span title="${esc(title)}">${inner}</span>`;
+const webUrl = u => /^https?:\/\/[^\s"<>]+$/i.test(String(u || '').trim()) ? String(u).trim() : '';
+const srcLink = (s, inner, title = '') => webUrl(s.url) ? `<a href="${esc(webUrl(s.url))}" target="_blank" rel="noopener noreferrer"${title ? ` title="${esc(title)}"` : ''}>${inner}</a>` : `<span title="${esc(title)}">${inner}</span>`;
 const ref = (s, i) => (s.src !== undefined && i && i.sources[s.src]) ? ` <sup>${srcLink(i.sources[s.src], `[${s.src + 1}]`, i.sources[s.src].name)}</sup>` : '';
 function stmtHtml(s, i) {
   const str = s.strength ? `<span class="str" title="${STR_TIP}">${STR_RU[s.strength]}</span>` : '';
@@ -569,7 +634,7 @@ function calcSign(c) {
 const calcFits = (c, i) => i.type === 'info' || [i.type, 'neutral'].includes(calcSign(c));
 const calcsOf = i => [...(i.blocks.calc || [])].sort((a, b) => calcFits(b, i) - calcFits(a, i));
 function calcHtml(c, i) {
-  const sc = c.scale ? `<label class="calc-s">${esc(c.scale.label)} <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="напр. 5" data-per="${c.scale.per_bn}" data-signed="${c.sign !== 'neutral'}" data-fam="${famOf(c.title)}" data-period="${esc(c.scale.period)}"> <output>→ введите сумму, чтобы пересчитать</output></label>` : '';
+  const sc = c.scale ? `<label class="calc-s">${esc(c.scale.label)} <input type="number" min="0" step="0.1" inputmode="decimal" placeholder="напр. 5" data-per="${c.scale.per_bn}" data-signed="${c.sign !== 'neutral'}" data-pm="${/^±/.test(c.value)}" data-fam="${famOf(c.title)}" data-period="${esc(c.scale.period)}"> <output>→ введите сумму, чтобы пересчитать</output></label>` : '';
   return `<div class="calc ${calcSign(c)}"><div class="calc-h"><span>${esc(c.title)}</span><span class="calc-v">${esc(moneyValue(c))}</span></div>
     <div class="calc-f">Формула: <code>${esc(c.formula)}</code>${c.strength ? ' · надёжность оценки: ' + CALC_STR[c.strength] : ''}</div>${sc}
     <details><summary>Данные и допущения</summary>${c.inputs.map(s => stmtHtml(s, i)).join('')}<ul>${c.assumptions.map(a => `<li>${esc(a)}</li>`).join('')}</ul></details></div>`;
@@ -588,6 +653,16 @@ function forWho(c) {
 }
 function srcShort(i) { const m = i.sources.length - 1; return esc(i.sources[0].name) + (m > 0 ? ` +${m}` : ''); }
 const plainFeat = s => s.replace(/\s*\(\d{2}\)|\s*(?:из\s+)?ОКВЭД\s*\d+(?:\.\d+)*/g, '').replace('входящего потока', 'поступлений').replace('исходящего потока', 'платежей');
+const numsOf = s => s.match(/\d+(?:[.,]\d+)?/g) || [];
+
+const PM_HEAD = {'Стоимость долга': 'Ставка ±1 п.п.', 'Валютные расчёты': 'Курс ±1%'};
+function numChips(i, take) {
+  const short = v => v.replace(' на каждый ', ' на ').replace(/ с плавающей ставкой| \((?:дороже|дешевле) в рублях\)/g, '');
+  const head = c => /^±/.test(c.value) ? PM_HEAD[Object.keys(PM_HEAD).find(k => c.title.startsWith(k))] || c.title : c.title.split(/: | — /)[0];
+  const calc = calcsOf(i).filter(c => calcFits(c, i)).slice(0, 1).map(c => `${head(c)}: ${short(moneyValue(c))}`);
+  const flows = (i.matched || []).filter(m => /\d+%/.test(m)).map(plainFeat);
+  return [...calc, ...flows].filter(c => !numsOf(c).every(n => take.includes(n))).slice(0, 3);
+}
 const evId = i => i.id.slice(0, -(state.company.length + 1));
 const cardJob = i => state.jobs[state.company + ':' + evId(i)];
 const jobMark = (j, prefix) => `<span class="jobchip" data-jobkey="${esc(j.key)}" data-prefix="${prefix}">${prefix}${Math.round(j.progress)}%</span>`;
@@ -640,15 +715,26 @@ function disclaimerHtml(cards) {
 }
 
 
+function relDate(d) {
+  const n = Math.round((today() - new Date(d + 'T00:00:00')) / 864e5);
+  if (n < 0 || n >= 7) return fmtDate(d);
+  return `${n === 0 ? 'сегодня' : n === 1 ? 'вчера' : `${n} ${plural(n, 'день', 'дня', 'дней')} назад`}, ${fmtDate(d)}`;
+}
+const dateHtml = i => `<span class="ic-date" title="${esc(fmtDateY(i.published))}">${relDate(i.published)}</span>`;
+const tagHtml = i => `<span class="tag ${i.type}">${i.type === 'info' ? cap(IMPACT_RU[i.impact]) : cap(TYPE_RU[i.type]) + ' · ' + IMPACT_RU[i.impact]}</span>`;
+const dupNote = i => i.dups.length ? `<span class="dup">+${i.dups.length} ${plural(i.dups.length, 'сообщение', 'сообщения', 'сообщений')} по теме</span>` : '';
+
 function cardHtml(i) {
   const open = state.open === i.id, nw = isNew(i), job = cardJob(i), take = takeaway(i);
-  const bank = (i.key_points || []).find(s => s.p === 'bank');
+  const chips = numChips(i, take), bank = !open && (i.key_points || []).find(s => s.p === 'bank');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span>${factorTag(i)}<span class="imp" title="Насколько событие совпадает с профилем компании по данным банка: продукты, внешняя торговля, отрасли покупателей и поставщиков">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Собран кодом за доли секунды: факты новости, данные вашей компании в банке, позиция банка и расчёт — без ИИ">Быстрый вывод по данным банка (без ИИ)</span>' : ''}${state.before[i.id] ? '<span class="ai-upd">Обновлено ИИ-аналитиком</span>' : ''}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}${i.type !== 'info' ? `<span class="tag ${i.type}">${TYPE_RU[i.type]}</span>` : ''}${factorTag(i)}<span class="imp" title="Насколько событие совпадает с профилем компании по данным банка: продукты, внешняя торговля, отрасли покупателей и поставщиков">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Собран кодом за доли секунды: факты новости, данные вашей компании в банке, позиция банка и расчёт — без ИИ">Быстрый вывод по данным банка (без ИИ)</span>' : ''}${state.before[i.id] ? '<span class="ai-upd">Обновлено ИИ-аналитиком</span>' : ''}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}${dateHtml(i)}</div>
       <div class="ic-take">${esc(take)}</div>
+      ${chips.length ? `<div class="nchips">${chips.map(c => `<span class="nchip">${esc(c)}</span>`).join('')}</div>` : ''}
+      ${i.until ? `<div class="ic-until">Ключевая дата: <b>${esc(i.until)}</b></div>` : ''}
       ${bank ? kpNote(bank, i) ? `<div class="kp-bank kp-note">${esc(bank.t)}${ref(bank, i)}</div>` : `<div class="kp-bank" title="Позиция банка">${esc(bank.t)}${ref(bank, i)}</div>` : ''}
-      <div class="ic-foot"><span class="ic-ev" title="${esc(i.title)}">${esc(i.title)} · ${srcShort(i)}</span><span class="more">${open ? 'Свернуть' : 'Подробнее'} <span class="chev">▾</span></span></div>
+      <div class="ic-foot"><span class="ic-ev" title="${esc(i.title)}">${esc(i.title)} · ${srcShort(i)}</span>${dupNote(i)}<span class="more">${open ? 'Свернуть' : 'Подробнее'} <span class="chev">▾</span></span></div>
     </button>
     ${open ? bodyHtml(i) : ''}
   </article>`;
@@ -657,7 +743,7 @@ function rowHtml(i) {
   const nw = isNew(i);
   return `<article class="ic row ${nw ? 'is-new' : ''}" id="card-${i.id}"><button class="ic-head" data-toggle="${i.id}" aria-expanded="false">
     <span class="${nw ? 'dot-new' : 'dot-read'}"></span><span class="row-main"><span class="row-take">${esc(takeaway(i))}</span><span class="ic-ev">${esc(i.title)}</span></span>
-    <span class="ic-date">${fmtDate(i.published)}</span><span class="more"><span class="chev">▾</span></span></button></article>`;
+    ${dateHtml(i)}<span class="more"><span class="chev">▾</span></span></button></article>`;
 }
 
 
@@ -668,21 +754,33 @@ function whatHappened(i, b) {
     <div class="foot-note">Откуда: ${how}${(i.matched || []).length ? ` — ${esc(i.matched.slice(0, 3).map(plainFeat).join(', '))}` : ''}. Факты ниже — дословно из источника; выводы — в разделах ниже.</div>
     ${list(b.what, i)}</details>`;
 }
+
+function actionsRow(i, main = true) {
+  const btn = (pri, kind, label) => `<button class="btn ${pri ? 'pri' : ''}" data-cta="${kind}" data-label="${esc(label)}">${esc(label)}</button>`;
+  const ctas = i.blocks.actions.filter(a => a.cta).map((a, k) => btn(main && !k, a.cta.kind, a.cta.label));
+  const recalc = calcsOf(i).some(c => c.scale) ? `<button class="btn ${ctas.length || !main ? '' : 'pri'}" data-recalc>Пересчитать под мою сумму</button>` : '';
+  const manager = !ctas.length && !recalc && i.type !== 'info' ? btn(main, 'manager', 'Обсудить с менеджером') : '';
+  const row = [...ctas, recalc, manager].filter(Boolean).join('');
+  return row ? `<div class="actions-row">${row}</div>` : '';
+}
+const WHY_SHOWN = 2;
 function bodyHtml(i) {
   const b = i.blocks, fb = state.feedback[i.id], job = cardJob(i), running = job && job.status === 'running';
   const upgradable = origin(i) === 'rules' && API && aiReady();
-  const ctas = b.actions.filter(a => a.cta).map(a => `<button class="btn pri" data-cta="${a.cta.kind}" data-label="${esc(a.cta.label)}">${esc(a.cta.label)}</button>`).join('');
-  const chatLog = (state.chats[i.id] || []).join('');
+  const chatLog = (state.chats[i.id] || []).join(''), acts = actionsRow(i, !upgradable);
   const srcNames = [...new Set(i.sources.map(s => s.name))].slice(0, 3).join(', ');
+  const why = state.whyAll[i.id] ? b.why : b.why.slice(0, WHY_SHOWN), whyRest = b.why.length - why.length;
+  const dups = i.dups.map(id => ranked().find(x => x.id === id)).filter(Boolean);
   return `<div class="ic-body">
     ${aiAdded(i)}
     ${legendHtml(i)}
     ${whatHappened(i, b)}
-    ${b.actions.length ? `<div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>` : ''}
+    ${b.actions.length || acts ? `<div class="sec"><h3>Что можно сделать</h3>${b.actions.length ? list(b.actions, i) : ''}${acts}</div>` : ''}
     ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${calcsOf(i).map(c => calcHtml(c, i)).join('')}</div>` : ''}
-    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
+    ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(why, i)}${whyRest ? `<button class="linkbtn why-more" data-why-all>Ещё ${whyRest} ${plural(whyRest, 'причина', 'причины', 'причин')}</button>` : ''}</div>` : ''}
     ${b.risks.length || b.opportunities.length ? `<div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>` : ''}
     <div class="sec"><h3>Как оценивает банк${state.before[i.id] && b.bank.quote && !state.before[i.id].has('bank:' + b.bank.quote) ? '<span class="sec-new" title="Позицию банка нашёл ИИ-аналитик">новое</span>' : ''}</h3>${bankHtml(i)}</div>
+    ${dups.length ? `<details class="sec-d"><summary>Ещё по теме за этот день <span class="muted">· ${dups.length}</span></summary>${dups.map(d => `<div class="stmt fact"><a href="#feed/${d.id}">${esc(d.title)}</a> <span class="muted">· ${srcShort(d)}</span></div>`).join('')}</details>` : ''}
     <details class="sec-d"><summary>На чём основан вывод <span class="muted">· ${esc(srcNames)}</span></summary><div class="two">
       <div><h4>Источники</h4><ol class="srcs">${i.sources.map(s => `<li><span class="kind ${s.kind}">${s.kind === 'bank' ? 'банк' : s.kind === 'stat' ? 'статистика' : 'новость'}</span>${srcLink(s, esc(s.name))} <span class="muted">· ${fmtDateY(s.date)}</span></li>`).join('')}</ol></div>
       <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(plainFeat(f))}</span>`).join('')}
@@ -692,10 +790,9 @@ function bodyHtml(i) {
       <button class="btn ${upgradable ? '' : 'pri'} ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}" title="Ответ по этому разбору, данным вашей компании и аналитике банка">Уточнить вопросы</button>
       <button class="btn" data-trace="${i.id}">Как получен вывод</button>
       <button class="btn" data-share>Переслать</button>
-      <span class="sp"></span>
-      <span class="muted">Оценка:</span>
-      <button class="btn ${fb === 'up' ? 'sel' : ''}" data-fb="up">Полезно</button>
-      <button class="btn ${fb === 'down' ? 'sel' : ''}" data-fb="down">Не про нас</button>
+      <span class="fbk"><span class="muted">Оценка:</span>
+        <button class="btn ${fb === 'up' ? 'sel' : ''}" data-fb="up">Полезно</button>
+        <button class="btn ${fb === 'down' ? 'sel' : ''}" data-fb="down">Не про нас</button></span>
     </div>
     <div class="chat ${state.chatOpen[i.id] ? 'on' : ''}">
       ${i.chat.length || API ? `<div class="sugg">${API ? (DATA.follow_ups || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}${i.chat.map((c, k) => `<button data-q="${k}">${esc(c.q)}</button>`).join('')}${API ? (DATA.chat_suggestions || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}</div>` : ''}
@@ -729,24 +826,40 @@ function homeItems(items) {
     keys.forEach(k => seen.add(k)); return true;
   });
 }
+
+function dayLine(items) {
+  const act = items.filter(i => i.group === 'act'), watch = items.filter(i => i.group === 'watch'), n = newCount();
+  const fs = company().factors || [], names = [...new Set([...act, ...watch].flatMap(factorIds))]
+    .map(id => (fs.find(f => f.id === id) || {}).title).filter(Boolean).map(t => t.split(':')[0].toLowerCase()).slice(0, 3);
+  const ev = k => `${k} ${plural(k, 'событие', 'события', 'событий')}`;
+  const head = act.length ? `${cap(ev(act.length))} ${act.length === 1 ? 'требует' : 'требуют'} решения`
+    : 'Сегодня решений не требуется';
+  const stat = (cls, k, label) => `<a class="stat ${cls}${k ? '' : ' zero'}" href="#feed"><b>${k}</b><span>${label}</span></a>`;
+  return `<section class="card brief" aria-label="Брифинг дня"><div class="eyebrow">Брифинг · ${fmtDateY(today())}</div>
+    <div class="brief-t">${head}</div>
+    <div class="stats">${stat('act', act.length, plural(act.length, 'требует решения', 'требуют решения', 'требуют решения'))}${stat('watch', watch.length, 'под наблюдением')}${stat('new', n, plural(n, 'новое в ленте', 'новых в ленте', 'новых в ленте'))}</div>
+    ${names.length ? `<div class="brief-f">Затронуто: ${esc(names.join(', '))}</div>` : ''}</section>`;
+}
 function viewHome() {
-  const ok = homeItems(ranked().filter(i => i.group !== 'mine')), fresh = ok.filter(i => i.group !== 'old');
+  const all = ranked().filter(i => i.group !== 'mine' && !i.dupOf), ok = homeItems(all), fresh = ok.filter(i => i.group !== 'old');
   const c = company(), top = topDistinct(fresh, 3), n = newCount();
   const last = top.length ? null : ok.filter(i => i.group === 'old').sort((a, b) => b.published.localeCompare(a.published))[0];
   const item = i => `<a class="w-item" href="#feed/${i.id}"><span class="${isNew(i) ? 'dot-new' : 'dot-read'}"></span>
-        <span><span class="tag ${i.type}">${TYPE_RU[i.type]}</span><div class="w-take" style="margin-top:4px">${esc(homeLine(i))}</div><div class="w-ev">${esc(labelTake(i) ? takeaway(i) : i.title)}</div></span></a>`;
-  const body = top.length ? (top.length < 3 ? `<div class="w-sub">Сегодня по-настоящему важно ${top.length} ${top.length === 1 ? 'событие' : 'события'}</div>` : '') + top.map(item).join('')
+        <span><div class="w-take">${esc(homeLine(i))}</div><div class="w-ev">${esc(labelTake(i) ? takeaway(i) : i.title)} · ${relDate(i.published)}</div></span></a>`;
+  const byGroup = PRIORITY.filter(([g]) => ['act', 'watch', 'info'].includes(g))
+    .map(([g, name]) => [name, top.filter(i => i.group === g)]).filter(x => x[1].length);
+  const body = top.length ? byGroup.map(([name, its]) => `<div class="w-grp">${name}</div>${its.map(item).join('')}`).join('')
     : last ? `<div class="w-quiet">Сегодня ничего, что требует решения. <a href="#feed/${last.id}">Последнее важное: ${esc(homeLine(last))} →</a></div>`
     : `<div class="empty">Значимых событий за сутки нет${API ? ' · <a class="linkbtn" href="#feed">Новости по вашему профилю →</a>' : ''}</div>`;
-  return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
-    ${companySummary(c)}
-    <div class="card widget" style="margin-top:16px">
-      <div class="widget-head"><h2>Важное для вашего бизнеса${hint('Три самых важных свежих события для компании и выбранной роли — из ленты «Новости для бизнеса»: сначала то, что требует решения, затем по силе влияния и темам роли. Это то, что произошло сейчас. «Чувствительность бизнеса» ниже — через что внешние события вообще влияют на компанию.')} ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
-      ${zoneSummary(fresh)}
+  return `<h1>${esc(c.display)}</h1><div class="muted">${esc(role().name)}</div>
+    ${dayLine(all.filter(i => i.group !== 'old'))}
+    <div class="card widget">
+      <div class="widget-head"><h2>Важное для вашего бизнеса${hint('Самые важные свежие события для компании и выбранной роли — из ленты: сначала то, что требует решения, потом за чем следить. «Риски и чувствительность бизнеса» ниже — через что внешние события вообще влияют на компанию.')}</h2><a class="linkbtn all" href="#feed">Вся лента ${n ? `<span class="badge-new">${n} ${plural(n, 'новое', 'новых', 'новых')}</span>` : ''} →</a></div>
       ${body}
-      ${disclaimerHtml(top.length ? top : last ? [last] : [])}
     </div>
-    ${factorsHtml(c)}`;
+    ${factorsHtml(c)}
+    <details class="profile"><summary>Данные банка о компании</summary>${companySummary(c)}</details>
+    ${disclaimerHtml(top.length ? top : last ? [last] : [])}`;
 }
 
 const TYPE_STATUS = {risk: 'Риск', opportunity: 'Возможность', info: 'Мониторинг'};
@@ -764,19 +877,21 @@ function factorTag(i) {
 }
 function factorsHtml(c) {
   if (!(c.factors || []).length) return '';
-  const items = ranked().filter(i => i.group !== 'old' && i.group !== 'mine');
+  const items = ranked().filter(i => i.group !== 'old' && i.group !== 'mine' && !i.dupOf);
   const LV = {high: 0, medium: 1, low: 2}, rank = r => (r || []).indexOf(state.role) < 0 ? 9 : r.indexOf(state.role);
   const pressure = x => !x.top ? 0 : x.top.type === 'info' ? 1 : 2;
-  const rows = c.factors.map(p => {
-    const hit = items.filter(i => factorIds(i).includes(p.id));
+  const used = new Set();
+  const rows = [...c.factors].sort((a, b) => LV[a.level] - LV[b.level] || rank(a.roles) - rank(b.roles)).map(p => {
+    const hit = items.filter(i => factorIds(i).includes(p.id) && !used.has(i.id));
     const top = hit.find(i => i.type !== 'info') || hit[0];
+    if (top) used.add(top.id);
     return {p, top, n: hit.length};
-  }).sort((a, b) => pressure(b) - pressure(a) || rank(a.p.roles) - rank(b.p.roles) || LV[a.p.level] - LV[b.p.level]).slice(0, 5);
+  }).sort((a, b) => LV[a.p.level] - LV[b.p.level] || pressure(b) - pressure(a) || rank(a.p.roles) - rank(b.p.roles)).slice(0, 5);
   const row = ({p, top, n}) => `<div class="factor"><span class="lv ${p.level}" title="${{high: 'высокая чувствительность', medium: 'средняя чувствительность', low: 'низкая чувствительность'}[p.level]}"></span>
     <div><b>${esc(p.title)}</b><div class="pd">${esc(p.detail)}</div>
-      ${top ? `<div class="ps ${top.type}">${TYPE_STATUS[top.type]}: <a href="#feed/${top.id}">${esc(homeLine(top))} →</a>${n > 1 ? ` <span class="muted">+${n - 1}</span>` : ''}</div>`
+      ${top ? `<div class="ps ${top.type}"><span>${TYPE_STATUS[top.type]}:</span><a href="#feed/${top.id}" title="${esc(top.title)}">${esc(top.title)}</a><span class="muted">${relDate(top.published)}${n > 1 ? ` · ещё ${n - 1}` : ''} →</span></div>`
         : `<div class="ps calm">Значимых событий нет · отслеживаем: ${esc(p.watch)}</div>`}</div></div>`;
-  return `<div class="card factors"><h2>Чувствительность бизнеса${hint('Постоянные «слабые места» компании по данным Альфа-Банка: долг с плавающей ставкой, валютные расчёты, зависимость от крупных покупателей и поставщиков, отраслевые налоги. Они есть, даже когда новостей нет. Точка — насколько компания чувствительна к фактору: красная — сильно, оранжевая — средне, серая — слабо. Под фактором — самое важное свежее событие по нему (риск, возможность или мониторинг): ссылка открывает его разбор в ленте, «+N» — сколько ещё событий по этому фактору.')}</h2><div class="muted" style="margin-bottom:4px">Факторы, через которые внешние события влияют на компанию, — по данным Альфа-Банка</div>${rows.map(row).join('')}</div>`;
+  return `<div class="card factors"><h2>Риски и чувствительность бизнеса${hint('Постоянные «слабые места» компании по данным Альфа-Банка: долг с плавающей ставкой, валютные расчёты, зависимость от крупных покупателей и поставщиков, отраслевые налоги. Они есть, даже когда новостей нет. Точка — насколько компания чувствительна к фактору: красная — сильно, оранжевая — средне, серая — слабо; сильные — выше. Под фактором — самое важное свежее событие по нему, ссылка открывает его разбор.')}</h2><div class="muted" style="margin-bottom:4px">Факторы, через которые внешние события влияют на компанию, — по данным Альфа-Банка</div>${rows.map(row).join('')}</div>`;
 }
 const RULES_HINT = 'Этот вывод собрал код за доли секунды, без ИИ. Правила написала команда по материалам кейса и аналитике Альфа-Банка: '
   + 'как типовые события доходят до денег компании — решение ЦБ по ставке → стоимость кредита и лизинга; курс → расчёты с зарубежными партнёрами; '
@@ -797,7 +912,7 @@ function flowCard(title, s, who) {
 }
 function companySummary(c) {
   const prods = c.products.length ? c.products.map(x => x === 'РКО' ? 'расчётный счёт' : x).join(', ') : 'нет';
-  return `<div class="grid3" style="margin-top:16px">
+  return `<div class="grid3">
     <div class="card"><h3 class="card-h">Компания</h3>
       <div class="kv"><span>Выручка за год</span><b>${c.revenue_bn.toLocaleString('ru-RU')} млрд ₽</b></div>
       <div class="kv"><span>Регион</span><b>${esc(c.region)}</b></div>
@@ -810,33 +925,36 @@ function companySummary(c) {
 }
 function viewFeed() {
   const c = company();
-  const all = ranked(), items = all.filter(i => i.group === 'mine' || inZone(i, state.zone));
+  const all = shown(ranked()), items = all.filter(i => i.group === 'mine' || inZone(i, state.zone));
   const groups = PRIORITY.map(([id, name]) => [id, name, items.filter(i => i.group === id)]).filter(g => g[2].length);
+  const noAct = items.some(i => ['watch', 'info'].includes(i.group)) && !items.some(i => i.group === 'act');
   return `<h1>Новости для бизнеса</h1>${forWho(c)}${aiBanner()}
-    ${c.data_quality.length ? `<div class="dq"><b>Данные о компании неполные — выводы ориентировочные.</b><br>${c.data_quality.map(esc).join('<br>')}</div>` : ''}
+    ${c.data_quality.length ? `<details class="dq"><summary>Данные о компании неполные — выводы ориентировочные</summary>${c.data_quality.map(esc).join('<br>')}</details>` : ''}
     ${API ? quickForm() : ''}
     ${all.length ? zoneFilter(all.filter(i => i.group !== 'mine')) : ''}
     ${all.length && !items.length ? `<div class="card empty">В зоне «${esc(state.zone === 'mine' ? 'Мои зоны' : zoneName(state.zone))}» событий нет</div>` : ''}
-    ${items.length ? groups.map(([id, name, its]) => `<section class="grp"><h2 class="grp-h">${name}<span class="n">${its.length}</span></h2>
+    ${noAct ? '<div class="no-act">Сегодня решений не требуется — ниже события, за которыми стоит следить</div>' : ''}
+    ${items.length ? groups.map(([id, name, its]) => `<section class="grp grp-${id}"><h2 class="grp-h">${name}<span class="n">${its.length}</span></h2>
       ${its.map(i => (id === 'info' || id === 'old') && state.open !== i.id ? rowHtml(i) : cardHtml(i)).join('')}</section>`).join('')
       : all.length ? '' : '<div class="card empty">Разобранных событий пока нет — выберите новость ниже или вставьте ссылку</div>'}
     ${API ? `<div class="sec"><h3>Ещё новости по вашему профилю</h3><div id="events-box">${eventsHtml()}</div></div>` : ''}`;
 }
 function quickForm() {
-  return `<form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость" aria-describedby="an-err">
+  return `<details class="quick-box quick-more" ${state.quickOpen ? 'open' : ''}><summary>Оценить новость по ссылке или по тексту</summary>
+    <form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость" aria-describedby="an-err">
       <button class="btn pri">Оценить</button></form><div class="an-err" id="an-err" role="alert"></div>
-    <details class="quick-more" ${state.quickOpen ? 'open' : ''}><summary>Нет ссылки — вставить текст новости</summary>
-      <div class="quick-row"><textarea id="quick-text" rows="5" maxlength="20000" placeholder="Текст новости">${esc(state.quickText || '')}</textarea>
-      <button class="btn" id="quick-text-go">Оценить текст</button></div><span id="an-msg" class="muted" role="status"></span></details>`;
+    <div class="or">Нет ссылки — вставьте текст новости</div>
+    <div class="quick-row"><textarea id="quick-text" rows="4" maxlength="20000" placeholder="Текст новости" aria-label="Текст новости">${esc(state.quickText || '')}</textarea>
+    <button class="btn" id="quick-text-go">Оценить текст</button></div><span id="an-msg" class="muted" role="status"></span></details>`;
 }
 
 const EVENTS_SHOWN = 5;
 function eventsHtml() {
   let ev = state.events[state.company];
   if (ev === undefined) return '<div class="muted">Подбираем новости…</div>';
-  if (!ev.length) return '<div class="card empty">Значимых для компании новостей за последние дни нет</div>';
+  if (!ev.length) return '<div class="calm-line">Других значимых для компании новостей за последние дни нет</div>';
   ev = ev.filter(e => !e.analyzed);
-  if (!ev.length) return '<div class="card empty">Все значимые новости по профилю уже разобраны</div>';
+  if (!ev.length) return '<div class="calm-line">Все значимые новости по профилю уже разобраны — они в ленте выше</div>';
   const more = state.moreEvents ? ev : ev.slice(0, EVENTS_SHOWN);
   const btn = e => { const j = state.jobs[state.company + ':' + e.id];
     return j && j.status === 'running' ? `<button class="btn" disabled>${jobMark(j, 'Разбор идёт · ')}</button>` : `<button class="btn" data-ev="${e.id}">Получить разбор</button>`; };
@@ -1332,7 +1450,8 @@ function openTrace(i) {
   state.drawer = 'card';
   const body = $('#drawer-body');
   body.innerHTML = i.trace.map(s => stepHtml(s, false)).join('');
-  $('#drawer-totals').textContent = origin(i) === 'seed' ? 'Разбор подготовлен аналитиками по материалам банка' : totalsText(i.trace);
+  $('#drawer-totals').textContent = origin(i) === 'seed' ? 'Разбор подготовлен аналитиками по материалам банка'
+    : origin(i) === 'rules' ? `Шагов: ${i.trace.length} · мгновенно, без модели` : totalsText(i.trace);
   openDrawer();
   let t = 150;
   [...body.querySelectorAll('.step')].forEach((el, k) => { traceTimers.push(setTimeout(() => el.classList.add('shown'), t)); t += Math.min(900, 250 + i.trace[k].ms / 6); });
@@ -1356,12 +1475,13 @@ function render(scrollToOpen = false, keep = false) {
   if (r === 'analyze') { location.replace('#feed'); return; }
   const views = {feed: viewFeed, admin: viewAdmin};
   document.body.classList.toggle('adm', r === 'admin' && API);
-  $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))();
+  $('#app').innerHTML = (API && views[r] || (r === 'feed' ? viewFeed : viewHome))() + (r === 'admin' ? '' : appFoot());
   state.firstPaint = false;
   bind();
   if (r === 'feed') { loadEvents(); bindEvents(); }
   if (r === 'admin' && API) bindAdmin();
   if (r === 'feed' && API && $('#quick-an')) {
+    $('.quick-box').ontoggle = e => { state.quickOpen = e.target.open; };
     
     $('#quick-an').onsubmit = async e => { e.preventDefault(); const f = e.target, url = f.url.value.trim(), btn = f.querySelector('button');
       if (!url || btn.disabled) return;
@@ -1393,7 +1513,6 @@ function toggle(id) {
 }
 function bind() {
   document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => toggle(b.dataset.toggle));
-  document.querySelectorAll('[data-zone]').forEach(a => a.onclick = () => { state.zone = a.dataset.zone; });
   document.querySelectorAll('[data-zf]').forEach(b => b.onclick = () => { state.zone = b.dataset.zf; render(); });
   if (!state.open) return;
   const i = ranked().find(x => x.id === state.open); if (!i) return;
@@ -1404,13 +1523,22 @@ function bind() {
   card.querySelector('[data-share]').onclick = () => shareCard(i);
   const up = card.querySelector('[data-upgrade]');
   if (up) up.onclick = () => startJob(state.company + ':' + evId(i), i.title, `/api/companies/${state.company}/events/${evId(i)}/analyze`, {});
-  card.querySelector('[data-chat]').onclick = () => { state.chatOpen[i.id] = !state.chatOpen[i.id]; render(); };
+  card.querySelector('[data-chat]').onclick = () => {
+    const on = state.chatOpen[i.id] = !state.chatOpen[i.id]; render();
+    const box = on && document.querySelector(`#card-${CSS.escape(i.id)} .chat`);
+    if (box) { box.scrollIntoView({behavior: 'smooth', block: 'nearest'}); box.querySelector('.chat-in input').focus({preventScroll: true}); }
+  };
+  const recalc = card.querySelector('[data-recalc]');
+  if (recalc) recalc.onclick = () => { const inp = card.querySelector('[data-per]'); inp.scrollIntoView({behavior: 'smooth', block: 'center'}); inp.focus({preventScroll: true}); };
+  const wa = card.querySelector('[data-why-all]');
+  if (wa) wa.onclick = () => { state.whyAll[i.id] = true; render(); };
   card.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => { state.feedback[i.id] = b.dataset.fb; render();
     if (API) api(`/api/cards/${i.id}/feedback`, {company_id: state.company, role: state.role, vote: b.dataset.fb}).catch(() => {}); });
   card.querySelectorAll('[data-per]').forEach(inp => inp.oninput = () => {
     const v = parseFloat(inp.value.replace(',', '.')), out = inp.parentElement.querySelector('output'), x = v * +inp.dataset.per;
-    const w = x ? moneyWord(inp.dataset.fam, x < 0) : '';
-    out.textContent = v > 0 ? '→ ' + (w ? w + ' ' + rubFmt(Math.abs(x), false) : rubFmt(x, inp.dataset.signed === 'true')) + ' ' + inp.dataset.period : '→ введите сумму, чтобы пересчитать';
+    const pm = inp.dataset.pm === 'true', w = x && !pm ? moneyWord(inp.dataset.fam, x < 0) : '';
+    const sum = pm ? '±' + rubFmt(Math.abs(x), false) : w ? w + ' ' + rubFmt(Math.abs(x), false) : rubFmt(x, inp.dataset.signed === 'true');
+    out.textContent = v > 0 ? `→ ${sum} ${inp.dataset.period}` : '→ введите сумму, чтобы пересчитать';
   });
   card.querySelectorAll('[data-cta]').forEach(b => b.onclick = () => {
     if (!API) { showModal(b.dataset.label, 'Обратитесь к вашему персональному менеджеру — разбор события он увидит в карточке клиента.'); return; }

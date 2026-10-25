@@ -21,6 +21,7 @@ def test_index_serves_ui_in_api_mode(client):
     r = client.get("/")
     assert r.status_code == 200 and '<script id="data" type="application/json">null</script>' in r.text
     assert r.headers["X-Content-Type-Options"] == "nosniff" and "frame-ancestors 'none'" in r.headers["Content-Security-Policy"]
+    assert "base-uri 'none'" in r.headers["Content-Security-Policy"] and r.headers["X-Frame-Options"] == "DENY"
 
 
 def test_bootstrap_has_seed_cards_and_all_companies(client):
@@ -61,6 +62,17 @@ def test_input_validation(client):
     assert client.post("/api/analyze", json={"company_id": "U_25835", "title": "x"}).status_code == 422
     assert client.post("/api/cards/i-rate-auto/feedback",
                        json={"company_id": "U_25835", "role": "admin", "vote": "up"}).status_code == 422
+
+
+def test_feedback_only_for_existing_cards(client):
+    """Оценка меняет порядок ленты — по несуществующей компании или карточке её не принимаем."""
+    assert client.post("/api/cards/i-rate-auto/feedback", json={"company_id": "U_0", "role": "cfo", "vote": "up"}).status_code == 404
+    assert client.post("/api/cards/nope/feedback", json={"company_id": "U_25835", "role": "cfo", "vote": "up"}).status_code == 404
+
+
+def test_news_refresh_is_for_bank_staff_only(client):
+    """Сбор новостей ходит в сеть и тратит общий ключ — без токена сотрудника не запускается."""
+    assert client.post("/api/news/refresh").status_code in (401, 503)
 
 
 def test_feedback_counts_in_metrics(client):
@@ -157,3 +169,17 @@ def test_top_events_get_ai_analysis_queued_in_background(client, monkeypatch):
     assert 0 < first <= app_module.PRECOMPUTE_TOP and q.qsize() == first  # повторное открытие не ставит заново
     queued = {f"{ev['id']}-{c}" for ev, c in list(q.queue)}
     assert queued <= rules
+
+
+def test_post_ceiling_and_counter_cleanup(client):
+    """Потолок на любые POST с одного адреса; счётчики адресов без запросов за минуту забываются."""
+    from collections import defaultdict, deque
+
+    import backend.app as a
+    hits = defaultdict(deque)
+    assert not any(a._over(hits, "x", 3, 0.0) for _ in range(3)) and a._over(hits, "x", 3, 1.0)
+    assert not a._over(hits, "x", 3, 62.0), "через минуту лимит снова доступен"
+    a._posts["203.0.113.9"] = deque([0.0])
+    a._last_sweep[0] = 0.0
+    a._sweep(1000.0)
+    assert "203.0.113.9" not in a._posts
