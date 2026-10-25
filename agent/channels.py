@@ -70,13 +70,15 @@ def _rule(t: str, cta: dict | None = None, **kw) -> dict:
 
 
 def _base_title(title: str) -> str:
-    return re.sub(r"^Если [^,]+, ", "", title)
+    return impact.base_title(title)
 
 
 def money(c: dict) -> str:
     """Сумма расчёта словами по смыслу: расход — «экономия / доп. расходы», доход — «потери / доп. доход».
     Сценарий из прогноза — с условием: «если ставку снизят на 0,5 п.п. — экономия 5 млн ₽ в год…»."""
     title, value = c["title"], c["value"]
+    if value.startswith("±"):  # чувствительность: масштаб, а не изменение
+        return f"{value} за {'каждый 1 п.п. ставки' if 'ставк' in title else 'каждый 1% курса'}"
     val = value.lstrip("+−- ")
     if value.startswith("≈"):
         phrase = val  # масштаб того, что под влиянием, а не изменение
@@ -85,8 +87,8 @@ def money(c: dict) -> str:
         cost = _base_title(title).startswith(impact.COST_TITLES)
         val = re.sub(r"\s*\([^)]*\)$", "", val)  # пояснение «(дороже в рублях)» есть в расчёте
         phrase = f"{('экономия' if down else 'дополнительные расходы') if cost else ('потери' if down else 'дополнительный доход')} {val}"
-    if title.startswith("Если "):
-        return f"если {title[5:title.index(',')]} — {phrase}"
+    if impact.scenario_condition(title):
+        return f"если {impact.scenario_condition(title)} — {phrase}"
     return phrase
 
 
