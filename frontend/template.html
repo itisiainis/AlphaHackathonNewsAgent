@@ -29,13 +29,15 @@ button{font:inherit;cursor:pointer}
 .logo small{font-weight:400;color:var(--ink-3)}
 .switch{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .switch label{font-size:12px;color:var(--ink-3)}
+/* компания и роль — по ширине выбранного названия, без обрезки; на узком экране переносятся строкой ниже */
+.switch select{max-width:min(60vw,100%);field-sizing:content}
 select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;max-width:260px}
 .layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 54px)}
 nav.side{background:#fff;border-right:1px solid var(--line);padding:16px 10px}
 nav.side a{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--ink-2);margin-bottom:2px}
 nav.side a.on{background:var(--bg);color:var(--ink);font-weight:600}
 .badge-new{white-space:nowrap;display:inline-block;background:var(--new);color:#fff;border-radius:10px;font-size:11px;padding:0 7px;font-weight:600}
-main{padding:24px;max-width:860px;width:100%;min-width:0}
+main{padding:24px;width:100%;min-width:0}
 h1{font-size:22px;margin:0 0 4px}
 h2{font-size:16px;margin:0}
 .muted{color:var(--ink-3)}
@@ -47,7 +49,12 @@ h2{font-size:16px;margin:0}
 .card h3.card-h{font-size:13px;margin:0 0 6px;color:var(--ink)}
 .foot-note{font-size:12px;color:var(--ink-3);margin-top:6px}
 .quick{display:flex;gap:8px;margin:0 0 6px}.quick input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
-.quick-more{font-size:13px;margin:0 0 14px}.quick-more textarea{width:100%;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;margin-top:6px}
+.quick-more{font-size:13px;margin:0 0 14px}
+/* «Нет ссылки» — спокойная ссылка, а не красное оповещение */
+.quick-more>summary{cursor:pointer;color:var(--ink-2);width:fit-content}.quick-more>summary:hover{color:var(--ink)}
+/* поле и кнопка — низами на одном уровне, при любом размере поля */
+.quick-row{display:flex;gap:8px;align-items:flex-end;margin-top:6px}
+.quick-row textarea{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;resize:vertical}
 .ctx{font-size:13px;color:var(--ink-2);margin:6px 0 14px}.ctx b{color:var(--ink);font-weight:600}
 nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .modal textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px}
@@ -105,13 +112,17 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .ic-event{font-size:13px;color:var(--ink-2);margin-top:8px;font-weight:600}
 .ic-take{font-size:18px;line-height:1.35;font-weight:700;margin:8px 0 10px}
 /* короткий слой: вывод, главные числа, позиция банка; событие и источник — мелко внизу */
-.nchips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
-.nchip{font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 9px;color:var(--ink)}
 .kp-bank{border-left:3px solid var(--bank);background:var(--bank-bg);padding:5px 10px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:13.5px;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .kp-bank.kp-note{border-left-color:#c79200;background:#fff7e0;color:#6b4d00}
 .kp-bank sup a{color:var(--ink-3);text-decoration:none;font-size:11px}
 .ic-ev{font-size:12.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .jobchip{font-size:11px;color:var(--ai);font-weight:600}
+/* что добавил ИИ-аналитик — мягкая подсветка нового текста, без яркой заливки */
+/* метка «новое» у пункта, который добавил ИИ-аналитик: маленький значок вместо подсветки текста — не рябит, даже когда нового много */
+.sec-new{margin-left:8px;font-size:10.5px;font-weight:600;letter-spacing:.02em;text-transform:none;color:#8a6a00;background:#fff4d6;border-radius:999px;padding:1px 7px;vertical-align:middle}
+.ai-upd{font-size:11px;color:#8a6a00;font-weight:600}
+.ai-added{font-size:12.5px;color:var(--ink-2);margin:0 0 8px}
+.up-note{display:block;font-size:11.5px;font-weight:400;opacity:.85;margin-top:2px}
 .btn .jobchip{color:inherit;font-size:inherit}
 /* группы ленты по приоритету */
 .grp{margin-top:18px}
@@ -132,6 +143,10 @@ nav.side .nav-foot{margin-top:24px;font-size:12px;color:var(--ink-3)}
 .ic.open .ic-body{display:block}
 .sec{margin-top:16px}
 .sec h3{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);margin:0 0 6px}
+/* разделы раскрытой карточки: заголовки — чёрным, между разделами — линия; видно, где кончается один блок и начинается другой */
+.ic-body>.sec,.ic-body>details.sec-d{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.ic-body>.sec>h3,.ic-body>details.sec-d>summary{color:var(--ink);font-size:12.5px}
+.ic-body>:first-child{border-top:0;padding-top:0}
 /* происхождение — цветом: факт без выделения, позиция банка — красным, вывод ИИ — фиолетовым; слово — в подсказке и легенде */
 .stmt{padding:6px 10px 6px 12px;margin:6px 0;border-left:3px solid;border-radius:0 6px 6px 0}
 .stmt.fact{border-color:#cdd1d8;background:transparent}
@@ -172,7 +187,7 @@ details.sec-d[open]>summary{margin-bottom:6px}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);align-items:center}
 .tools .sp{flex:1}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:12px}
-.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
+.legend>span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
 .legend .l-fact::before{background:#cdd1d8}.legend .l-bank::before{background:var(--bank)}.legend .l-ai::before{background:var(--ai)}.legend .l-rule::before{background:var(--rule)}
 /* чат */
 .chat{display:none;margin-top:12px;background:var(--bg);border-radius:12px;padding:12px}
@@ -255,7 +270,8 @@ footer.note{font-size:11px;color:var(--ink-3);margin-top:20px}
 }
 /* панель управления банка */
 body.adm .switch{display:none}
-body.adm main{max-width:1120px}
+body.adm main{max-width:none}
+body.adm .adm-filter select{max-width:none;width:min(560px,100%)}
 .adm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .adm-login{display:grid;gap:12px;max-width:420px;margin-top:16px}.adm-login label{display:grid;gap:4px;font-size:13px;color:var(--ink-2)}
 .adm-login input,.fld input,.fld select{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
@@ -283,6 +299,32 @@ body.adm main{max-width:1120px}
 .adm-save{display:flex;gap:12px;align-items:center;margin-top:16px}
 .adm-card{padding:10px 0 14px;border-bottom:1px solid var(--line);margin-bottom:10px}.adm-card p{margin:6px 0 0;color:var(--ink-2)}
 @media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fld{grid-template-columns:1fr}.srcs{grid-template-columns:1fr}}
+/* счётчик необработанных запросов на вкладке */
+.tab-n{display:inline-block;min-width:18px;margin-left:6px;padding:0 5px;border-radius:9px;background:var(--brand);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+/* статус запроса цветом: новый — красный, в работе — жёлтый, закрыт — зелёный */
+.st{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid var(--line);font-weight:600}
+.st.new{background:#fdecec;border-color:#f3c2c2;color:#b42318}.st.in_work{background:#fff6dc;border-color:#f1dc9c;color:#8a6200}.st.done{background:#e8f7ef;border-color:#bfe6d2;color:#17784a}
+/* подсказка «?»: пояснение по наведению или фокусу */
+.hint{position:relative;display:inline-grid;place-items:center;width:18px;height:18px;margin-left:6px;border-radius:50%;border:1px solid var(--line);
+  background:#fff;color:var(--ink-3);font-size:11px;font-weight:700;cursor:help;vertical-align:middle}
+.hint-t{display:none;position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);z-index:30;width:min(360px,80vw);
+  background:var(--ink);color:#fff;font-size:12.5px;font-weight:400;line-height:1.45;text-align:left;border-radius:8px;padding:8px 10px;box-shadow:0 6px 24px rgba(20,24,32,.18)}
+.hint:hover .hint-t,.hint:focus .hint-t,.hint:focus-within .hint-t{display:block}
+/* разбор из таблицы — левая выдвижная панель, закрывается кликом по свободному месту справа */
+.ldrawer{position:fixed;top:0;left:0;height:100%;width:min(640px,100%);background:#fff;border-right:1px solid var(--line);box-shadow:8px 0 30px rgba(0,0,0,.1);
+  transform:translateX(-100%);visibility:hidden;transition:transform .25s,visibility .25s;z-index:40;display:flex;flex-direction:column}
+.ldrawer.open{transform:none;visibility:visible}
+.ldrawer header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.ldrawer .body{padding:14px 18px;overflow:auto;flex:1}
+.ldrawer .take{margin:6px 0;font-size:14px}.ldrawer .take b{color:var(--ink-3);font-weight:600;font-size:12px;margin-right:6px}
+.cardlink{border:0;background:none;padding:0;color:var(--ink);text-align:left;text-decoration:underline;text-decoration-color:#c9ced6;text-underline-offset:3px;cursor:pointer}
+.cardlink:hover{text-decoration-color:var(--brand)}
+/* сортировка и фильтр таблицы запусков */
+.tbl th button{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer}.tbl th button[aria-sort]::after{content:" ▾";opacity:.35}
+.tbl th button[aria-sort="ascending"]::after{content:" ▴";opacity:1}.tbl th button[aria-sort="descending"]::after{content:" ▾";opacity:1}
+.tbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 8px;font-size:13px;color:var(--ink-2)}
+.tbar input{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px}
+@media (prefers-reduced-motion:reduce){.ldrawer{transition:none}}
 </style>
 </head>
 <body>
@@ -302,6 +344,10 @@ body.adm main{max-width:1120px}
   <header><b id="drawer-title">Как получен вывод</b><button class="btn" id="drawer-close">Закрыть</button></header>
   <div class="body" id="drawer-body"></div>
   <div class="totals" id="drawer-totals"></div>
+</aside>
+<aside class="ldrawer" id="ldrawer" role="dialog" aria-modal="true" aria-labelledby="ldrawer-title">
+  <header><b id="ldrawer-title">Разбор</b><button class="btn" id="ldrawer-close">Закрыть</button></header>
+  <div class="body" id="ldrawer-body"></div>
 </aside>
 <div class="dock" aria-live="polite"><div id="toasts"></div><div id="jobs"></div></div>
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -324,7 +370,7 @@ function loadRead() { try { return new Set(JSON.parse(localStorage.getItem(READ_
 function saveRead() { try { localStorage.setItem(READ_KEY, JSON.stringify([...state.read].slice(-500))); } catch (e) { /* без хранилища — до перезагрузки */ } }
 const state = {company: null, role: null, open: null,
   read: loadRead(), feedback: {}, chats: {}, chatOpen: {}, firstPaint: true, events: {},
-  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}, zone: ''};
+  jobs: {}, order: {}, drawer: null, ticker: null, quoteFull: {}, zone: '', before: {}};
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   const data = await r.json().catch(() => ({}));
@@ -335,10 +381,11 @@ const origin = i => ((DATA.origins || {})[state.company] || {})[i.id];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const IMPACT = {high: 3, medium: 2, low: 1};
-const IMPACT_RU = {high: 'высокое влияние', medium: 'среднее влияние', low: 'низкое влияние'};
+const IMPACT_RU = {high: 'высокая релевантность вашему профилю', medium: 'средняя релевантность вашему профилю', low: 'низкая релевантность вашему профилю'};
 const TYPE_RU = {risk: 'риск', opportunity: 'возможность', info: 'к сведению'};
 const P_FULL = {fact: 'факт', bank: 'позиция банка', ai: 'вывод ИИ', rule: 'вывод по правилам: собран кодом из новости, данных банка, расчёта и взгляда банка, без ИИ'};
 const STR_RU = {high: 'сильное влияние', medium: 'умеренное влияние', low: 'слабое влияние'};
+const STR_TIP = 'Насколько сильным может быть это последствие для компании. Не расчёт, а оценка: в разборе ИИ её ставит ИИ-аналитик, в быстром выводе — правила. Деньги считаются отдельно — в «Сколько это в деньгах».';
 const fmtDate = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'});
 const fmtDateY = d => new Date(d).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'});
 
@@ -495,8 +542,22 @@ function showModal(title, text, form = false, submit = 'Отправить ме�
 const srcLink = (s, inner, title = '') => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener"${title ? ` title="${esc(title)}"` : ''}>${inner}</a>` : `<span title="${esc(title)}">${inner}</span>`;
 const ref = (s, i) => (s.src !== undefined && i && i.sources[s.src]) ? ` <sup>${srcLink(i.sources[s.src], `[${s.src + 1}]`, i.sources[s.src].name)}</sup>` : '';
 function stmtHtml(s, i) {
-  const str = s.strength ? `<span class="str">${STR_RU[s.strength]}</span>` : '';
-  return `<div class="stmt ${s.p}" title="${P_FULL[s.p]}">${esc(s.t)}${ref(s, i)}${str}</div>`;
+  const str = s.strength ? `<span class="str" title="${STR_TIP}">${STR_RU[s.strength]}</span>` : '';
+  return `<div class="stmt ${s.p}" title="${P_FULL[s.p]}">${esc(s.t)}${ref(s, i)}${isAiNew(i, s.t) ? '<span class="sec-new" title="Добавлено ИИ-аналитиком">новое</span>' : ''}${str}</div>`;
+}
+// Тексты карточки до разбора ИИ-аналитиком: всё, чего среди них нет, — новое от ИИ (подсвечивается до перезагрузки)
+const cardTexts = c => new Set([...Object.values(c.takeaway || {}), ...(c.key_points || []),
+  ...['what', 'why', 'risks', 'opportunities', 'actions'].flatMap(k => (c.blocks || {})[k] || [])].map(x => typeof x === 'string' ? x : x.t));
+const isAiNew = (i, t) => !!(i && state.before[i.id]) && !state.before[i.id].has(t);
+function aiAdded(i) {
+  const before = state.before[i.id]; if (!before) return '';
+  const n = k => ((i.blocks || {})[k] || []).filter(s => !before.has(s.t)).length;
+  const parts = [[n('risks'), 'риск', 'риска', 'рисков'], [n('opportunities'), 'возможность', 'возможности', 'возможностей'],
+    [n('actions'), 'действие', 'действия', 'действий'], [n('why'), 'довод «почему вам»', 'довода «почему вам»', 'доводов «почему вам»']]
+    .filter(x => x[0]).map(([k, a, b, c]) => `${k} ${plural(k, a, b, c)}`);
+  const bank = i.blocks.bank && i.blocks.bank.quote && !before.has('bank:' + i.blocks.bank.quote) ? ['позиция банка'] : [];
+  const all = [...bank, ...parts];
+  return all.length ? `<div class="ai-added">ИИ-аналитик добавил: ${all.join(', ')} — каждый новый пункт отмечен <span class="sec-new" style="margin-left:2px">новое</span></div>` : '';
 }
 const CALC_STR = {high: 'высокая', medium: 'средняя', low: 'низкая'};
 const ORIGIN_RU = {seed: 'подготовлены аналитиками', agent: 'ИИ-аналитик', rules: 'краткие разборы'};
@@ -547,20 +608,11 @@ function forWho(c) {
     c.ved.length ? `внешняя торговля: <b>${esc(c.ved.slice(0, 3).join(', '))}</b>` : 'без внешней торговли',
     side(c.counterparties.customers) ? `покупатели: <b>${esc(side(c.counterparties.customers))}</b>` : '',
     side(c.counterparties.suppliers) ? `поставщики: <b>${esc(side(c.counterparties.suppliers))}</b>` : ''].filter(Boolean);
-  return `<div class="ctx">Учитываем: ${parts.join(' · ')}</div>`;
+  return `<div class="ctx">Учитываем: ${parts.join(' · ')}${hint('По этим данным Альфа-Банка о вашей компании сервис отбирает новости в ленту: продукты банка (кредит, лизинг — значит важна ставка), страны внешней торговли (важен курс), главные покупатели и поставщики (важны новости их отраслей). Если чего-то здесь нет — новости об этом в ленту не попадут.')}</div>`;
 }
 function srcShort(i) { const m = i.sources.length - 1; return esc(i.sources[0].name) + (m > 0 ? ` +${m}` : ''); }
 // признаки компании без кодов отраслей и внутренних терминов (и для карточек, посчитанных до этих правил)
 const plainFeat = s => s.replace(/\s*\(\d{2}\)|\s*(?:из\s+)?ОКВЭД\s*\d+(?:\.\d+)*/g, '').replace('входящего потока', 'поступлений').replace('исходящего потока', 'платежей');
-const numsOf = s => s.match(/\d+(?:[.,]\d+)?/g) || [];
-/* Главные числа карточки — чипами, их проще пробежать глазами, чем предложения: расчёт в рублях и доли
-   платежей, на которые сработал отбор. Число, которое уже есть в главном выводе, не повторяем. */
-function numChips(i, take) {
-  const calc = calcsOf(i).filter(c => calcFits(c, i)).slice(0, 1).map(c => `${c.title.split(/: | — /)[0]}: ${moneyValue(c)
-    .replace(' на каждый ', ' на ').replace(/ с плавающей ставкой| \((?:дороже|дешевле) в рублях\)/g, '')}`);
-  const flows = (i.matched || []).filter(m => /\d+%/.test(m)).map(plainFeat);
-  return [...calc, ...flows].filter(c => !numsOf(c).every(n => take.includes(n))).slice(0, 3);
-}
 const evId = i => i.id.slice(0, -(state.company.length + 1));
 const cardJob = i => state.jobs[state.company + ':' + evId(i)];
 const jobMark = (j, prefix) => `<span class="jobchip" data-jobkey="${esc(j.key)}" data-prefix="${prefix}">${prefix}${Math.round(j.progress)}%</span>`;
@@ -602,7 +654,7 @@ function bankHtml(i) {
   const b = i.blocks.bank, notice = bankNotice(b), src = `<div class="src-line">${esc(b.doc)}${b.date ? ' · ' + fmtDateY(b.date) : ''}</div>`;
   if (!b.quote) return `<div class="dq">${esc(b.doc)}</div>${b.stale && !/не используется/.test(b.doc) ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}`;
   if (notice) return `<div class="dq">${esc(quoteParts(b.quote).text)}</div>${src}${b.stale && !/не используется/.test(b.quote) ? '<div class="stale-note">⚠ Материал старше 12 месяцев — в выводе не используется</div>' : ''}`;
-  return quoteHtml(i) + src + (b.plain ? `<div class="stmt ai plain" title="${P_FULL.ai}">Проще говоря: ${esc(b.plain)}</div>` : '');
+  return quoteHtml(i) + src + (b.plain ? `<div class="stmt ai plain" title="${P_FULL.ai}">Проще говоря: ${esc(b.plain.replace(/^\s*проще говоря\s*[:,—–-]?\s*/i, ''))}</div>` : '');
 }
 /* Оговорка под разбором и под виджетом — как в каждом материале банка. Центр макроэкономического анализа назван,
    только если все использованные материалы банка — его обзоры (макростатистика, ставка, инфляция, потребление):
@@ -619,12 +671,11 @@ function disclaimerHtml(cards) {
 /* ---------- карточка-аккордеон ---------- */
 function cardHtml(i) {
   const open = state.open === i.id, nw = isNew(i), job = cardJob(i), take = takeaway(i);
-  const chips = numChips(i, take), bank = (i.key_points || []).find(s => s.p === 'bank');
+  const bank = (i.key_points || []).find(s => s.p === 'bank');
   return `<article class="ic ${open ? 'open' : ''} ${nw ? 'is-new' : ''} ${state.firstPaint ? 'fresh' : ''}" id="card-${i.id}">
     <button class="ic-head" data-toggle="${i.id}" aria-expanded="${open}">
-      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span><span class="imp">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Факты, данные компании, позиция банка, расчёт и выводы по правилам — без ИИ">краткий разбор</span>' : ''}${factorTag(i)}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
+      <div class="ic-meta">${nw ? '<span class="newmark">Новое</span>' : ''}<span class="tag ${i.type}">${TYPE_RU[i.type]}</span>${factorTag(i)}<span class="imp" title="Насколько событие совпадает с профилем компании по данным банка: продукты, внешняя торговля, отрасли покупателей и поставщиков">${IMPACT_RU[i.impact]}</span>${origin(i) === 'rules' ? '<span class="chip" title="Собран кодом за доли секунды: факты новости, данные вашей компании в банке, позиция банка и расчёт — без ИИ">Быстрый вывод по данным банка (без ИИ)</span>' : ''}${state.before[i.id] ? '<span class="ai-upd">Обновлено ИИ-аналитиком</span>' : ''}${job && job.status === 'running' ? jobMark(job, 'ИИ готовит разбор · ') : ''}<span class="ic-date">${fmtDate(i.published)}</span></div>
       <div class="ic-take">${esc(take)}</div>
-      ${chips.length ? `<div class="nchips">${chips.map(c => `<span class="nchip">${esc(c)}</span>`).join('')}</div>` : ''}
       ${bank ? kpNote(bank, i) ? `<div class="kp-bank kp-note">${esc(bank.t)}${ref(bank, i)}</div>` : `<div class="kp-bank" title="Позиция банка">${esc(bank.t)}${ref(bank, i)}</div>` : ''}
       <div class="ic-foot"><span class="ic-ev" title="${esc(i.title)}">${esc(i.title)} · ${srcShort(i)}</span><span class="more">${open ? 'Свернуть' : 'Подробнее'} <span class="chev">▾</span></span></div>
     </button>
@@ -639,28 +690,39 @@ function rowHtml(i) {
     <span class="ic-date">${fmtDate(i.published)}</span><span class="more"><span class="chev">▾</span></span></button></article>`;
 }
 /* Раскрытая карточка: сначала что делать и сколько это стоит, потом почему; пересказ события и основание — под катом */
+/* Что произошло — первым: откуда новость (источник, дата, ссылка), как она попала в ленту и сами факты.
+   Отвечает на вопрос «а откуда это вообще?» до того, как человек читает выводы */
+function whatHappened(i, b) {
+  const src = i.sources.find(s => s.kind === 'news') || i.sources[0];
+  const how = isMine(i) ? 'вы прислали эту новость сами' : `сервис собрал новость из ${esc(src.name)} и отобрал для компании по её данным в банке`;
+  return `<details class="sec-d"><summary>Что произошло <span class="muted">· ${srcLink(src, esc(src.name))}, ${esc(fmtDate(src.date || i.published))}</span></summary>
+    <div class="foot-note">Откуда: ${how}${(i.matched || []).length ? ` — ${esc(i.matched.slice(0, 3).map(plainFeat).join(', '))}` : ''}. Факты ниже — дословно из источника; выводы — в разделах ниже.</div>
+    ${list(b.what, i)}</details>`;
+}
 function bodyHtml(i) {
   const b = i.blocks, fb = state.feedback[i.id], job = cardJob(i), running = job && job.status === 'running';
+  const upgradable = origin(i) === 'rules' && API && aiReady();
   const ctas = b.actions.filter(a => a.cta).map(a => `<button class="btn pri" data-cta="${a.cta.kind}" data-label="${esc(a.cta.label)}">${esc(a.cta.label)}</button>`).join('');
   const chatLog = (state.chats[i.id] || []).join('');
   const srcNames = [...new Set(i.sources.map(s => s.name))].slice(0, 3).join(', ');
   return `<div class="ic-body">
+    ${aiAdded(i)}
     ${legendHtml(i)}
+    ${whatHappened(i, b)}
     ${b.actions.length ? `<div class="sec"><h3>Что можно сделать</h3>${list(b.actions, i)}${ctas ? `<div class="actions-row">${ctas}</div>` : ''}</div>` : ''}
     ${b.calc && b.calc.length ? `<div class="sec"><h3>Сколько это в деньгах</h3>${calcsOf(i).map(c => calcHtml(c, i)).join('')}</div>` : ''}
     ${b.why.length ? `<div class="sec"><h3>Почему это важно вам</h3>${list(b.why, i)}</div>` : ''}
     ${b.risks.length || b.opportunities.length ? `<div class="sec"><h3>Последствия</h3><div class="two"><div><h4 class="h-risk">Риски</h4>${list(b.risks, i)}</div><div><h4 class="h-opp">Возможности</h4>${list(b.opportunities, i)}</div></div></div>` : ''}
-    <div class="sec"><h3>Как оценивает банк</h3>${bankHtml(i)}</div>
-    <details class="sec-d"><summary>Что произошло</summary>${list(b.what, i)}</details>
+    <div class="sec"><h3>Как оценивает банк${state.before[i.id] && b.bank.quote && !state.before[i.id].has('bank:' + b.bank.quote) ? '<span class="sec-new" title="Позицию банка нашёл ИИ-аналитик">новое</span>' : ''}</h3>${bankHtml(i)}</div>
     <details class="sec-d"><summary>На чём основан вывод <span class="muted">· ${esc(srcNames)}</span></summary><div class="two">
       <div><h4>Источники</h4><ol class="srcs">${i.sources.map(s => `<li><span class="kind ${s.kind}">${s.kind === 'bank' ? 'банк' : s.kind === 'stat' ? 'статистика' : 'новость'}</span>${srcLink(s, esc(s.name))} <span class="muted">· ${fmtDateY(s.date)}</span></li>`).join('')}</ol></div>
       <div><h4>Признаки вашей компании</h4>${b.basis.features.map(f => `<span class="chip f">${esc(plainFeat(f))}</span>`).join('')}
         ${b.basis.coverage ? `<div class="dq" style="margin-top:8px">${esc(b.basis.coverage)}</div>` : ''}</div></div></details>
     <div class="tools">
-      ${origin(i) === 'rules' && API && aiReady() ? `<button class="btn pri" data-upgrade ${running ? 'disabled' : ''}>${running ? jobMark(job, 'Разбор идёт · ') : 'Полный разбор ИИ'}</button>` : ''}
-      <button class="btn" data-share>Переслать</button>
+      ${upgradable ? `<button class="btn pri" data-upgrade ${running ? 'disabled' : ''}>${running ? jobMark(job, 'Разбор идёт · ') : 'Углубить с ИИ-аналитиком'}<span class="up-note">~1–2 мин: найдёт позицию банка и связанные события, напишет вывод под вашу роль, проверит второй моделью</span></button>` : ''}
+      <button class="btn ${upgradable ? '' : 'pri'} ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}" title="Ответ по этому разбору, данным вашей компании и аналитике банка">Уточнить вопросы</button>
       <button class="btn" data-trace="${i.id}">Как получен вывод</button>
-      <button class="btn ${state.chatOpen[i.id] ? 'sel' : ''}" data-chat="${i.id}">Задать вопрос</button>
+      <button class="btn" data-share>Переслать</button>
       <span class="sp"></span>
       <span class="muted">Оценка:</span>
       <button class="btn ${fb === 'up' ? 'sel' : ''}" data-fb="up">Полезно</button>
@@ -669,7 +731,7 @@ function bodyHtml(i) {
     <div class="chat ${state.chatOpen[i.id] ? 'on' : ''}">
       ${i.chat.length || API ? `<div class="sugg">${API ? (DATA.follow_ups || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}${i.chat.map((c, k) => `<button data-q="${k}">${esc(c.q)}</button>`).join('')}${API ? (DATA.chat_suggestions || []).map(q => `<button data-gq="${esc(q)}">${esc(q)}</button>`).join('') : ''}</div>` : ''}
       <div class="chat-log">${chatLog}</div>
-      <form class="chat-in"><input placeholder="Вопрос по этому событию" autocomplete="off"><button class="btn pri">Спросить</button></form>
+      <form class="chat-in"><input placeholder="Свой вопрос по этому событию" autocomplete="off"><button class="btn pri">Спросить</button></form>
     </div>
     ${disclaimerHtml([i])}
   </div>`;
@@ -713,14 +775,14 @@ function viewHome() {
     : last ? `<div class="w-quiet">Сегодня ничего, что требует решения. <a href="#feed/${last.id}">Последнее важное: ${esc(homeLine(last))} →</a></div>`
     : `<div class="empty">Значимых событий за сутки нет${API ? ' · <a class="linkbtn" href="#feed">Новости по вашему профилю →</a>' : ''}</div>`;
   return `<h1>Добрый день</h1><div class="muted">${esc(c.display)} · ${esc(role().name)}</div>
-    <div class="card widget">
-      <div class="widget-head"><h2>Важное для вашего бизнеса ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
+    ${companySummary(c)}
+    <div class="card widget" style="margin-top:16px">
+      <div class="widget-head"><h2>Важное для вашего бизнеса${hint('Три самых важных свежих события для компании и выбранной роли — из ленты «Новости для бизнеса»: сначала то, что требует решения, затем по силе влияния и темам роли. Это то, что произошло сейчас. «Чувствительность бизнеса» ниже — через что внешние события вообще влияют на компанию.')} ${n ? `<span class="badge-new">${n} ${n === 1 ? 'новое' : 'новых'}</span>` : ''}</h2><a class="linkbtn" href="#feed">Все →</a></div>
       ${zoneSummary(fresh)}
       ${body}
       ${disclaimerHtml(top.length ? top : last ? [last] : [])}
     </div>
-    ${factorsHtml(c)}
-    ${companySummary(c)}`;
+    ${factorsHtml(c)}`;
 }
 /* Чувствительность бизнеса (backend agent/sensitivity.py): факторы, через которые внешние события влияют на компанию, по данным
    банка, и свежее событие по каждому. Сначала факторы с риском или возможностью, потом важные для выбранной роли */
@@ -735,7 +797,7 @@ function factorIds(i) {
 }
 function factorTag(i) {
   const id = factorIds(i)[0], p = id && (company().factors || []).find(x => x.id === id);
-  return p ? `<span class="factor-tag" title="Фактор чувствительности бизнеса, на который влияет событие">${esc(p.title)}</span>` : '';
+  return p ? `<span class="factor-tag" title="Фактор из «Чувствительности бизнеса» на главной: через что событие доходит до денег компании">влияет через: ${esc(p.title[0].toLowerCase() + p.title.slice(1))}</span>` : '';
 }
 function factorsHtml(c) {
   if (!(c.factors || []).length) return '';
@@ -751,11 +813,18 @@ function factorsHtml(c) {
     <div><b>${esc(p.title)}</b><div class="pd">${esc(p.detail)}</div>
       ${top ? `<div class="ps ${top.type}">${TYPE_STATUS[top.type]}: <a href="#feed/${top.id}">${esc(homeLine(top))} →</a>${n > 1 ? ` <span class="muted">+${n - 1}</span>` : ''}</div>`
         : `<div class="ps calm">Значимых событий нет · отслеживаем: ${esc(p.watch)}</div>`}</div></div>`;
-  return `<div class="card factors"><h2>Чувствительность бизнеса</h2><div class="muted" style="margin-bottom:4px">Факторы, через которые внешние события влияют на компанию, — по данным Альфа-Банка</div>${rows.map(row).join('')}</div>`;
+  return `<div class="card factors"><h2>Чувствительность бизнеса${hint('Постоянные «слабые места» компании по данным Альфа-Банка: долг с плавающей ставкой, валютные расчёты, зависимость от крупных покупателей и поставщиков, отраслевые налоги. Они есть, даже когда новостей нет. Точка — насколько компания чувствительна к фактору: красная — сильно, оранжевая — средне, серая — слабо. Под фактором — самое важное свежее событие по нему (риск, возможность или мониторинг): ссылка открывает его разбор в ленте, «+N» — сколько ещё событий по этому фактору.')}</h2><div class="muted" style="margin-bottom:4px">Факторы, через которые внешние события влияют на компанию, — по данным Альфа-Банка</div>${rows.map(row).join('')}</div>`;
 }
+// Откуда правила: что сервис знает о том, как новость доходит до денег компании, — написано командой и видно в коде
+const RULES_HINT = 'Этот вывод собрал код за доли секунды, без ИИ. Правила написала команда по материалам кейса и аналитике Альфа-Банка: '
+  + 'как типовые события доходят до денег компании — решение ЦБ по ставке → стоимость кредита и лизинга; курс → расчёты с зарубежными партнёрами; '
+  + 'пошлины и налоги → себестоимость; спрос и цены в отрасли → выручка от покупателей этой отрасли. '
+  + 'Код находит в новости само изменение (ставку, процент, пошлину), берёт из данных банка, что есть у вашей компании (кредит, страны торговли, '
+  + 'доли покупателей и поставщиков), считает эффект по формуле и добавляет действующий прогноз банка. '
+  + 'Каждое правило открыто — agent/channels.py; одинаковые данные всегда дают одинаковый вывод.';
 function legendHtml(i) {
   const ps = new Set([...i.key_points, ...['what', 'why', 'risks', 'opportunities', 'actions'].flatMap(k => i.blocks[k] || [])].map(s => s.p));
-  return `<div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span>${ps.has('ai') || origin(i) !== 'rules' ? '<span class="l-ai">вывод ИИ</span>' : ''}${ps.has('rule') ? `<span class="l-rule" title="${P_FULL.rule}">вывод по правилам</span>` : ''}</div>`;
+  return `<div class="legend"><span class="l-fact">факт из источника</span><span class="l-bank">позиция банка</span>${ps.has('ai') || origin(i) !== 'rules' ? '<span class="l-ai">вывод ИИ</span>' : ''}${ps.has('rule') ? `<span class="l-rule">вывод по правилам${hint(RULES_HINT)}</span>` : ''}</div>`;
 }
 // Сводка «ваш бизнес в данных банка»: то, от чего зависит влияние новостей на компанию
 function flowCard(title, s, who) {
@@ -795,9 +864,9 @@ function viewFeed() {
 function quickForm() {
   return `<form class="quick" id="quick-an"><input name="url" type="url" maxlength="500" placeholder="Ссылка на новость — оценим влияние на компанию" aria-label="Ссылка на новость" aria-describedby="an-err">
       <button class="btn pri">Оценить</button></form><div class="an-err" id="an-err" role="alert"></div>
-    <details class="quick-more"><summary class="linkbtn">Нет ссылки — вставить текст новости</summary>
-      <textarea id="quick-text" rows="5" maxlength="20000" placeholder="Текст новости"></textarea>
-      <button class="btn" id="quick-text-go">Оценить текст</button> <span id="an-msg" class="muted" role="status"></span></details>`;
+    <details class="quick-more" ${state.quickOpen ? 'open' : ''}><summary>Нет ссылки — вставить текст новости</summary>
+      <div class="quick-row"><textarea id="quick-text" rows="5" maxlength="20000" placeholder="Текст новости">${esc(state.quickText || '')}</textarea>
+      <button class="btn" id="quick-text-go">Оценить текст</button></div><span id="an-msg" class="muted" role="status"></span></details>`;
 }
 /* События, прошедшие отбор правилами (без LLM): видно, на какие признаки компании они сработали */
 const EVENTS_SHOWN = 5;
@@ -889,7 +958,7 @@ function tickJobs() {
 const JOB_HEAD = {running: 'ИИ готовит разбор', done: 'Разбор готов', failed: 'Разбор не получился'};
 function jobStatus(j) {
   if (j.status === 'running') return `${Math.round(j.progress)}% · осталось ${etaText(j)}`;
-  return j.status === 'done' ? (j.rules ? 'ИИ недоступен — краткий разбор без ИИ' : 'карточка в ленте') : j.error;
+  return j.status === 'done' ? (j.rules ? 'ИИ недоступен — быстрый вывод без ИИ' : 'карточка в ленте') : j.error;
 }
 function renderJobs() {
   $('#jobs').innerHTML = Object.values(state.jobs).map(j => `<div class="job ${j.status}">
@@ -951,10 +1020,10 @@ async function analyzeNow(key, label, briefPath, path, body, onError = e => toas
   if (r.user && before.has(r.card.id)) { toast('Этот материал уже разобран — открыли готовый разбор', 5000); return true; }
   if (r.reused) { toast('Этот сюжет уже разбирали для вашей компании — полный разбор открыт сразу', 5000); return true; }
   if (r.origin === 'agent') return true;  // полный разбор этого события уже есть
-  // связи с профилем нет — платный разбор ИИ сам не запускаем; кнопка «Полный разбор ИИ» в карточке остаётся
+  // связи с профилем нет — платный разбор ИИ сам не запускаем; кнопка «Углубить с ИИ-аналитиком» в карточке остаётся
   if (!(r.card.matched || []).length || /^Прямой связи/.test(takeaway(r.card) || '')) {
-    toast('Связи с вашей компанией не нашли — полный разбор ИИ не запускали', 6000); return true; }
-  if (!r.llm_online) { toast('Краткий разбор готов. Полный разбор ИИ можно будет запустить, когда модель станет доступна.', 6000); return true; }
+    toast('Связи с вашей компанией не нашли — показан быстрый вывод, ИИ-аналитика не запускали', 6000); return true; }
+  if (!r.llm_online) { toast('Быстрый вывод готов. Углубить с ИИ-аналитиком можно будет, когда модель станет доступна.', 6000); return true; }
   startJob(key, label, path, body, true);
   return true;
 }
@@ -979,7 +1048,12 @@ function finishJob(j, r) {
     j.status = 'failed'; j.trace = r.trace || j.trace;
     j.error = 'карточка не прошла проверку' + (r.errors && r.errors.length ? ': ' + r.errors[0] : '');
   } else {
-    const cid = j.company, list = DATA.insights[cid] || [];
+    const cid = j.company, list = DATA.insights[cid] || [], old = list.find(c => c.id === r.card.id);
+    if (old && r.mode !== 'rules' && !r.reused) {
+      const t = cardTexts(old);
+      if (old.blocks && old.blocks.bank && old.blocks.bank.quote) t.add('bank:' + old.blocks.bank.quote);
+      state.before[r.card.id] = t;
+    }
     // разбор того же события заменяет карточку на её месте; новая — встаёт первой в своей группе
     DATA.insights[cid] = list.some(c => c.id === r.card.id) ? list.map(c => c.id === r.card.id ? r.card : c) : [r.card, ...list];
     ((DATA.origins = DATA.origins || {})[cid] = DATA.origins[cid] || {})[r.card.id] = r.mode === 'rules' ? 'rules' : 'agent';
@@ -987,7 +1061,7 @@ function finishJob(j, r) {
     delete state.events[cid];
     j.status = 'done'; j.cardId = r.card.id; j.rules = r.mode === 'rules'; j.trace = r.card.trace || j.trace;
     toast(r.reused ? 'Этот сюжет уже разбирали для вашей компании — разбор взят из памяти, без ожидания'
-      : j.rules ? 'ИИ сейчас недоступен — готов краткий разбор без выводов ИИ. Полный разбор можно запустить позже.'
+      : j.rules ? 'ИИ сейчас недоступен — готов быстрый вывод по данным банка. Углубить с ИИ-аналитиком можно позже.'
       : `Разбор готов: ${j.label}`, 8000);
   }
   if (state.drawer === 'job:' + j.key) liveTrace(j.trace, '');
@@ -1052,7 +1126,7 @@ function viewAdmin() {
     <button class="btn pri">Войти</button>${ADM.error ? `<div class="down" role="alert">${esc(ADM.error)}</div>` : ''}<div class="foot-note">Токен задаёт администратор сервиса (переменная ADMIN_TOKEN). Он хранится только до закрытия вкладки.</div></form>`;
   return `<div class="adm-head"><div><h1>Панель управления</h1><div class="muted">Как работает сервис, что видят клиенты и что можно поменять. Все изменения — в журнале.</div></div>
     <button class="btn" id="adm-out">Выйти</button></div>
-    <div class="tabs" role="tablist">${ADM_TABS.map(([id, n]) => `<button role="tab" class="${ADM.tab === id ? 'on' : ''}" data-tab="${id}" aria-selected="${ADM.tab === id}">${n}</button>`).join('')}</div>
+    <div class="tabs" role="tablist">${ADM_TABS.map(([id, n]) => `<button role="tab" class="${ADM.tab === id ? 'on' : ''}" data-tab="${id}" aria-selected="${ADM.tab === id}">${n}${id === 'clients' ? '<span class="tab-n" id="req-n" hidden></span>' : ''}</button>`).join('')}</div>
     <div id="adm-box">Загружаем…</div>`;
 }
 function bindAdmin() {
@@ -1060,7 +1134,32 @@ function bindAdmin() {
   if (f) { f.onsubmit = e => { e.preventDefault(); ADM.error = ''; admSave(e.target.token.value.trim(), e.target.name.value.trim()); render(); }; return; }
   $('#adm-out').onclick = () => { admSave('', ''); render(); };
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { ADM.tab = b.dataset.tab; render(); });
-  loadAdmin();
+  loadAdmin(); reqBadge();
+}
+// Кружок с числом необработанных запросов менеджеру на вкладке «Клиенты» (до 99+)
+function showReqBadge() {
+  const el = $('#req-n'); if (!el) return;
+  el.hidden = !ADM.newReq; el.textContent = ADM.newReq > 99 ? '99+' : ADM.newReq;
+  el.setAttribute('aria-label', `необработанных запросов: ${ADM.newReq}`);
+}
+async function reqBadge() {
+  try { ADM.newReq = (await aapi('/requests')).filter(x => x.status === 'new').length; } catch (e) { return; }
+  showReqBadge();
+}
+// Подсказка «?»: пояснение по наведению или фокусу клавиатурой
+const hint = text => `<span class="hint" tabindex="0" role="button" aria-label="Пояснение">?<span class="hint-t" role="tooltip">${text}</span></span>`;
+// Разбор, который оценил клиент или по которому он написал менеджеру, — в левой панели, как его видит клиент
+async function openCardPanel(cid, id) {
+  let c;
+  try { c = await aapi(`/cards/${cid}/${id}`); } catch (e) { toast(e.message, 5000); return; }
+  const b = c.blocks || {}, part = (h, arr) => arr && arr.length ? `<div class="sec"><h3>${h}</h3>${list(arr, c)}</div>` : '';
+  $('#ldrawer-title').textContent = c.title;
+  $('#ldrawer-body').innerHTML = `<div class="muted">${esc(fmtDateY(c.published))} · ${esc(TYPE_RU[c.type] || '')} · ${esc(IMPACT_RU[c.impact] || '')}</div>
+    ${Object.entries(c.takeaway || {}).map(([r, t]) => `<div class="take"><b>${esc(ROLE_RU[r] || r)}</b>${esc(t)}</div>`).join('')}
+    ${legendHtml(c)}${part('Что можно сделать', b.actions)}${part('Почему это важно', b.why)}${part('Риски', b.risks)}${part('Возможности', b.opportunities)}
+    ${b.bank && b.bank.quote ? `<div class="sec"><h3>Как оценивает банк</h3><div class="quote">«${esc(b.bank.quote)}»</div><div class="src-line">${esc(b.bank.doc)} · ${esc(fmtDateY(b.bank.date))}</div></div>` : ''}
+    ${part('Что произошло', b.what)}`;
+  rememberOpener(); $('#ldrawer').classList.add('open'); $('#overlay').classList.add('on'); $('#ldrawer-close').focus();
 }
 async function loadAdmin() {
   const box = $('#adm-box');
@@ -1087,39 +1186,78 @@ async function admOverview() {
       ${kpi('Расход сегодня', `${num(st.spent_today_rub)} ₽`, `лимит ${num(st.budget_rub)} ₽ · модель ${st.llm_online ? 'подключена' : 'не подключена'}`)}
       ${kpi('Новости', o.news.events, o.news.hours_ago === null ? 'нет данных о свежести' : `последняя ${num(o.news.hours_ago)} ч назад`)}</div>
     <div class="src-line">Разборов в базе: ${Object.entries(m.cards).map(([k, v]) => `${ORIGIN_RU[k] || k} — ${v}`).join(', ') || 'нет'}</div>
-    ${m.matching_eval ? `<div class="src-line">Отбор новостей на размеченном наборе (${m.matching_eval.pairs} пар «новость × компания»): точность ${pct(m.matching_eval.precision)}, полнота ${pct(m.matching_eval.recall)}</div>` : ''}
+    ${m.matching_eval ? `<div class="src-line">Отбор новостей на размеченном наборе (${m.matching_eval.pairs} пар «новость × компания»): точность ${pct(m.matching_eval.precision)}, полнота ${pct(m.matching_eval.recall)}${hint(
+      `Команда вручную разметила ${m.matching_eval.pairs} пар «новость × компания»: важна новость этой компании или нет (data/eval/relevance.json). Отбор прогоняется по ним при каждом открытии панели, без ИИ.<br><b>Точность</b> — из пар, которые сервис отобрал, доля действительно важных: остальные — лишние новости в ленте.<br><b>Полнота</b> — из действительно важных пар, доля, которую сервис нашёл: остальные — пропущенные новости.`)}</div>` : ''}
     <div class="src-line">Последний сбор новостей: ${o.collect.at ? `${new Date(o.collect.at).toLocaleString('ru-RU')} · ${esc(JSON.stringify(Object.fromEntries(Object.entries(o.collect).filter(([k]) => k !== 'at'))))}` : 'в этом запуске не было'}
       <button class="linkbtn" data-collect>Собрать сейчас</button></div>`;
 }
 async function admClients() {
   const [req, fb] = await Promise.all([aapi('/requests'), aapi('/feedback')]);
   const reqRows = req.map(x => `<tr><td>${dt(x.ts)}</td><td>${esc(x.company)}<div class="muted">${esc(ROLE_RU[x.role] || x.role)}</div></td>
-    <td>${esc(x.label)}<div class="muted">${esc(x.title)}</div>${x.comment ? `<div class="cm">«${esc(x.comment)}»</div>` : ''}</td>
-    <td><select data-req="${x.id}" aria-label="Статус запроса">${Object.entries(REQ_RU).map(([k, v]) => `<option value="${k}"${x.status === k ? ' selected' : ''}>${v}</option>`).join('')}</select></td></tr>`);
+    <td>${esc(x.label)}<div><button class="cardlink" data-card="${esc(x.company_id)}|${esc(x.card_id)}">${esc(x.title)}</button></div>${x.comment ? `<div class="cm">«${esc(x.comment)}»</div>` : ''}</td>
+    <td><select class="st ${x.status}" data-req="${x.id}" aria-label="Статус запроса">${Object.entries(REQ_RU).map(([k, v]) => `<option value="${k}"${x.status === k ? ' selected' : ''}>${v}</option>`).join('')}</select></td></tr>`);
   const fbRows = fb.map(x => `<tr><td>${dt(x.ts)}</td><td>${esc(x.company)}</td><td>${esc(ROLE_RU[x.role] || x.role)}</td>
-    <td class="${x.vote === 'up' ? 'up' : 'down'}">${x.vote === 'up' ? 'Полезно' : 'Не про нас'}</td><td>${esc(x.title)}</td></tr>`);
+    <td class="${x.vote === 'up' ? 'up' : 'down'}">${x.vote === 'up' ? 'Полезно' : 'Не про нас'}</td><td><button class="cardlink" data-card="${esc(x.company_id)}|${esc(x.card_id)}">${esc(x.title)}</button></td></tr>`);
+  ADM.newReq = req.filter(x => x.status === 'new').length; showReqBadge();
   return `<h2 class="adm-h">Запросы менеджеру из разборов</h2>${table(['Когда', 'Клиент', 'Запрос и разбор', 'Статус'], reqRows, 'Запросов пока нет.')}
-    <h2 class="adm-h">Оценки клиентов</h2><div class="foot-note">Оценки «не про нас» опускают такие темы для роли в ленте — это видно на вкладке «Обучение».</div>
+    <h2 class="adm-h">Оценки клиентов${hint('Оценки «не про нас» опускают такие темы для роли в ленте — это видно на вкладке «Обучение».')}</h2>
     ${table(['Когда', 'Клиент', 'Роль', 'Оценка', 'Разбор'], fbRows, 'Оценок пока нет.')}`;
 }
 async function admCards() {
-  const [all, runs] = await Promise.all([aapi('/cards'), aapi('/runs')]);
+  const [all, runs] = await Promise.all([aapi('/cards'), aapi('/runs?limit=500')]);
+  ADM.data.runs = runs;
   const cards = ADM.data.cards = all.filter(c => !ADM.company || c.company_id === ADM.company);
   const comps = [...new Map(all.map(c => [c.company_id, c.company])).entries()];
   const sel = `<label class="adm-filter">Клиент <select id="adm-company"><option value="">все</option>${comps
     .map(([id, n]) => `<option value="${esc(id)}"${ADM.company === id ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
-  const rows = cards.map((c, k) => `<tr class="${c.hidden ? 'off' : ''}"><td>${esc(c.title)}<div class="muted">${esc(c.company)} · ${c.published ? fmtDate(c.published) : ''}</div></td>
+  const rows = cards.map((c, k) => `<tr class="${c.hidden ? 'off' : ''}"><td><button class="cardlink" data-card="${esc(c.company_id)}|${esc(c.id)}">${esc(c.title)}</button><div class="muted">${esc(c.company)} · ${c.published ? fmtDate(c.published) : ''}</div></td>
     <td>${ORIGIN_RU[c.origin] || c.origin}</td><td>${c.votes.up} / ${c.votes.down}</td>
     <td class="acts"><button class="linkbtn" data-look="${k}">Под капотом</button>
       <button class="linkbtn" data-hide="${k}">${c.hidden ? 'Вернуть клиенту' : 'Скрыть'}</button>
       ${c.rerun === 'running' ? '<span class="muted">пересчёт идёт…</span>' : c.rerunnable ? `<button class="linkbtn" data-rerun="${k}">Пересчитать ИИ</button>` : ''}
       ${c.rerun === 'failed' ? '<span class="down">пересчёт не удался</span>' : ''}</td></tr>`);
-  const runRows = runs.slice(0, 30).map(x => `<tr><td>${dt(x.ts)}</td><td>${x.ok ? '<span class="up">прошёл</span>' : '<span class="down">не прошёл</span>'}</td>
-    <td>${sec(x.ms)}</td><td>${x.revisions}</td><td>${num(x.cost)} ₽</td><td class="muted">${esc((x.errors || []).slice(0, 2).join('; '))}</td></tr>`);
   return `${sel}<h2 class="adm-h">Разборы, которые видят клиенты</h2>
     <div class="foot-note">«Скрыть» — разбор пропадёт из ленты клиента и не будет выдаваться из памяти. «Пересчитать ИИ» — новый разбор по тому же событию, расход из дневного лимита.</div>
     ${table(['Разбор', 'Откуда', 'Полезно / нет', ''], rows, 'Разборов нет.')}
-    <h2 class="adm-h">Последние запуски ИИ-аналитика</h2>${table(['Когда', 'Проверка', 'Время', 'Правок', 'Расход', 'Замечания'], runRows, 'Запусков ИИ пока не было.')}`;
+    <h2 class="adm-h">Запуски ИИ-аналитика</h2>
+    <div class="tbar"><label>с <input type="date" id="run-from" value="${ADM.runFrom || ''}"></label><label>по <input type="date" id="run-to" value="${ADM.runTo || ''}"></label>
+      <button class="btn" id="run-csv">Экспорт CSV</button><span class="muted" id="run-n"></span></div>
+    <div id="runs-box">${runsTable()}</div>`;
+}
+/* Запуски ИИ: фильтр по датам, сортировка по любой колонке, выгрузка того, что отфильтровано, в CSV */
+const RUN_COLS = [['ts', 'Когда', x => dt(x.ts)], ['company', 'Клиент', x => esc(x.company)], ['ok', 'Проверка', x => x.ok ? '<span class="up">прошёл</span>' : '<span class="down">не прошёл</span>'],
+  ['ms', 'Время', x => sec(x.ms)], ['tools', 'Инструментов', x => x.tools], ['revisions', 'Правок', x => x.revisions], ['cost', 'Расход', x => num(x.cost) + ' ₽'],
+  ['errors', 'Замечания', x => `<span class="muted">${esc((x.errors || []).slice(0, 2).join('; '))}</span>`]];
+const dayOf = ts => new Date(ts * 1000).toLocaleDateString('sv-SE');  // ГГГГ-ММ-ДД в часовом поясе браузера
+function runsView() {
+  const sort = ADM.runSort || {key: 'ts', dir: -1}, val = x => sort.key === 'errors' ? (x.errors || []).join('; ') : x[sort.key];
+  return (ADM.data.runs || []).filter(x => (!ADM.runFrom || dayOf(x.ts) >= ADM.runFrom) && (!ADM.runTo || dayOf(x.ts) <= ADM.runTo))
+    .sort((a, b) => { const p = val(a), q = val(b); return (typeof p === 'string' ? p.localeCompare(q, 'ru') : (p > q) - (p < q)) * sort.dir; });
+}
+function runsTable() {
+  const sort = ADM.runSort || {key: 'ts', dir: -1}, rows = runsView();
+  const head = RUN_COLS.map(([k, n]) => `<button data-rsort="${k}" aria-sort="${sort.key === k ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none'}">${n}</button>`);
+  const n = document.getElementById('run-n'); if (n) n.textContent = `запусков: ${rows.length}`;
+  return table(head, rows.map(x => `<tr>${RUN_COLS.map(([, , f]) => `<td>${f(x)}</td>`).join('')}</tr>`), 'Запусков ИИ за эти даты нет.');
+}
+function runsCsv() {
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['Когда', 'Клиент', 'ID клиента', 'Событие', 'Проверка', 'Время, с', 'Инструментов', 'Правок', 'Расход, ₽', 'Замечания'].map(q).join(';'),
+    ...runsView().map(x => [new Date(x.ts * 1000).toLocaleString('ru-RU'), x.company, x.company_id, x.event_id, x.ok ? 'прошёл' : 'не прошёл',
+      (x.ms / 1000).toFixed(1).replace('.', ','), x.tools, x.revisions, String(x.cost).replace('.', ','), (x.errors || []).join('; ')].map(q).join(';'))];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'}));
+  a.download = `zapuski-ii-${new Date().toLocaleDateString('sv-SE')}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function bindRuns() {
+  const box = $('#runs-box'); if (!box) return;
+  const redraw = () => { box.innerHTML = runsTable(); bindRuns(); };
+  box.querySelectorAll('[data-rsort]').forEach(b => b.onclick = () => { const s = ADM.runSort || {key: 'ts', dir: -1};
+    ADM.runSort = {key: b.dataset.rsort, dir: s.key === b.dataset.rsort ? -s.dir : (b.dataset.rsort === 'ts' ? -1 : 1)}; redraw(); });
+  $('#run-from').onchange = e => { ADM.runFrom = e.target.value; redraw(); };
+  $('#run-to').onchange = e => { ADM.runTo = e.target.value; redraw(); };
+  $('#run-csv').onclick = runsCsv;
+  const n = $('#run-n'); if (n) n.textContent = `запусков: ${runsView().length}`;
 }
 async function admLearning() {
   const s = await aapi('/learning'), c = s.constants;
@@ -1130,36 +1268,37 @@ async function admLearning() {
     <td class="${x.delta > 0 ? 'up' : 'down'}">${x.delta > 0 ? 'выше' : 'ниже'} на ${num(Math.abs(x.delta))}</td></tr>`);
   const rt = s.routine.map(x => `<tr><td>${esc(x.example)}</td><td>${esc(x.source)}</td><td>${x.days} дн.</td></tr>`);
   const ls = s.lessons.map(x => `<tr><td>${esc(x.lesson)}</td><td>${x.seen}</td><td>${x.active ? '<span class="up">в задании агенту</span>' : `<span class="muted">с ${c.min_lesson} повторов</span>`}</td></tr>`);
-  return `<div class="card learn-intro"><b>Сервис учится на своём опыте.</b> Модели по условиям кейса только разрешённые, дообучать их нельзя — поэтому учится всё вокруг них, и каждый шаг виден здесь.
-      <label class="sw"><input type="checkbox" data-learning ${s.enabled ? 'checked' : ''}> Применять накопленный опыт</label>
-      <div class="foot-note">Если выключить — сервис работает как в первый день, но опыт продолжает копиться.</div></div>
+  return `<div class="card learn-intro"><b>Как сервис учится.</b> Сами ИИ-модели не меняются: по условиям кейса можно пользоваться только готовыми моделями из списка, переобучать их нельзя.
+      Учится всё, что сервис делает вокруг них: запоминает уже сделанные разборы, поднимает в ленте темы, которые клиенты отмечают «полезно», узнаёт новостную рутину и превращает частые ошибки ИИ в правила для него.
+      <label class="sw"><input type="checkbox" data-learning ${s.enabled ? 'checked' : ''}> Применять накопленный опыт${hint('Если выключить — сервис работает как в первый день, но опыт продолжает копиться.')}</label></div>
     <div class="kpis">${kpi('Разборов ИИ в памяти', s.memory, `ответов из памяти: ${s.reused}`)}${kpi('Заголовков в истории', s.stories, `за ${s.days_observed} дн. — для распознавания шаблонов`)}
       ${kpi('Узнано шаблонов', s.routine.length, `выходят ≥ ${c.routine_days} дней с новыми датами и числами`)}${kpi('Уроков в задании агенту', s.lessons.filter(x => x.active).length, `всего замечаний: ${s.lessons.reduce((a, x) => a + x.seen, 0)}`)}</div>
-    <h2 class="adm-h">1. Становится ли лучше и быстрее</h2><div class="foot-note">По дням: доля разборов, прошедших проверку с первого раза, время и число правок. Уроки и память должны снижать время и правки.</div>
+    <h2 class="adm-h">1. Становится ли лучше и быстрее${hint('По дням: доля разборов, прошедших проверку с первого раза, время и число правок. Уроки и память должны снижать время и правки.')}</h2>
     ${table(['День', 'Разборов ИИ', 'Прошли проверку', 'Среднее время', 'Правок в среднем', 'Расход'], trend, 'Разборов ИИ ещё не было — динамика появится после первых запусков.')}
-    <h2 class="adm-h">2. Чему научили оценки клиентов</h2><div class="foot-note">Тема поднимается, если её отмечают «полезно» чаще, чем клиент отмечает в среднем (доля «полезно» сейчас — ${pct(s.useful_share)} из ${s.votes} оценок). Пока оценок мало, сдвиг небольшой. Своя история компании важнее общей для роли.</div>
+    <h2 class="adm-h">2. Чему научили оценки клиентов${hint(`Тема поднимается, если её отмечают «полезно» чаще, чем клиент отмечает в среднем (доля «полезно» сейчас — ${pct(s.useful_share)} из ${s.votes} оценок). Пока оценок мало, сдвиг небольшой. Своя история компании важнее общей для роли.`)}</h2>
     ${table(['Роль', 'Тема', 'В ленте'], w, 'Оценок пока нет — порядок новостей задают правила под роль.')}
-    <h2 class="adm-h">3. Что сервис узнал как рутину</h2><div class="foot-note">Шаблон одного источника, выходящий ${c.routine_days} и больше дней с другими датами и числами («Что произошло за день: среда…»), опускается в отборе (вес ×${String(c.routine_factor).replace('.', ',')}). Повтор важного события с теми же цифрами шаблоном не считается. Ручных списков нет.</div>
+    <h2 class="adm-h">3. Что сервис узнал как рутину${hint(`Шаблон одного источника, выходящий ${c.routine_days} и больше дней с другими датами и числами («Что произошло за день: среда…»), опускается в отборе (вес ×${String(c.routine_factor).replace('.', ',')}). Повтор важного события с теми же цифрами шаблоном не считается. Ручных списков нет.`)}</h2>
     ${table(['Пример заголовка', 'Источник', 'Выходил'], rt, `Шаблонов пока нет: история потока — ${s.days_observed} дн.`)}
-    <h2 class="adm-h">4. Уроки проверки</h2><div class="foot-note">Частые замечания проверки становятся правилами в задании агенту — меньше правок, быстрее ответ.</div>
-    ${table(['Урок', 'Замечаний', 'Статус'], ls, 'Замечаний проверки пока нет.')}
-    <div class="foot-note">Память: тот же сюжет для той же компании за ${c.dup_days} дн. отдаётся готовым разбором — если заголовки похожи (≥ ${pct(c.dup_jaccard)}) и не расходятся числа, даты, названия, отрицание и направление. Прошлые разборы других клиентов агенту не показываются. Методика и замеры — docs/experiments/learning.md.</div>`;
+    <h2 class="adm-h">4. Уроки проверки${hint(`Частые замечания проверки становятся правилами в задании агенту — меньше правок, быстрее ответ.<br><br>Память: тот же сюжет для той же компании за ${c.dup_days} дн. отдаётся готовым разбором — если заголовки похожи (≥ ${pct(c.dup_jaccard)}) и не расходятся числа, даты, названия, отрицание и направление. Прошлые разборы других клиентов агенту не показываются. Методика и замеры — docs/experiments/learning.md.`)}</h2>
+    ${table(['Урок', 'Замечаний', 'Статус'], ls, 'Замечаний проверки пока нет.')}`;
 }
 async function admSettings() {
   const s = await aapi('/settings'), v = s.values; ADM.data.settings = s;
-  const field = (k, label, hint, attrs) => `<label class="fld"><span>${label}</span><input name="${k}" type="number" ${attrs} value="${v[k]}"><small>${hint}</small></label>`;
-  const check = (k, label, hint) => `<label class="sw"><input type="checkbox" name="${k}" ${v[k] ? 'checked' : ''}> ${label}<small>${hint}</small></label>`;
+  const field = (k, label, note, attrs, tip = '') => `<label class="fld"><span>${label}${tip ? hint(tip) : ''}</span><input name="${k}" type="number" ${attrs} value="${v[k]}"><small>${note}</small></label>`;
+  const check = (k, label, note, tip = '') => `<label class="sw"><input type="checkbox" name="${k}" ${v[k] ? 'checked' : ''}> ${label}${tip ? hint(tip) : ''}<small>${note}</small></label>`;
   return `<form id="adm-settings" class="card">
     <h2 class="adm-h">Расход и нагрузка</h2>
     ${field('budget_rub', 'Дневной лимит расхода, ₽', `не больше ${s.limits.budget_rub} ₽ — доля сервиса в общем ключе; при исчерпании клиенты получают краткий разбор`, `min="0" max="${s.limits.budget_rub}" step="1"`)}
     ${field('rate_limit', 'Запросов к ИИ в минуту с одного адреса', 'защита от повторов и перебора', 'min="1" max="60" step="1"')}
     <h2 class="adm-h">Отбор и лента</h2>
-    ${field('select_min', 'Порог значимости события', 'выше — меньше новостей и точнее; ниже — больше, но и шума больше', 'min="1" max="6" step="0.1"')}
+    ${field('select_min', 'Порог значимости события', 'выше — меньше новостей и точнее; ниже — больше, но и шума больше', 'min="1" max="6" step="0.1"',
+      'Каждая новость получает для каждой компании балл — сумму совпадений с её профилем по данным банка (без ИИ, agent/matching.py). Например: новость о ставке при кредите или лизинге — 3, решение ЦБ по ставке — 2,5, новость о курсе при внешней торговле — 3 (+2, если названа страна, с которой компания торгует), отрасль покупателей — 6 × их доля в поступлениях. Новость ниже порога не попадает в ленту компании, и ИИ на неё не тратится. 2,5 — значение, при котором отбор лучше всего совпадает с ручной разметкой (точность и полнота на «Обзоре»).')}
     ${field('briefs', 'Кратких разборов на компанию сразу', 'готовы без ИИ при открытии компании', 'min="0" max="6" step="1"')}
     ${check('learning', 'Применять накопленный опыт', 'память разборов, оценки клиентов, рутина, уроки')}
     <h2 class="adm-h">Сбор новостей</h2>
     ${field('collect_every_min', 'Собирать каждые, минут', 'от 5 минут до суток', 'min="5" max="1440" step="5"')}
-    ${check('collect_triage', 'Размечать новости моделью при сборе', '≈0,003 ₽ за 20 новостей; выключено — только словари')}
+    ${check('collect_triage', 'Размечать новости моделью при сборе', '≈0,003 ₽ за 20 новостей; выключено — только словари',
+      `При каждом сборе модель ${esc(s.models[v.routing.triage] || 'из настроек «Модели по задачам»')} читает новые новости пачками по 20 и отмечает, о чём они: темы (ставка, курс, налоги…), отрасли и страны. Это дополняет словари: новость, где нужное слово не встретилось, всё равно попадёт к нужной компании. Видно в ленте клиента — в признаках «Почему вам» у новостей и в «На чём основан вывод». Выключено — только словари: бесплатно, но больше пропусков.`)}
     <div class="srcs">${s.sources.map(n => `<label><input type="checkbox" name="src" value="${esc(n)}" ${v.sources_off.includes(n) ? '' : 'checked'}> ${esc(n)}</label>`).join('')}</div>
     <h2 class="adm-h">Модели по задачам</h2><div class="foot-note">Только модели из списка кейса.</div>
     ${s.tasks.map(t => `<label class="fld"><span>${TASK_RU[t] || t}</span><select name="route:${t}">${Object.entries(s.models).map(([k, n]) => `<option value="${k}"${v.routing[t] === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`).join('')}
@@ -1171,10 +1310,14 @@ async function admAudit() {
     a.map(x => `<tr><td>${dt(x.ts)}</td><td>${esc(x.actor)}</td><td>${esc(x.action)}</td><td class="muted">${esc(x.detail)}</td></tr>`), 'Изменений пока не было.')}`;
 }
 function bindAdminTab() {
+  bindRuns();
   const col = document.querySelector('[data-collect]');
   if (col) col.onclick = async () => { try { await aapi('/collect', 'POST'); toast('Сбор новостей запущен — обычно до минуты', 4000); } catch (e) { toast(e.message, 5000); } };
-  document.querySelectorAll('[data-req]').forEach(s => s.onchange = async () => {
-    try { await aapi('/requests/' + s.dataset.req, 'POST', {status: s.value}); toast('Статус запроса обновлён', 2500); } catch (e) { toast(e.message, 5000); } });
+  document.querySelectorAll('[data-req]').forEach(s => { s.dataset.was = s.value; s.onchange = async () => {
+    try { await aapi('/requests/' + s.dataset.req, 'POST', {status: s.value});
+      ADM.newReq += (s.value === 'new') - (s.dataset.was === 'new'); s.dataset.was = s.value; s.className = 'st ' + s.value; showReqBadge();
+      toast('Статус запроса обновлён', 2500); } catch (e) { toast(e.message, 5000); s.value = s.dataset.was; } }; });
+  document.querySelectorAll('[data-card]').forEach(b => b.onclick = () => { const [cid, id] = b.dataset.card.split('|'); openCardPanel(cid, id); });
   const cs = $('#adm-company'); if (cs) cs.onchange = () => { ADM.company = cs.value; loadAdmin(); };
   const card = k => ADM.data.cards[+k];
   const hide = async (c, note) => { try { await aapi(`/cards/${c.company_id}/${c.id}/hide`, 'POST', {hidden: !c.hidden, note}); closeOverlays(); loadAdmin(); }
@@ -1253,8 +1396,8 @@ function openTrace(i) {
 }
 // restore — закрыл сам пользователь (Esc, «Закрыть», фон): фокус возвращается туда, откуда открыли
 function closeOverlays(restore = false) {
-  const was = $('#drawer').classList.contains('open') || $('#modal').classList.contains('on');
-  state.drawer = null; $('#drawer').classList.remove('open'); $('#overlay').classList.remove('on'); $('#modal').classList.remove('on');
+  const was = $('#drawer').classList.contains('open') || $('#ldrawer').classList.contains('open') || $('#modal').classList.contains('on');
+  state.drawer = null; $('#drawer').classList.remove('open'); $('#ldrawer').classList.remove('open'); $('#overlay').classList.remove('on'); $('#modal').classList.remove('on');
   if (was && restore) restoreFocus(); else if (was) opener = null;
 }
 
@@ -1263,7 +1406,10 @@ function closeOverlays(restore = false) {
 function render(scrollToOpen = false, keep = false) {
   const [route, arg] = (location.hash || '#home').slice(1).split('/');
   const r = route === 'insight' ? 'feed' : route === 'quality' ? 'admin' : route;   // старые ссылки #insight/id и #quality
-  if (r === 'feed' && arg && state.open !== arg) { state.open = arg; markRead(arg); scrollToOpen = true; }
+  if (r === 'feed' && arg && state.open !== arg) { state.open = arg; markRead(arg); scrollToOpen = true;
+    const c = (DATA.insights[state.company] || []).find(x => x.id === arg);
+    if (c && !inZone(c, state.zone)) state.zone = '';  // ссылка на карточку ведёт к ней, даже если в ленте стоял фильтр зоны
+  }
   if (!keep) closeOverlays();
   renderNav(r);
   if (r === 'analyze') { location.replace('#feed'); return; }  // старые ссылки на отдельную страницу
@@ -1285,13 +1431,16 @@ function render(scrollToOpen = false, keep = false) {
         $('#an-err').textContent = `${cap(err.message.replace(/[.\s]+$/, ''))}. Можно вставить текст новости ниже.`;
         document.querySelector('.quick-more').open = true; });
       if (btn.isConnected) { btn.disabled = false; btn.textContent = 'Оценить'; } };
+    // черновик текста и раскрытость поля переживают сворачивание и перерисовку ленты
+    $('#quick-text').oninput = e => { state.quickText = e.target.value; };
+    document.querySelector('.quick-more').ontoggle = e => { state.quickOpen = e.target.open; };
     $('#quick-text-go').onclick = async () => { const text = $('#quick-text').value.trim();
       if (text.length < 40) { $('#an-msg').textContent = 'Вставьте текст новости — хотя бы пару предложений'; return; }
       const title = text.split(/[.!?\n]/)[0].slice(0, 200);
       $('#an-msg').textContent = '';
       const ok = await analyzeNow(state.company + ':text:' + title, title, '/api/brief', '/api/analyze', {company_id: state.company, title, text},
         err => { if ($('#an-msg')) $('#an-msg').textContent = err.message; else toast(err.message, 6000); });
-      if (ok && $('#quick-text')) $('#quick-text').value = ''; };
+      if (ok) { state.quickText = ''; if ($('#quick-text')) $('#quick-text').value = ''; } };
   }
   if (scrollToOpen && state.open) { const el = document.getElementById('card-' + state.open); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
   else if (!arg) window.scrollTo(0, 0);
@@ -1346,7 +1495,9 @@ function bind() {
     log.innerHTML = state.chats[i.id].join(''); };
 }
 const closeByUser = () => closeOverlays(true);
-$('#overlay').onclick = closeByUser; $('#drawer-close').onclick = closeByUser; $('#modal-ok').onclick = closeByUser; $('#modal [data-close]').onclick = closeByUser;
+// «?» внутри подписи к флажку не должен переключать флажок
+document.addEventListener('click', e => { if (e.target.closest('.hint')) e.preventDefault(); });
+$('#overlay').onclick = closeByUser; $('#drawer-close').onclick = closeByUser; $('#ldrawer-close').onclick = closeByUser; $('#modal-ok').onclick = closeByUser; $('#modal [data-close]').onclick = closeByUser;
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && ($('#drawer').classList.contains('open') || $('#modal').classList.contains('on'))) { e.preventDefault(); closeByUser(); }
 });

@@ -23,7 +23,7 @@ from .contract import validate_card
 from .impact import _sentences
 from .ingest.bank_docs import strip_artefacts
 from .kb import BM25Index
-from .matching import Match
+from .matching import Match, relevance
 from .okved import plain, topics_in, who
 from .tools import Source, ToolSession
 
@@ -384,7 +384,7 @@ def rules_card(event: dict, company_id: str, match: Match, bank: BM25Index, news
     card = {
         "id": f"{event['id']}-{company_id}",
         "type": channels.card_type(chs, calcs),
-        "impact": "high" if match.score >= 6 else "medium" if match.score >= 3.5 else "low",
+        "impact": relevance(match.score),
         "topics": [t for t in event.get("topics", []) if t in TOPICS] or ["отрасль"],
         "is_new": True, "published": event.get("published") or today.isoformat(),
         "title": event.get("title", "")[:200],

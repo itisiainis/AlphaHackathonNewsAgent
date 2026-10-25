@@ -177,12 +177,13 @@ def _attention(m: dict, st: dict, fresh_h: float | None, new_req: int, skipped: 
         out.append({"level": "medium", "text": "Модель не подключена — клиенты видят краткий разбор без ИИ."})
     if fresh_h is None or fresh_h > 24:
         out.append({"level": "medium", "text": "Свежих новостей больше суток нет — проверьте сбор и источники."})
-    if new_req:
-        out.append({"level": "high", "text": f"Необработанных запросов менеджеру: {new_req}."})
+    # необработанные запросы менеджеру — счётчиком на вкладке «Клиенты», а не здесь
     if skipped:
-        names = ", ".join(sorted(skipped)[:3]) + (" и др." if len(skipped) > 3 else "")
-        out.append({"level": "medium", "text": f"Готовые разборы ИИ не показаны клиентам: {len(skipped)} ({names}) — "
-                    "посчитаны до пересмотра прогноза банка или не прошли проверку. Пересчитать: scripts/run_agent.py --save."})
+        names = "; ".join(_company_name(k.split("/")[0]) for k in sorted(skipped)[:3]) + (" и др." if len(skipped) > 3 else "")
+        out.append({"level": "medium", "text": f"Разборов ИИ, посчитанных заранее, спрятано от клиентов: {len(skipped)} ({names}). "
+                    "С тех пор Альфа-Банк изменил прогноз, на который они опирались (или разбор не прошёл проверку), — "
+                    "устаревший вывод показывать нельзя, поэтому клиенты видят по этим событиям краткий разбор. "
+                    "Вернуть: «Пересчитать ИИ» на вкладке «Разборы»."})
     return out
 
 
@@ -219,7 +220,7 @@ def _company_name(cid: str) -> str:
     from agent import profiles
 
     p = profiles.get(cid)
-    return profiles.short_industry(p) if p else cid
+    return profiles.short_industry(p, limit=200) if p else cid  # в панели — полное название, таблица переносит строки
 
 
 @router.get("/feedback")
@@ -256,7 +257,7 @@ def request_status(rowid: int, body: StatusIn, who: str = Depends(admin)):
 def runs(limit: int = 100):
     rows = _app().store.rows("SELECT ts, company_id, event_id, ok, errors, cost, ms, tools, revisions FROM runs ORDER BY ts DESC LIMIT ?",
                              (min(limit, 500),))
-    return [r | {"errors": json.loads(r["errors"] or "[]")} for r in rows]
+    return [r | {"errors": json.loads(r["errors"] or "[]"), "company": _company_name(r["company_id"])} for r in rows]
 
 
 @router.get("/cards")

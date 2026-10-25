@@ -37,6 +37,12 @@ from .kb import ECONOMIST_RE, bank_voice_sources
 from .okved import RATE_SENSITIVE, country_name, plain, who
 
 SELECT_MIN = 2.5
+
+
+def relevance(score: float) -> str:
+    """Релевантность события профилю компании (поле impact карточки) — по баллу отбора, одинаково для краткого
+    разбора и разбора ИИ: в интерфейсе «высокая / средняя / низкая релевантность вашему профилю»."""
+    return "high" if score >= 6 else "medium" if score >= 3.5 else "low"
 FLOW_MIN = 0.03
 FLOW_MIN_N = 10  # меньше контрагентов в выборке банка — доля отрасли в потоке ничего не говорит о бизнесе
 CONSUMER_SECTORS = {"10", "11", "29", "41", "45", "47", "55", "56", "68", "79"}

@@ -53,7 +53,7 @@ def test_overview_names_precomputed_cards_left_out(ctx):
     _, c = ctx
     o = c.get("/api/admin/overview", headers=H).json()
     assert "U_25835/ev-e31c37f5eb-U_25835" in o["skipped_precomputed"]
-    assert any("Готовые разборы ИИ не показаны клиентам" in a["text"] and "scripts/run_agent.py" in a["text"]
+    assert any("спрятано от клиентов" in a["text"] and "изменил прогноз" in a["text"] and "Пересчитать ИИ" in a["text"]
                for a in o["attention"])
 
 

@@ -273,3 +273,23 @@ def test_checker_failure_is_reported_not_hidden():
 def test_trace_records_model_per_step():
     res = run(ScriptedLLM())
     assert any(t.get("model") for t in res.card["trace"] if t["kind"] in ("plan", "draft", "check"))
+
+
+def test_draft_retried_without_reasoning_when_reasoning_eats_the_limit():
+    """GLM потратил весь лимит на скрытые рассуждения — черновик повторяется без них, клиент получает разбор ИИ."""
+    class Overthinking(ScriptedLLM):
+        def complete(self, role, messages, **kw):
+            if "составь карточку" in messages[0]["content"] and kw.get("reasoning"):
+                raise LLMUnavailable("модель glm: лимит токенов израсходован на рассуждения")
+            return super().complete(role, messages, **kw)
+
+    res = run(Overthinking())
+    assert res.card is not None and not res.unavailable
+
+
+def test_key_points_removed_by_grounding_are_refilled_from_blocks():
+    """Сверка цифр убрала обоснования — короткий слой добирается из проверенных утверждений разбора, карточка не теряется."""
+    d = json.loads(json.dumps(DRAFT))
+    d["key_points"] = [{"t": "Выручка упадёт на 987 млрд ₽", "p": "fact", "src": "S1"}]
+    res = run(ScriptedLLM(draft=d))
+    assert res.card is not None and len(res.card["key_points"]) >= 2

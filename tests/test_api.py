@@ -126,3 +126,34 @@ def test_company_has_sensitivity_factors_and_hits(client):
     assert set(client.get("/api/bootstrap").json()["factor_hits"]) >= {"U_25835", "U_177581", "U_200890"}
     r = client.post("/api/cards/i-rate-auto/feedback", json={"company_id": "U_25835", "role": "accountant", "vote": "up"})
     assert r.status_code == 200, "главный бухгалтер — допустимая роль"
+
+
+def test_event_dropped_from_feed_is_rebuilt_from_its_card(client):
+    """Краткий разбор остался в кеше, а событие выпало из потока (поток пересобран) — полный разбор всё равно запускается."""
+    import backend.app as app_module
+
+    card = {"id": "ev-gone000000-U_25835", "title": "АвтоВАЗ сократил дилерскую сеть в Москве", "published": "2026-10-20",
+            "sources": [{"name": "Интерфакс", "kind": "news", "date": "2026-10-20", "url": "https://example.ru/a"}],
+            "blocks": {"what": [{"t": "Дилеров стало меньше: с 15 до 6.", "p": "fact", "src": 0}]}}
+    app_module.store.put_card("U_25835", card, "rules")
+    ev = app_module._event("U_25835", "ev-gone000000")
+    assert ev["id"] == "ev-gone000000" and "с 15 до 6" in ev["text"] and ev["url"] == "https://example.ru/a"
+
+
+def test_top_events_get_ai_analysis_queued_in_background(client, monkeypatch):
+    """Главное — без нажатия: быстрые выводы лучших событий ставятся в очередь на разбор ИИ, каждый — один раз."""
+    import queue
+
+    import backend.app as app_module
+
+    q = queue.Queue()
+    monkeypatch.setattr(app_module, "_pre_queue", q)
+    monkeypatch.setattr(type(app_module.llm), "online", property(lambda self: True))
+    cid = "U_25835"
+    app_module._ensure_briefs(cid)
+    rules = {c["id"] for c, o in app_module.store.cards(cid) if o == "rules"}
+    first = q.qsize()
+    app_module._precompute(cid)
+    assert 0 < first <= app_module.PRECOMPUTE_TOP and q.qsize() == first  # повторное открытие не ставит заново
+    queued = {f"{ev['id']}-{c}" for ev, c in list(q.queue)}
+    assert queued <= rules

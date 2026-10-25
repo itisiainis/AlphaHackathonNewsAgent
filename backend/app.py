@@ -277,6 +277,53 @@ def _ensure_briefs(cid: str) -> None:
             continue
         if card:
             store.put_card(cid, card, "rules")
+    _precompute(cid)
+
+
+# Главное — без нажатия: для лучших событий компании полный разбор ИИ готовится заранее, в фоне, по очереди.
+# Быстрый вывод клиент видит сразу; когда разбор ИИ готов, он заменяет быстрый вывод на том же месте.
+PRECOMPUTE_TOP = int(os.environ.get("PRECOMPUTE_TOP", "3"))          # сколько событий компании углублять заранее
+PRECOMPUTE_DAILY = int(os.environ.get("PRECOMPUTE_DAILY", "15"))     # не больше разборов в день — бюджет общего ключа
+PRECOMPUTE_BUDGET_SHARE = 0.6  # заранее тратим не больше 60% дневного лимита: остальное — на разборы по кнопке
+_pre_queue: queue.Queue = queue.Queue()
+_pre_seen: set[str] = set()
+_pre_day = {"day": "", "n": 0}
+_pre_lock = threading.Lock()
+
+
+def _precompute_worker() -> None:
+    while True:
+        ev, cid = _pre_queue.get()
+        try:
+            if {c["id"]: o for c, o in store.cards(cid)}.get(f"{ev['id']}-{cid}") != "rules":
+                continue  # уже разобрано ИИ (по кнопке или из памяти) или скрыто
+            if not llm.online or llm.spent_today() >= PRECOMPUTE_BUDGET_SHARE * llm.budget:
+                continue
+            _run(ev, cid)
+        except Exception:
+            log.exception("заранее: разбор %s для %s", ev.get("id"), cid)
+        finally:
+            _pre_queue.task_done()
+
+
+def _precompute(cid: str) -> None:
+    if PRECOMPUTE_TOP <= 0 or not llm.online:
+        return
+    origins = {c["id"]: o for c, o in store.cards(cid)}
+    with _pre_lock:
+        today = date.today().isoformat()
+        if _pre_day["day"] != today:
+            _pre_day.update(day=today, n=0)
+        for ev, _ in diverse_events(pipe.ranked(cid, 12), PRECOMPUTE_TOP):
+            key = f"{ev['id']}-{cid}"
+            if origins.get(key) != "rules" or key in _pre_seen or _pre_day["n"] >= PRECOMPUTE_DAILY:
+                continue
+            _pre_seen.add(key)
+            _pre_day["n"] += 1
+            _pre_queue.put((ev, cid))
+
+
+threading.Thread(target=_precompute_worker, daemon=True).start()
 
 
 @app.get("/api/companies/{cid}")
@@ -412,10 +459,23 @@ def _stream(event: dict, cid: str) -> StreamingResponse:
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+def _event_from_card(cid: str, eid: str) -> dict | None:
+    """Событие выпало из потока новостей (поток пересобран после перезапуска), а краткий разбор по нему остался в кеше:
+    восстанавливаем событие из карточки — заголовок, факты новости, ссылка на первоисточник. Полный текст по ссылке
+    агент подтянет сам (pipeline.full_text)."""
+    card = store.card(cid, f"{eid}-{cid}")
+    if not card:
+        return None
+    news = next((s for s in card.get("sources", []) if s.get("kind") == "news"), {})
+    facts = [s["t"] for s in card["blocks"].get("what", []) if s.get("p") == "fact"]
+    return event_from_text(card["title"], " ".join(facts) or card["title"], news.get("url", ""),
+                           source=news.get("name") or "Новость", published=card.get("published")) | {"id": eid}
+
+
 def _event(cid: str, eid: str) -> dict:
     _company(cid)
     # событие из потока или новость, которую клиент прислал сам (её полный разбор запускают позже)
-    ev = next((e for e in pipe.events if e["id"] == eid), None) or store.user_event(cid, eid)
+    ev = next((e for e in pipe.events if e["id"] == eid), None) or store.user_event(cid, eid) or _event_from_card(cid, eid)
     if not ev:
         raise HTTPException(404, "событие не найдено: возможно, оно выпало из потока новостей — пришлите ссылку ещё раз")
     return ev

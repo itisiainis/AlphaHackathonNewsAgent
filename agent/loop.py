@@ -24,7 +24,7 @@ from .contract.validator import numbers_in
 from .ingest.bank_docs import strip_artefacts
 from .kb import BM25Index, no_industry_view
 from .llm import LLM, NO_REASONING, ROUTING, LLMUnavailable, extract_json
-from .matching import Match
+from .matching import Match, relevance
 from .offline import NO_BANK_VIEW, _bank_quote, _stems
 from .prompts import AGENT_SYSTEM, CHECK_SYSTEM, DRAFT_SYSTEM, ROLES_RU, house_view_block, tools_block
 from .tools import ToolSession
@@ -196,7 +196,16 @@ class Agent:
         """Вызов модели с одной повторной попыткой, если ответ не JSON. think — включить скрытые рассуждения."""
         self._emit(trace, PENDING.get(title, "Модель работает…"))
         think = role not in NO_REASONING if think is None else think
-        c = self.llm.complete(ROUTING[role], messages, max_tokens=max_tokens, json_mode=True, reasoning=think)
+        try:
+            c = self.llm.complete(ROUTING[role], messages, max_tokens=max_tokens, json_mode=True, reasoning=think)
+        except LLMUnavailable as e:
+            # Замер 23–25.10: GLM на черновике всё чаще тратит весь лимит на скрытые рассуждения и не отвечает.
+            # Тот же запрос без рассуждений отвечает за ~30 с — повторяем так, а не отдаём клиенту «ИИ недоступен».
+            if not think or "рассуждени" not in str(e):
+                raise
+            think = False
+            self._emit(trace, "Модель отвечает без долгих рассуждений…")
+            c = self.llm.complete(ROUTING[role], messages, max_tokens=max_tokens, json_mode=True, reasoning=False)
         cost, ms = c.cost_rub, c.ms
         try:
             data = extract_json(c.text)
@@ -477,12 +486,25 @@ class Agent:
         b = draft.get("blocks", {})
         blocks = {k: stmts(b.get(k)) for k in ("what", "why", "risks", "opportunities", "actions")}
         key_points = stmts(draft.get("key_points"))[:3]
+        if len(key_points) < 2:
+            # сверка цифр убрала обоснования (чаще у черновика без рассуждений) — добираем из уже проверенных утверждений
+            # разбора: почему важно, риски, возможности; карточку не теряем из-за пустого короткого слоя
+            seen = {s["t"] for s in key_points}
+            for s in blocks["why"] + blocks["risks"] + blocks["opportunities"] + blocks["what"]:
+                if len(key_points) >= 2:
+                    break
+                if s["t"] not in seen:
+                    key_points.append({k: v for k, v in s.items() if k in ("t", "p", "src")})
+                    seen.add(s["t"])
+            if len(key_points) >= 2:
+                repairs.append("обоснования добраны из разбора")
         bank_in = b.get("bank") if isinstance(b.get("bank"), dict) else {}
         bank_src = by_label.get(bank_in.get("src") or "")
         if bank_src and bank_src.kind != "bank":
             bank_src = None
         quote = str(bank_in.get("quote") or "").strip()
-        plain = no_codes(str(bank_in.get("plain") or "").strip())
+        # модель иногда сама начинает с «Проще говоря:» — интерфейс добавляет это слово сам, без повтора
+        plain = re.sub(r"^\s*проще говоря\s*[:,—–-]?\s*", "", no_codes(str(bank_in.get("plain") or "").strip()), flags=re.I)
         if bank_src and not (quote and verbatim(quote, bank_src.text)):
             # цитата — только дословно: пересказ или дописанный хвост («…», при этом инфляция …) цитатой не показываем
             said, quote = quote, ""
@@ -509,7 +531,7 @@ class Agent:
             idx(bank_src.label)
             bank = {"quote": quote, "doc": bank_src.doc or bank_src.name, "date": bank_src.date, "stale": bank_src.stale}
             if quote and plain and not bank_src.stale:
-                bank["plain"] = plain  # «проще говоря» — вывод ИИ рядом с дословной цитатой
+                bank["plain"] = re.sub(r"^\s*проще говоря\s*[:,—–-]?\s*", "", plain, flags=re.I)  # «проще говоря» — вывод ИИ рядом с цитатой
         else:
             bank = {"quote": "", "doc": NO_BANK_VIEW, "date": self.today.isoformat(), "stale": False}
 
@@ -527,7 +549,7 @@ class Agent:
                     "url": by_label[lbl].url} for lbl in cited]
         card = {
             "id": f"{event['id']}-{company_id}",
-            "type": draft.get("type", "info"), "impact": draft.get("impact", "low"),
+            "type": draft.get("type", "info"), "impact": relevance(match.score),
             "topics": [t for t in draft.get("topics", []) if t] or event.get("topics", []) or ["отрасль"],
             "is_new": True, "published": event.get("published") or self.today.isoformat(),
             "title": draft.get("title") or event.get("title", ""),

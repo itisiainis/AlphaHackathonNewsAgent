@@ -21,7 +21,7 @@ def test_home_quiet_day_and_short_list():
 
 
 def test_paste_flow_copy():
-    assert "Связи с вашей компанией не нашли — полный разбор ИИ не запускали" in HTML
+    assert "Связи с вашей компанией не нашли — показан быстрый вывод, ИИ-аналитика не запускали" in HTML
     assert "Этот материал уже разобран — открыли готовый разбор" in HTML
     assert 'id="an-err" role="alert"' in HTML
 
