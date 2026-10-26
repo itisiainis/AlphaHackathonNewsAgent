@@ -77,7 +77,7 @@ def test_settings_validated_applied_persisted_and_audited(ctx):
 
     old = dict(ROUTING), matching.SELECT_MIN
     try:
-        assert c.put("/api/admin/settings", json={"budget_rub": 400}, headers=H).status_code == 422   # выше доли сервиса
+        assert c.put("/api/admin/settings", json={"budget_rub": 600}, headers=H).status_code == 422   # выше лимита общего ключа
         assert c.put("/api/admin/settings", json={"routing": {"draft": "gpt"}}, headers=H).status_code == 422  # не из списка кейса
         assert c.put("/api/admin/settings", json={"unknown": 1}, headers=H).status_code == 422
         r = c.put("/api/admin/settings", json={"budget_rub": 12, "routing": {"draft": "qwen"}, "select_min": 3}, headers=H)

@@ -1427,7 +1427,7 @@ async function admSettings() {
   const check = (k, label, note, tip = '') => `<label class="sw"><input type="checkbox" name="${k}" ${v[k] ? 'checked' : ''}> ${label}${tip ? hint(tip) : ''}<small>${note}</small></label>`;
   return `<form id="adm-settings" class="card">
     <h2 class="adm-h">Расход и нагрузка</h2>
-    ${field('budget_rub', 'Дневной лимит расхода, ₽', `не больше ${s.limits.budget_rub} ₽ — доля сервиса в общем ключе; при исчерпании клиенты получают краткий разбор`, `min="0" max="${s.limits.budget_rub}" step="1"`)}
+    ${field('budget_rub', 'Дневной лимит расхода, ₽', `не больше ${s.limits.budget_rub} ₽ — лимит общего ключа команды (его делят все сервисы команды); при исчерпании клиенты получают краткий разбор`, `min="0" max="${s.limits.budget_rub}" step="1"`)}
     ${field('rate_limit', 'Запросов к ИИ в минуту с одного адреса', 'защита от повторов и перебора', 'min="1" max="60" step="1"')}
     <h2 class="adm-h">Отбор и лента</h2>
     ${field('select_min', 'Порог значимости события', 'выше — меньше новостей и точнее; ниже — больше, но и шума больше', 'min="1" max="6" step="0.1"',

@@ -28,7 +28,7 @@ http://localhost:8000 · проверка живости: http://localhost:8000/
 ## Railway
 
 1. **New Project → Deploy from GitHub repo** → репозиторий. Railway соберёт `Dockerfile` (`railway.json`).
-2. Variables: `LLM_BASE_URL`, `LLM_API_KEY`, по желанию `LLM_DAILY_BUDGET_RUB=50`.
+2. Variables: `LLM_BASE_URL`, `LLM_API_KEY`, по желанию `LLM_DAILY_BUDGET_RUB=100`.
 3. Settings → Networking → **Generate Domain**.
 
 ## Переменные окружения
@@ -38,7 +38,7 @@ http://localhost:8000 · проверка живости: http://localhost:8000/
 | Переменная | По умолчанию | Зачем |
 |---|---|---|
 | `LLM_BASE_URL`, `LLM_API_KEY` | — | доступ к разрешённым моделям; без них — краткий разбор без ИИ |
-| `LLM_DAILY_BUDGET_RUB` | 50 | дневной лимит расхода сервиса (ключ общий на команду, 500 ₽/день) |
+| `LLM_DAILY_BUDGET_RUB` | 100 | дневной лимит расхода сервиса (ключ общий на команду, 500 ₽/день); в панели — до 500 ₽ |
 | `RATE_LIMIT_PER_MIN` | 10 | платных запросов в минуту с одного адреса |
 | `POST_LIMIT_PER_MIN` | 60 | любых изменяющих запросов в минуту с одного адреса |
 | `COLLECT_ON_START`, `COLLECT_EVERY_MIN` | 1, 60 | сбор свежих новостей при старте и по расписанию |

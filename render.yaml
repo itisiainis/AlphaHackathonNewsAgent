@@ -14,7 +14,7 @@ services:
       - key: ADMIN_TOKEN        # панель управления банка; пусто — панель выключена
         sync: false
       - key: LLM_DAILY_BUDGET_RUB
-        value: "50"
+        value: "100"
       - key: RATE_LIMIT_PER_MIN
         value: "10"
       - key: COLLECT_ON_START
